@@ -88,7 +88,8 @@ test "ambiguous version path is not autodetected" {
   let v3 =
     #|{"zarr_format":3,"node_type":"array","shape":[1],"data_type":"uint8","chunk_grid":{"name":"regular","configuration":{"chunk_shape":[1]}},"chunk_key_encoding":{"name":"default"},"fill_value":0,"codecs":[{"name":"bytes"}]}
   assert_true(store.put_array_metadata(@metadata.V2, "mixed", v2))
-  assert_true(store.put_array_metadata(@metadata.V3, "mixed", v3))
+  assert_true(!store.put_array_metadata(@metadata.V3, "mixed", v3))
+  store.put("mixed/zarr.json", @utf8.encode(v3))
   assert_true(store.open_array("mixed") is None)
 }
 
@@ -290,13 +291,14 @@ test "groups reject mixed formats invalid attributes and v2 array collision" {
     ),
   )
   assert_true(
-    @hierarchy.put_group_metadata(
+    !@hierarchy.put_group_metadata(
       store,
       @metadata.V3,
       "mixed",
       "{\"zarr_format\":3,\"node_type\":\"group\"}",
     ),
   )
+  store.put("mixed/zarr.json", b"{\"zarr_format\":3,\"node_type\":\"group\"}")
   assert_true(@hierarchy.open_group(store, "mixed") is None)
   assert_true(
     @hierarchy.put_group_metadata(
@@ -323,6 +325,41 @@ test "groups reject mixed formats invalid attributes and v2 array collision" {
       "{\"zarr_format\":3,\"node_type\":\"group\"}",
     ),
   )
+  assert_true(
+    !store.put_array_metadata(
+      @metadata.V2,
+      "array",
+      "{\"zarr_format\":2,\"shape\":[1],\"chunks\":[1],\"dtype\":\"|u1\",\"compressor\":null,\"fill_value\":0,\"order\":\"C\",\"filters\":null}",
+    ),
+  )
+}
+
+///|
+test "array and group metadata reject cross-format nodes at one path" {
+  let store = @store.MemoryStore::new()
+  guard @array.u8_metadata_json(@metadata.V2, [2], [1], b'\x00') is Some(v2) else {
+    fail("v2 metadata")
+  }
+  guard @array.u8_metadata_json(@metadata.V3, [2], [1], b'\x00') is Some(v3) else {
+    fail("v3 metadata")
+  }
+  assert_true(store.put_array_metadata(@metadata.V3, "samples", v3))
+  assert_true(!store.put_array_metadata(@metadata.V2, "samples", v2))
+  assert_true(
+    !@hierarchy.put_group_metadata(
+      store,
+      @metadata.V2,
+      "samples",
+      "{\"zarr_format\":2}",
+    ),
+  )
+  store.put("samples/.zgroup", b"{\"zarr_format\":2}")
+  assert_true(store.open_array("samples") is None)
+  assert_true(@hierarchy.open_group(store, "samples") is None)
+  assert_true(
+    @hierarchy.read_attributes(store, @metadata.V3, "samples") is None,
+  )
+  assert_true(!@hierarchy.put_attributes(store, @metadata.V3, "samples", "{}"))
 }
 
 ///|
@@ -713,4 +750,18 @@ test "group tree creates ancestors and preserves existing attributes" {
     @hierarchy.create_group_tree(legacy, @metadata.V2, "__legacy/data"),
   )
   assert_true(legacy.get("__legacy/.zgroup") is Some(_))
+  assert_true(@hierarchy.open_group(legacy, "__legacy") is Some(_))
+  guard @array.create_u8(
+      legacy,
+      @metadata.V2,
+      "__legacy/data/values",
+      [2],
+      [1],
+      b'\x03',
+    )
+    is Some(values) else {
+    fail("v2-only path")
+  }
+  assert_eq(values.read([0]), Some(b'\x03'))
+  assert_true(legacy.open_array("__legacy/data/values") is Some(_))
 }

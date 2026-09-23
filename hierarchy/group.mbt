@@ -16,6 +16,9 @@ pub fn put_group_metadata(
   guard @chunk.array_metadata_key(format, path) is Some(array_key) else {
     return false
   }
+  if other_format_node_exists(store, format, path) {
+    return false
+  }
   if format == @metadata.V2 && store.get(array_key) is Some(_) {
     return false
   }
@@ -91,16 +94,18 @@ pub fn open_group(
   guard @chunk.group_metadata_key(@metadata.V2, path) is Some(v2_key) else {
     return None
   }
-  guard @chunk.group_metadata_key(@metadata.V3, path) is Some(v3_key) else {
-    return None
-  }
+  let v3_key = @chunk.group_metadata_key(@metadata.V3, path)
   guard @chunk.array_metadata_key(@metadata.V2, path) is Some(v2_array_key) else {
     return None
   }
   if store.get(v2_array_key) is Some(_) {
     return None
   }
-  let (format, bytes) = match (store.get(v2_key), store.get(v3_key)) {
+  let v3 = match v3_key {
+    Some(key) => store.get(key)
+    None => None
+  }
+  let (format, bytes) = match (store.get(v2_key), v3) {
     (Some(bytes), None) => (@metadata.V2, bytes)
     (None, Some(bytes)) => (@metadata.V3, bytes)
     _ => return None
@@ -160,12 +165,33 @@ fn v2_node_exists(store : @store.MemoryStore, path : String) -> Bool {
 }
 
 ///|
+fn other_format_node_exists(
+  store : @store.MemoryStore,
+  format : @metadata.Format,
+  path : String,
+) -> Bool {
+  let other = if format == @metadata.V2 { @metadata.V3 } else { @metadata.V2 }
+  let array = match @chunk.array_metadata_key(other, path) {
+    Some(key) => store.get(key) is Some(_)
+    None => false
+  }
+  let group = match @chunk.group_metadata_key(other, path) {
+    Some(key) => store.get(key) is Some(_)
+    None => false
+  }
+  array || group
+}
+
+///|
 pub fn read_attributes(
   store : @store.MemoryStore,
   format : @metadata.Format,
   path : String,
 ) -> Json? {
   guard @chunk.group_metadata_key(format, path) is Some(metadata_key) else {
+    return None
+  }
+  if other_format_node_exists(store, format, path) {
     return None
   }
   if format == @metadata.V2 {
@@ -199,6 +225,9 @@ pub fn put_attributes(
     return false
   }
   guard @chunk.group_metadata_key(format, path) is Some(metadata_key) else {
+    return false
+  }
+  if other_format_node_exists(store, format, path) {
     return false
   }
   if format == @metadata.V2 {

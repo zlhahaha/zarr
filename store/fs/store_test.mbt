@@ -99,6 +99,33 @@ async test "native store opens v2 and v3 group metadata" {
 }
 
 ///|
+async test "native metadata writes reject cross-format node conflicts" {
+  let dir = @async_fs.tmpdir(prefix="zarr-mixed-node-test")
+  guard @fs.FileStore::new(dir) is Some(store) else { fail("store") }
+  let v2 =
+    #|{"zarr_format":2,"shape":[2],"chunks":[1],"dtype":"|u1","compressor":null,"fill_value":0,"order":"C","filters":null}
+  let v3 =
+    #|{"zarr_format":3,"node_type":"array","shape":[2],"data_type":"uint8","chunk_grid":{"name":"regular","configuration":{"chunk_shape":[1]}},"chunk_key_encoding":{"name":"default"},"fill_value":0,"codecs":[{"name":"bytes"}]}
+  assert_true(store.put_array_metadata(@metadata.V3, "samples", v3))
+  assert_true(!store.put_array_metadata(@metadata.V2, "samples", v2))
+  assert_true(
+    !store.put_group_metadata(@metadata.V2, "samples", "{\"zarr_format\":2}"),
+  )
+  assert_true(store.put("samples/.zgroup", b"{\"zarr_format\":2}"))
+  assert_true(store.open_array("samples") is None)
+  assert_true(store.open_group("samples") is None)
+  assert_true(store.read_attributes(@metadata.V3, "samples") is None)
+  assert_true(!store.put_attributes(@metadata.V3, "samples", "{}"))
+  assert_true(store.create_group_tree(@metadata.V2, "__legacy/data"))
+  assert_true(store.open_group("__legacy") is Some(_))
+  assert_true(
+    store.put_array_metadata(@metadata.V2, "__legacy/data/values", v2),
+  )
+  assert_true(store.open_array("__legacy/data/values") is Some(_))
+  @async_fs.rmdir(dir, recursive=true)
+}
+
+///|
 async test "native typed creation writes persistent v2 and v3 arrays" {
   let dir = @async_fs.tmpdir(prefix="zarr-create-test")
   guard @fs.FileStore::new(dir) is Some(store) else { fail("store") }

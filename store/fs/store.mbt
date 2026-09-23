@@ -133,6 +133,18 @@ pub async fn FileStore::put_array_metadata(
   guard @chunk.group_metadata_key(format, path) is Some(group_key) else {
     return false
   }
+  let other = if format == @metadata.V2 { @metadata.V3 } else { @metadata.V2 }
+  let other_array = match @chunk.array_metadata_key(other, path) {
+    Some(key) => self.get(key) is Some(_)
+    None => false
+  }
+  let other_group = match @chunk.group_metadata_key(other, path) {
+    Some(key) => self.get(key) is Some(_)
+    None => false
+  }
+  if other_array || other_group {
+    return false
+  }
   if format == @metadata.V2 && self.get(group_key) is Some(_) {
     return false
   }
@@ -153,11 +165,18 @@ pub async fn FileStore::open_array(
   guard @chunk.array_metadata_key(@metadata.V2, path) is Some(v2_key) else {
     return None
   }
-  guard @chunk.array_metadata_key(@metadata.V3, path) is Some(v3_key) else {
+  let v3_key = @chunk.array_metadata_key(@metadata.V3, path)
+  guard @chunk.group_metadata_key(@metadata.V2, path) is Some(v2_group_key) else {
+    return None
+  }
+  if self.get(v2_group_key) is Some(_) {
     return None
   }
   let v2 = self.get(v2_key)
-  let v3 = self.get(v3_key)
+  let v3 = match v3_key {
+    Some(key) => self.get(key)
+    None => None
+  }
   let (format, bytes) = match (v2, v3) {
     (Some(bytes), None) => (@metadata.V2, bytes)
     (None, Some(bytes)) => (@metadata.V3, bytes)

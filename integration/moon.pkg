@@ -6,4 +6,5 @@ import {
   "zlhahaha/zarr/codec",
   "zlhahaha/zarr/hierarchy",
   "moonbitlang/core/json",
+  "moonbitlang/core/encoding/utf8",
 } for "test"
