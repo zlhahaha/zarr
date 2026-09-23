@@ -1,5 +1,7 @@
 # Zarr
 
+[![CI](https://github.com/zlhahaha/zarr/actions/workflows/ci.yml/badge.svg)](https://github.com/zlhahaha/zarr/actions/workflows/ci.yml)
+
 A MoonBit implementation of the Zarr v2 and v3 storage formats for chunked N-dimensional arrays. This is an independent implementation, not an official Zarr Developers project.
 
 ## Status
@@ -26,7 +28,7 @@ Early development. The library can read and write `uint8`, `uint16`, `int32`, `f
 
 ## Build and run
 
-Requires the MoonBit toolchain. From this directory:
+Requires the MoonBit toolchain. CI and release packaging are tested with the September 2026 toolchain; the library also passes local checks with the July 2026 toolchain. From this directory:
 
 ```sh
 moon check --deny-warn

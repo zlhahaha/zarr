@@ -2,18 +2,18 @@
 
 The name “Zarr” means the library targets both Zarr storage format 2 and 3. It does **not** imply that all format extensions/codecs or the entire zarr-python API are implemented. Every phase has a testable exit gate; README support claims must follow passing gates.
 
-## Stage 0 — Project foundation (local gate passed; remote gate pending)
+## Stage 0 — Project foundation (local and remote gates passed)
 
 - MoonBit package, Apache-2.0 license, source attribution, Git history, CI, proposal and runnable example.
 - Parse regular-grid metadata for v2/v3; generate safe logical paths and chunk keys; reject malformed/ambiguous metadata.
 - In-memory byte store for metadata and already-encoded chunks.
 - Gate: `moon check --deny-warn`, `moon build`, `moon test --deny-warn`, and `moon run cmd/main` pass locally and in GitHub Actions.
 
-Local native/wasm-gc checks, builds, tests and example runs pass. GitHub Actions has not run because the repository is intentionally not pushed yet.
+Native/wasm-gc checks, builds, tests and example runs pass locally and in [GitHub Actions](https://github.com/zlhahaha/zarr/actions/workflows/ci.yml). The release archive is validated in CI; Mooncakes publication is still pending.
 
 ## Stage 1 — Useful uncompressed numeric arrays
 
-Current implementation: typed `uint8`, `uint16`, `int32`, `float32`, and `float64` create/open/element and rectangular-slice I/O in memory and native filesystem, plus v2/v3 group/attribute operations and safe ancestor creation. Slices batch file I/O and codec work by touched chunk but still buffer the requested result. Fourteen independent zarr-python 3.4.0 fixtures are read by native tests, and zarr-python reads fifteen MoonBit-generated stores locally, including a multi-chunk compressed slice and nested groups. The remaining dtype breadth is open; GitHub CI has not yet run.
+Current implementation: typed `uint8`, `uint16`, `int32`, `float32`, and `float64` create/open/element and rectangular-slice I/O in memory and native filesystem, plus v2/v3 group/attribute operations and safe ancestor creation. Slices batch file I/O and codec work by touched chunk but still buffer the requested result. Fourteen independent zarr-python 3.4.0 fixtures are read by native tests, and zarr-python reads fifteen MoonBit-generated stores in CI, including a multi-chunk compressed slice and nested groups. The remaining dtype breadth is open.
 
 - Store abstraction and native filesystem backend; create/open arrays and groups, metadata/attributes, and chunks for v2/v3.
 - Core numeric dtypes (`bool`, signed/unsigned 8/16/32/64-bit, float32/64) with specified endian handling; C-order v2 and v3 bytes codec.
