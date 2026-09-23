@@ -27,4 +27,5 @@ description = "Zarr v2 and v3 chunked array storage for MoonBit"
 
 import {
   "moonbitlang/async@0.20.3",
+  "moonbit-community/flate@0.8.0",
 }

@@ -19,6 +19,7 @@ fn numeric_metadata_json(
   v3_dtype : String,
   fill_value : Json,
   big_endian : Bool,
+  compression : @codec.Compression,
 ) -> String? {
   if shape.length() != chunk_shape.length() {
     return None
@@ -27,6 +28,44 @@ fn numeric_metadata_json(
   guard dimensions_json(chunk_shape, true) is Some(chunks_json) else {
     return None
   }
+  let compressor_json = match compression {
+    @codec.Raw => Json::null()
+    @codec.Gzip(level) =>
+      Json::object(
+        Map([
+          ("id", Json::string("gzip")),
+          ("level", Json::number(level.to_double())),
+        ]),
+      )
+    @codec.Zlib(level) =>
+      Json::object(
+        Map([
+          ("id", Json::string("zlib")),
+          ("level", Json::number(level.to_double())),
+        ]),
+      )
+  }
+  let v3_compressor_json = match compression {
+    @codec.Raw => None
+    @codec.Gzip(level) =>
+      Some(
+        Json::object(
+          Map([
+            ("name", Json::string("gzip")),
+            (
+              "configuration",
+              Json::object(Map([("level", Json::number(level.to_double()))])),
+            ),
+          ]),
+        ),
+      )
+    @codec.Zlib(_) => if format == @metadata.V2 { None } else { return None }
+  }
+  match compression {
+    @codec.Gzip(level) | @codec.Zlib(level) if level < 0 || level > 9 =>
+      return None
+    _ => ()
+  }
   let metadata = if format == @metadata.V2 {
     Json::object(
       Map([
@@ -34,7 +73,7 @@ fn numeric_metadata_json(
         ("shape", shape_json),
         ("chunks", chunks_json),
         ("dtype", Json::string(v2_dtype)),
-        ("compressor", Json::null()),
+        ("compressor", compressor_json),
         ("fill_value", fill_value),
         ("order", Json::string("C")),
         ("filters", Json::null()),
@@ -60,6 +99,11 @@ fn numeric_metadata_json(
           ),
         ]),
       )
+    }
+    let codecs = [codec]
+    match v3_compressor_json {
+      Some(value) => codecs.push(value)
+      None => ()
     }
     Json::object(
       Map([
@@ -92,7 +136,7 @@ fn numeric_metadata_json(
           ),
         ),
         ("fill_value", fill_value),
-        ("codecs", Json::array([codec])),
+        ("codecs", Json::array(codecs)),
       ]),
     )
   }
@@ -106,6 +150,7 @@ pub fn u8_metadata_json(
   shape : Array[Int],
   chunk_shape : Array[Int],
   fill : Byte,
+  compression? : @codec.Compression = @codec.Raw,
 ) -> String? {
   numeric_metadata_json(
     format,
@@ -115,6 +160,7 @@ pub fn u8_metadata_json(
     "uint8",
     Json::number(fill.to_int().to_double()),
     false,
+    compression,
   )
 }
 
@@ -127,6 +173,7 @@ pub fn f64_metadata_json(
   chunk_shape : Array[Int],
   fill : Double,
   big_endian? : Bool = false,
+  compression? : @codec.Compression = @codec.Raw,
 ) -> String? {
   if fill.is_nan() || fill.is_inf() {
     return None
@@ -143,6 +190,7 @@ pub fn f64_metadata_json(
     "float64",
     Json::number(fill),
     big_endian,
+    compression,
   )
 }
 
@@ -153,6 +201,7 @@ pub fn f32_metadata_json(
   chunk_shape : Array[Int],
   fill : Float,
   big_endian? : Bool = false,
+  compression? : @codec.Compression = @codec.Raw,
 ) -> String? {
   if fill.is_nan() || fill.is_inf() {
     return None
@@ -169,6 +218,7 @@ pub fn f32_metadata_json(
     "float32",
     Json::number(fill.to_double()),
     big_endian,
+    compression,
   )
 }
 
@@ -179,6 +229,7 @@ pub fn i32_metadata_json(
   chunk_shape : Array[Int],
   fill : Int,
   big_endian? : Bool = false,
+  compression? : @codec.Compression = @codec.Raw,
 ) -> String? {
   numeric_metadata_json(
     format,
@@ -192,6 +243,7 @@ pub fn i32_metadata_json(
     "int32",
     Json::number(fill.to_double()),
     big_endian,
+    compression,
   )
 }
 
@@ -203,11 +255,13 @@ pub fn create_u8(
   shape : Array[Int],
   chunk_shape : Array[Int],
   fill : Byte,
+  compression? : @codec.Compression = @codec.Raw,
 ) -> U8Array? {
   if node_exists(store, path) {
     return None
   }
-  guard u8_metadata_json(format, shape, chunk_shape, fill) is Some(raw) else {
+  guard u8_metadata_json(format, shape, chunk_shape, fill, compression~)
+    is Some(raw) else {
     return None
   }
   if !store.put_array_metadata(format, path, raw) {
@@ -225,11 +279,19 @@ pub fn create_f64(
   chunk_shape : Array[Int],
   fill : Double,
   big_endian? : Bool = false,
+  compression? : @codec.Compression = @codec.Raw,
 ) -> F64Array? {
   if node_exists(store, path) {
     return None
   }
-  guard f64_metadata_json(format, shape, chunk_shape, fill, big_endian~)
+  guard f64_metadata_json(
+      format,
+      shape,
+      chunk_shape,
+      fill,
+      big_endian~,
+      compression~,
+    )
     is Some(raw) else {
     return None
   }
@@ -248,11 +310,19 @@ pub fn create_f32(
   chunk_shape : Array[Int],
   fill : Float,
   big_endian? : Bool = false,
+  compression? : @codec.Compression = @codec.Raw,
 ) -> F32Array? {
   if node_exists(store, path) {
     return None
   }
-  guard f32_metadata_json(format, shape, chunk_shape, fill, big_endian~)
+  guard f32_metadata_json(
+      format,
+      shape,
+      chunk_shape,
+      fill,
+      big_endian~,
+      compression~,
+    )
     is Some(raw) else {
     return None
   }
@@ -271,11 +341,19 @@ pub fn create_i32(
   chunk_shape : Array[Int],
   fill : Int,
   big_endian? : Bool = false,
+  compression? : @codec.Compression = @codec.Raw,
 ) -> I32Array? {
   if node_exists(store, path) {
     return None
   }
-  guard i32_metadata_json(format, shape, chunk_shape, fill, big_endian~)
+  guard i32_metadata_json(
+      format,
+      shape,
+      chunk_shape,
+      fill,
+      big_endian~,
+      compression~,
+    )
     is Some(raw) else {
     return None
   }

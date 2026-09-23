@@ -13,16 +13,18 @@ Local native/wasm-gc checks, builds, tests and example runs pass. GitHub Actions
 
 ## Stage 1 — Useful uncompressed numeric arrays
 
-Current implementation: typed `uint8`, `int32`, `float32`, and `float64` create/open/element and rectangular-slice I/O in memory and native filesystem, plus v2/v3 group/attribute operations. Native slices batch file I/O by touched chunk but still buffer the requested result. Five independent zarr-python 3.4.0 fixtures are read by native tests, and zarr-python reads five MoonBit-generated stores locally. The remaining dtype breadth is open; GitHub CI has not yet run.
+Current implementation: typed `uint8`, `int32`, `float32`, and `float64` create/open/element and rectangular-slice I/O in memory and native filesystem, plus v2/v3 group/attribute operations. Native slices batch file I/O by touched chunk but still buffer the requested result. Eight independent zarr-python 3.4.0 fixtures are read by native tests, and zarr-python reads eight MoonBit-generated stores locally. The remaining dtype breadth is open; GitHub CI has not yet run.
 
 - Store abstraction and native filesystem backend; create/open arrays and groups, metadata/attributes, and chunks for v2/v3.
 - Core numeric dtypes (`bool`, signed/unsigned 8/16/32/64-bit, float32/64) with specified endian handling; C-order v2 and v3 bytes codec.
 - Read/write a full chunk and a bounded N-dimensional rectangular slice, including edge chunks and absent-chunk fill values.
 - Gate: separately generated zarr-python v2 and v3 datasets round-trip with MoonBit; invalid metadata, paths, ranks, ranges and byte lengths fail explicitly.
 
-## Stage 2 — Common real-world codecs and v2 compatibility
+## Stage 2 — Common real-world codecs and v2 compatibility (partial)
 
-- v3 codec pipeline: bytes plus zstd and gzip; v2 compressor/filter adapter for raw, gzip/zlib, zstd and Blosc where dependencies permit.
+Implemented locally: gzip read/write for v2/v3, zlib read/write for v2, bounded decompression, rejection of unsupported v2 filters, and three independent compressed Python fixtures in each interoperability direction.
+
+- v3 codec pipeline: bytes plus zstd and gzip; v2 compressor/filter adapter for raw, gzip/zlib, zstd and Blosc where dependencies permit. Zstd, Blosc and filters remain open.
 - v2 `.` and `/` chunk separators, F-order, `.zattrs`, `.zgroup`, and consolidated `.zmetadata` reads.
 - Gate: compare against zarr-python fixtures across dtypes, endianness, fill values, partial chunks and codec combinations; document unsupported codecs.
 

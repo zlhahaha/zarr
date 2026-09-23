@@ -449,3 +449,79 @@ test "chunk region planning covers edge chunks and scalar arrays" {
   assert_eq(scalar_pieces.length(), 1)
   assert_eq(scalar_pieces[0].coordinates, [])
 }
+
+///|
+test "gzip and zlib chunks round-trip and reject invalid payloads" {
+  let store = @store.MemoryStore::new()
+  guard @array.create_u8(
+      store,
+      @metadata.V3,
+      "gzip",
+      [3],
+      [2],
+      b'\x05',
+      compression=@codec.Gzip(1),
+    )
+    is Some(gzip) else {
+    fail("create gzip array")
+  }
+  assert_true(gzip.write([2], b'\x09'))
+  assert_eq(gzip.read([2]), Some(b'\x09'))
+  guard store.get("gzip/c/1") is Some(compressed) else { fail("gzip chunk") }
+  assert_true(compressed.length() > 2)
+  assert_eq(compressed[0], b'\x1f')
+  assert_eq(compressed[1], b'\x8b')
+  store.put("gzip/c/1", b"broken")
+  assert_eq(gzip.read([2]), None)
+  assert_true(!gzip.write([2], b'\x01'))
+  store.put("gzip/c/1", @codec.encode_chunk(@codec.Gzip(1), b"\x01\x02\x03"))
+  assert_eq(gzip.read([2]), None)
+  store.put(
+    "gzip/c/1",
+    @codec.encode_chunk(@codec.Gzip(1), b"\x01\x02") + b"junk",
+  )
+  assert_eq(gzip.read([2]), None)
+
+  guard @array.create_f64(
+      store,
+      @metadata.V2,
+      "zlib",
+      [3],
+      [2],
+      1.5,
+      compression=@codec.Zlib(1),
+    )
+    is Some(zlib) else {
+    fail("create zlib array")
+  }
+  assert_true(zlib.write([2], 42.25))
+  assert_eq(zlib.read([2]), Some(42.25))
+  assert_true(
+    @array.create_u8(
+      store,
+      @metadata.V3,
+      "unsupported",
+      [2],
+      [2],
+      b'\x00',
+      compression=@codec.Zlib(1),
+    )
+    is None,
+  )
+  assert_true(
+    @array.create_u8(
+      store,
+      @metadata.V2,
+      "invalid",
+      [2],
+      [2],
+      b'\x00',
+      compression=@codec.Gzip(99),
+    )
+    is None,
+  )
+  let filtered =
+    #|{"zarr_format":2,"shape":[2],"chunks":[2],"dtype":"|u1","compressor":null,"fill_value":0,"order":"C","filters":[{"id":"gzip","level":1}]}
+  assert_true(store.put_array_metadata(@metadata.V2, "filtered", filtered))
+  assert_true(@array.open_u8(store, "filtered") is None)
+}

@@ -1,5 +1,5 @@
 ///|
-/// Uncompressed float64 array backed by a MemoryStore. Each operation touches
+/// Float64 array backed by a MemoryStore. Each operation touches
 /// at most one full chunk; missing chunks return the declared fill value.
 pub struct F64Array {
   store : @store.MemoryStore
@@ -8,6 +8,7 @@ pub struct F64Array {
   fill : Double
   chunk_bytes : Int
   big_endian : Bool
+  compression : @codec.Compression
 }
 
 ///|
@@ -25,7 +26,7 @@ pub fn open_f64_from_metadata(
   guard @chunk.array_metadata_key(metadata.format, path) is Some(_) else {
     return None
   }
-  guard @codec.plain_f64_endian(metadata) is Some(big_endian) else {
+  guard @codec.f64_plan(metadata) is Some((big_endian, compression)) else {
     return None
   }
   guard @dtype.f64_fill(metadata.fill_value) is Some(fill) else { return None }
@@ -33,7 +34,15 @@ pub fn open_f64_from_metadata(
   if count > 2147483647 / 8 {
     return None
   }
-  Some({ store, metadata, path, fill, chunk_bytes: count * 8, big_endian })
+  Some({
+    store,
+    metadata,
+    path,
+    fill,
+    chunk_bytes: count * 8,
+    big_endian,
+    compression,
+  })
 }
 
 ///|
@@ -59,10 +68,11 @@ pub fn F64Array::read(self : F64Array, indices : Array[Int]) -> Double? {
   match self.store.get(key) {
     None => Some(self.fill)
     Some(bytes) => {
-      if bytes.length() != self.chunk_bytes {
+      guard @codec.decode_chunk(self.compression, bytes, self.chunk_bytes)
+        is Some(raw) else {
         return None
       }
-      let value = bytes.view(start=offset * 8, end=offset * 8 + 8)
+      let value = raw.view(start=offset * 8, end=offset * 8 + 8)
       if self.big_endian {
         guard value is [u64be(bits), ..] else { return None }
         Some(bits.reinterpret_as_double())
@@ -84,13 +94,14 @@ pub fn F64Array::write(
     is Some((key, offset)) else {
     return false
   }
-  let encoded = match self.store.get(key) {
+  let raw = match self.store.get(key) {
     None => self.encoded_fill()
     Some(bytes) => {
-      if bytes.length() != self.chunk_bytes {
+      guard @codec.decode_chunk(self.compression, bytes, self.chunk_bytes)
+        is Some(raw) else {
         return false
       }
-      bytes
+      raw
     }
   }
   let value_bytes = if self.big_endian {
@@ -98,11 +109,14 @@ pub fn F64Array::write(
   } else {
     value.reinterpret_as_uint64().to_le_bytes()
   }
-  let mutable = encoded.to_array()
+  let mutable = raw.to_array()
   for i in 0..<8 {
     mutable[offset * 8 + i] = value_bytes[i]
   }
-  self.store.put(key, Bytes::from_array(mutable[:]))
+  self.store.put(
+    key,
+    @codec.encode_chunk(self.compression, Bytes::from_array(mutable[:])),
+  )
   true
 }
 

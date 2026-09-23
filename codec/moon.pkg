@@ -1,4 +1,7 @@
 import {
   "zlhahaha/zarr/metadata",
   "zlhahaha/zarr/dtype",
+  "moonbit-community/flate/gzip",
+  "moonbit-community/flate/zlib",
+  "moonbit-community/flate",
 }

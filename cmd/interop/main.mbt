@@ -71,5 +71,70 @@ async fn main {
     println("v3 int32 write failed")
     return
   }
+
+  guard @fs.FileStore::new("\{base}/v2_gzip_u8.zarr") is Some(gzip_store) else {
+    println("invalid gzip output path")
+    return
+  }
+  guard gzip_store.create_u8(
+      @metadata.V2,
+      "",
+      [3],
+      [2],
+      b'\x05',
+      compression=@codec.Gzip(1),
+    )
+    is Some(gzip) else {
+    println("v2 gzip creation failed")
+    return
+  }
+  if !gzip.write([2], b'\x09') {
+    println("v2 gzip write failed")
+    return
+  }
+
+  guard @fs.FileStore::new("\{base}/v2_zlib_f64.zarr") is Some(zlib_store) else {
+    println("invalid zlib output path")
+    return
+  }
+  guard zlib_store.create_f64(
+      @metadata.V2,
+      "",
+      [3],
+      [2],
+      1.5,
+      big_endian=true,
+      compression=@codec.Zlib(1),
+    )
+    is Some(zlib) else {
+    println("v2 zlib creation failed")
+    return
+  }
+  if !zlib.write([2], 42.25) {
+    println("v2 zlib write failed")
+    return
+  }
+
+  guard @fs.FileStore::new("\{base}/v3_gzip_i32.zarr") is Some(v3_gzip_store) else {
+    println("invalid v3 gzip output path")
+    return
+  }
+  guard v3_gzip_store.create_i32(
+      @metadata.V3,
+      "",
+      [3],
+      [2],
+      -1,
+      big_endian=true,
+      compression=@codec.Gzip(1),
+    )
+    is Some(v3_gzip) else {
+    println("v3 gzip creation failed")
+    return
+  }
+  if !v3_gzip.write([2], -200) {
+    println("v3 gzip write failed")
+    return
+  }
   println("MoonBit interop stores created")
 }

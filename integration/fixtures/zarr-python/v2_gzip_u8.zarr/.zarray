@@ -1,0 +1,18 @@
+{
+  "shape": [
+    3
+  ],
+  "chunks": [
+    2
+  ],
+  "dtype": "|u1",
+  "fill_value": 5,
+  "order": "C",
+  "filters": null,
+  "dimension_separator": ".",
+  "compressor": {
+    "id": "gzip",
+    "level": 1
+  },
+  "zarr_format": 2
+}

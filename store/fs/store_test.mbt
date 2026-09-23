@@ -235,3 +235,28 @@ async test "native rectangular slices cross chunks for all supported dtypes" {
   )
   @async_fs.rmdir(dir, recursive=true)
 }
+
+///|
+async test "read independent zarr-python compressed fixtures" {
+  let base = "integration/fixtures/zarr-python"
+  guard @fs.FileStore::new("\{base}/v2_gzip_u8.zarr") is Some(gzip_store) else {
+    fail("gzip store")
+  }
+  guard gzip_store.open_u8("") is Some(gzip) else { fail("gzip array") }
+  assert_eq(gzip.read([0]), Some(b'\x05'))
+  assert_eq(gzip.read([2]), Some(b'\x09'))
+
+  guard @fs.FileStore::new("\{base}/v2_zlib_f64.zarr") is Some(zlib_store) else {
+    fail("zlib store")
+  }
+  guard zlib_store.open_f64("") is Some(zlib) else { fail("zlib array") }
+  assert_eq(zlib.read([0]), Some(1.5))
+  assert_eq(zlib.read([2]), Some(42.25))
+
+  guard @fs.FileStore::new("\{base}/v3_gzip_i32.zarr") is Some(v3_store) else {
+    fail("v3 gzip store")
+  }
+  guard v3_store.open_i32("") is Some(v3) else { fail("v3 gzip array") }
+  assert_eq(v3.read([0]), Some(-1))
+  assert_eq(v3.read([2]), Some(-200))
+}

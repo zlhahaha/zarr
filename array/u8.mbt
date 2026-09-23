@@ -1,12 +1,12 @@
 ///|
-/// An uncompressed uint8 array backed by MemoryStore. This is the first
-/// typed slice of the future format-neutral array API.
+/// A uint8 array backed by MemoryStore.
 pub struct U8Array {
   store : @store.MemoryStore
   metadata : @metadata.ArrayMetadata
   path : String
   fill : Byte
   chunk_len : Int
+  compression : @codec.Compression
 }
 
 ///|
@@ -30,14 +30,14 @@ pub fn open_u8_from_metadata(
   if metadata.shape.length() != metadata.chunk_shape.length() {
     return None
   }
-  if !@codec.is_plain_u8(metadata) {
+  guard @codec.u8_compression(metadata) is Some(compression) else {
     return None
   }
   guard @dtype.u8_fill(metadata.fill_value) is Some(fill) else { return None }
   guard @chunk.chunk_element_count(metadata) is Some(chunk_len) else {
     return None
   }
-  Some({ store, metadata, path, fill, chunk_len })
+  Some({ store, metadata, path, fill, chunk_len, compression })
 }
 
 ///|
@@ -52,10 +52,11 @@ pub fn U8Array::read(self : U8Array, indices : Array[Int]) -> Byte? {
   match self.store.get(key) {
     None => Some(self.fill)
     Some(bytes) => {
-      if bytes.length() != self.chunk_len {
+      guard @codec.decode_chunk(self.compression, bytes, self.chunk_len)
+        is Some(raw) else {
         return None
       }
-      Some(bytes[offset])
+      Some(raw[offset])
     }
   }
 }
@@ -68,18 +69,22 @@ pub fn U8Array::write(
   value : Byte,
 ) -> Bool {
   guard self.locate(indices) is Some((key, offset)) else { return false }
-  let encoded = match self.store.get(key) {
+  let raw = match self.store.get(key) {
     None => Bytes::make(self.chunk_len, self.fill)
     Some(bytes) => {
-      if bytes.length() != self.chunk_len {
+      guard @codec.decode_chunk(self.compression, bytes, self.chunk_len)
+        is Some(raw) else {
         return false
       }
-      bytes
+      raw
     }
   }
-  let mutable = encoded.to_array()
+  let mutable = raw.to_array()
   mutable[offset] = value
-  self.store.put(key, Bytes::from_array(mutable[:]))
+  self.store.put(
+    key,
+    @codec.encode_chunk(self.compression, Bytes::from_array(mutable[:])),
+  )
   true
 }
 

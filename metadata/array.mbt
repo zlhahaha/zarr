@@ -16,6 +16,7 @@ pub(all) struct ArrayMetadata {
   separator : String
   key_encoding : String
   codecs : Array[Json]
+  v2_filter_count : Int
   storage_transformers : Array[Json]
   fill_value : Json
   order : String
@@ -108,6 +109,10 @@ fn parse_v2(value : Json) -> ArrayMetadata? {
     Object(_) => codecs.push(compressor)
     _ => return None
   }
+  let v2_filter_count = match filters {
+    Array(items) => items.length()
+    _ => 0
+  }
   Some({
     format: V2,
     shape,
@@ -116,6 +121,7 @@ fn parse_v2(value : Json) -> ArrayMetadata? {
     separator,
     key_encoding: "v2",
     codecs,
+    v2_filter_count,
     storage_transformers: [],
     fill_value,
     order,
@@ -178,6 +184,7 @@ fn parse_v3(value : Json) -> ArrayMetadata? {
     separator,
     key_encoding,
     codecs,
+    v2_filter_count: 0,
     storage_transformers,
     fill_value,
     order: "C",

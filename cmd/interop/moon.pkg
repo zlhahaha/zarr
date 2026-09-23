@@ -1,5 +1,6 @@
 import {
   "zlhahaha/zarr/metadata",
+  "zlhahaha/zarr/codec",
   "zlhahaha/zarr/store/fs",
   "moonbitlang/async",
 }

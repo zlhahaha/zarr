@@ -21,11 +21,13 @@ pub async fn FileStore::create_u8(
   shape : Array[Int],
   chunk_shape : Array[Int],
   fill : Byte,
+  compression? : @codec.Compression = @codec.Raw,
 ) -> FileU8Array? {
   if self.node_exists(path) {
     return None
   }
-  guard @array.u8_metadata_json(format, shape, chunk_shape, fill) is Some(raw) else {
+  guard @array.u8_metadata_json(format, shape, chunk_shape, fill, compression~)
+    is Some(raw) else {
     return None
   }
   if !self.put_array_metadata(format, path, raw) {
@@ -43,11 +45,19 @@ pub async fn FileStore::create_f64(
   chunk_shape : Array[Int],
   fill : Double,
   big_endian? : Bool = false,
+  compression? : @codec.Compression = @codec.Raw,
 ) -> FileF64Array? {
   if self.node_exists(path) {
     return None
   }
-  guard @array.f64_metadata_json(format, shape, chunk_shape, fill, big_endian~)
+  guard @array.f64_metadata_json(
+      format,
+      shape,
+      chunk_shape,
+      fill,
+      big_endian~,
+      compression~,
+    )
     is Some(raw) else {
     return None
   }
@@ -66,11 +76,19 @@ pub async fn FileStore::create_f32(
   chunk_shape : Array[Int],
   fill : Float,
   big_endian? : Bool = false,
+  compression? : @codec.Compression = @codec.Raw,
 ) -> FileF32Array? {
   if self.node_exists(path) {
     return None
   }
-  guard @array.f32_metadata_json(format, shape, chunk_shape, fill, big_endian~)
+  guard @array.f32_metadata_json(
+      format,
+      shape,
+      chunk_shape,
+      fill,
+      big_endian~,
+      compression~,
+    )
     is Some(raw) else {
     return None
   }
@@ -89,11 +107,19 @@ pub async fn FileStore::create_i32(
   chunk_shape : Array[Int],
   fill : Int,
   big_endian? : Bool = false,
+  compression? : @codec.Compression = @codec.Raw,
 ) -> FileI32Array? {
   if self.node_exists(path) {
     return None
   }
-  guard @array.i32_metadata_json(format, shape, chunk_shape, fill, big_endian~)
+  guard @array.i32_metadata_json(
+      format,
+      shape,
+      chunk_shape,
+      fill,
+      big_endian~,
+      compression~,
+    )
     is Some(raw) else {
     return None
   }

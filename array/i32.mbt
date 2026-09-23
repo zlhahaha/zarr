@@ -1,5 +1,5 @@
 ///|
-/// Uncompressed int32 array backed by a MemoryStore. Each operation touches
+/// Int32 array backed by a MemoryStore. Each operation touches
 /// at most one full chunk; missing chunks return the declared fill value.
 pub struct I32Array {
   store : @store.MemoryStore
@@ -8,6 +8,7 @@ pub struct I32Array {
   fill : Int
   chunk_bytes : Int
   big_endian : Bool
+  compression : @codec.Compression
 }
 
 ///|
@@ -25,7 +26,7 @@ pub fn open_i32_from_metadata(
   guard @chunk.array_metadata_key(metadata.format, path) is Some(_) else {
     return None
   }
-  guard @codec.plain_i32_endian(metadata) is Some(big_endian) else {
+  guard @codec.i32_plan(metadata) is Some((big_endian, compression)) else {
     return None
   }
   guard @dtype.i32_fill(metadata.fill_value) is Some(fill) else { return None }
@@ -33,7 +34,15 @@ pub fn open_i32_from_metadata(
   if count > 2147483647 / 4 {
     return None
   }
-  Some({ store, metadata, path, fill, chunk_bytes: count * 4, big_endian })
+  Some({
+    store,
+    metadata,
+    path,
+    fill,
+    chunk_bytes: count * 4,
+    big_endian,
+    compression,
+  })
 }
 
 ///|
@@ -66,10 +75,11 @@ pub fn I32Array::read(self : I32Array, indices : Array[Int]) -> Int? {
   match self.store.get(key) {
     None => Some(self.fill)
     Some(bytes) => {
-      if bytes.length() != self.chunk_bytes {
+      guard @codec.decode_chunk(self.compression, bytes, self.chunk_bytes)
+        is Some(raw) else {
         return None
       }
-      let value = bytes.view(start=offset * 4, end=offset * 4 + 4)
+      let value = raw.view(start=offset * 4, end=offset * 4 + 4)
       if self.big_endian {
         guard value is [u32be(bits), ..] else { return None }
         Some(bits.reinterpret_as_int())
@@ -91,21 +101,25 @@ pub fn I32Array::write(
     is Some((key, offset)) else {
     return false
   }
-  let encoded = match self.store.get(key) {
+  let raw = match self.store.get(key) {
     None => self.encoded_fill()
     Some(bytes) => {
-      if bytes.length() != self.chunk_bytes {
+      guard @codec.decode_chunk(self.compression, bytes, self.chunk_bytes)
+        is Some(raw) else {
         return false
       }
-      bytes
+      raw
     }
   }
   let value_bytes = i32_bytes(value, self.big_endian)
-  let mutable = encoded.to_array()
+  let mutable = raw.to_array()
   for i in 0..<4 {
     mutable[offset * 4 + i] = value_bytes[i]
   }
-  self.store.put(key, Bytes::from_array(mutable[:]))
+  self.store.put(
+    key,
+    @codec.encode_chunk(self.compression, Bytes::from_array(mutable[:])),
+  )
   true
 }
 
