@@ -2,7 +2,7 @@
 /// Native filesystem view of an uncompressed float64 Zarr array.
 pub struct FileF64Array {
   store : FileStore
-  metadata : @zarr.ArrayMetadata
+  metadata : @metadata.ArrayMetadata
   path : String
 }
 
@@ -12,8 +12,8 @@ pub async fn FileStore::open_f64(
   path : String,
 ) -> FileF64Array? {
   guard self.open_array(path) is Some(metadata) else { return None }
-  let scratch = @zarr.MemoryStore::new()
-  guard scratch.open_f64_from_metadata(metadata, path) is Some(_) else {
+  let scratch = @store.MemoryStore::new()
+  guard @array.open_f64_from_metadata(scratch, metadata, path) is Some(_) else {
     return None
   }
   Some({ store: self, metadata, path })
@@ -44,8 +44,9 @@ pub async fn FileF64Array::read(
   indices : Array[Int],
 ) -> Double? {
   guard self.chunk_coords(indices) is Some(coordinates) else { return None }
-  let scratch = @zarr.MemoryStore::new()
-  guard scratch.open_f64_from_metadata(self.metadata, self.path) is Some(array) else {
+  let scratch = @store.MemoryStore::new()
+  guard @array.open_f64_from_metadata(scratch, self.metadata, self.path)
+    is Some(array) else {
     return None
   }
   match self.store.get_chunk(self.metadata, coordinates, self.path) {
@@ -65,8 +66,9 @@ pub async fn FileF64Array::write(
   value : Double,
 ) -> Bool {
   guard self.chunk_coords(indices) is Some(coordinates) else { return false }
-  let scratch = @zarr.MemoryStore::new()
-  guard scratch.open_f64_from_metadata(self.metadata, self.path) is Some(array) else {
+  let scratch = @store.MemoryStore::new()
+  guard @array.open_f64_from_metadata(scratch, self.metadata, self.path)
+    is Some(array) else {
     return false
   }
   match self.store.get_chunk(self.metadata, coordinates, self.path) {

@@ -2,14 +2,18 @@
 
 The name “Zarr” means the library targets both Zarr storage format 2 and 3. It does **not** imply that all format extensions/codecs or the entire zarr-python API are implemented. Every phase has a testable exit gate; README support claims must follow passing gates.
 
-## Stage 0 — Project foundation (in progress)
+## Stage 0 — Project foundation (local gate passed; remote gate pending)
 
 - MoonBit package, Apache-2.0 license, source attribution, Git history, CI, proposal and runnable example.
 - Parse regular-grid metadata for v2/v3; generate safe logical paths and chunk keys; reject malformed/ambiguous metadata.
 - In-memory byte store for metadata and already-encoded chunks.
 - Gate: `moon check --deny-warn`, `moon build`, `moon test --deny-warn`, and `moon run cmd/main` pass locally and in GitHub Actions.
 
+Local native/wasm-gc checks, builds, tests and example runs pass. GitHub Actions has not run because the repository is intentionally not pushed yet.
+
 ## Stage 1 — Useful uncompressed numeric arrays
+
+Current implementation: typed `uint8` and endian-aware `float64` create/open/element I/O in memory and native filesystem, plus in-memory rectangular slices and v2/v3 group/attribute operations. The remaining dtype breadth, filesystem slicing and independent zarr-python compatibility gate are still open.
 
 - Store abstraction and native filesystem backend; create/open arrays and groups, metadata/attributes, and chunks for v2/v3.
 - Core numeric dtypes (`bool`, signed/unsigned 8/16/32/64-bit, float32/64) with specified endian handling; C-order v2 and v3 bytes codec.

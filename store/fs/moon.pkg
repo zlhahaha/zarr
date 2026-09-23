@@ -1,5 +1,9 @@
 import {
-  "zlhahaha/zarr",
+  "zlhahaha/zarr/metadata",
+  "zlhahaha/zarr/chunk",
+  "zlhahaha/zarr/store",
+  "zlhahaha/zarr/array",
+  "zlhahaha/zarr/hierarchy",
   "moonbitlang/async/fs" @async_fs,
   "moonbitlang/async/io",
   "moonbitlang/core/encoding/utf8",

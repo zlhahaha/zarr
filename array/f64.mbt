@@ -2,8 +2,8 @@
 /// Uncompressed float64 array backed by a MemoryStore. Each operation touches
 /// at most one full chunk; missing chunks return the declared fill value.
 pub struct F64Array {
-  store : MemoryStore
-  metadata : ArrayMetadata
+  store : @store.MemoryStore
+  metadata : @metadata.ArrayMetadata
   path : String
   fill : Double
   chunk_bytes : Int
@@ -11,71 +11,29 @@ pub struct F64Array {
 }
 
 ///|
-fn plain_f64_endian(metadata : ArrayMetadata) -> Bool? {
-  if metadata.storage_transformers.length() != 0 {
-    return None
-  }
-  match metadata.format {
-    V2 => {
-      if metadata.codecs.length() != 0 {
-        return None
-      }
-      match metadata.data_type {
-        "<f8" => Some(false)
-        ">f8" => Some(true)
-        _ => None
-      }
-    }
-    V3 => {
-      if metadata.data_type != "float64" || metadata.codecs.length() != 1 {
-        return None
-      }
-      guard metadata.codecs[0] is Object(codec) else { return None }
-      guard codec.get("name") == Some(Json::string("bytes")) else {
-        return None
-      }
-      guard codec.get("configuration") is Some(Object(config)) else {
-        return None
-      }
-      match config.get("endian") {
-        Some(String("little")) => Some(false)
-        Some(String("big")) => Some(true)
-        _ => None
-      }
-    }
-  }
+pub fn open_f64(store : @store.MemoryStore, path : String) -> F64Array? {
+  guard store.open_array(path) is Some(metadata) else { return None }
+  open_f64_from_metadata(store, metadata, path)
 }
 
 ///|
-fn f64_fill(value : Json) -> Double? {
-  match value {
-    Number(n, ..) => Some(n)
-    _ => None
-  }
-}
-
-///|
-pub fn MemoryStore::open_f64(self : MemoryStore, path : String) -> F64Array? {
-  guard self.open_array(path) is Some(metadata) else { return None }
-  self.open_f64_from_metadata(metadata, path)
-}
-
-///|
-pub fn MemoryStore::open_f64_from_metadata(
-  self : MemoryStore,
-  metadata : ArrayMetadata,
+pub fn open_f64_from_metadata(
+  store : @store.MemoryStore,
+  metadata : @metadata.ArrayMetadata,
   path : String,
 ) -> F64Array? {
-  guard array_metadata_key(metadata.format, path) is Some(_) else {
+  guard @chunk.array_metadata_key(metadata.format, path) is Some(_) else {
     return None
   }
-  guard plain_f64_endian(metadata) is Some(big_endian) else { return None }
-  guard f64_fill(metadata.fill_value) is Some(fill) else { return None }
-  guard metadata.chunk_element_count() is Some(count) else { return None }
+  guard @codec.plain_f64_endian(metadata) is Some(big_endian) else {
+    return None
+  }
+  guard @dtype.f64_fill(metadata.fill_value) is Some(fill) else { return None }
+  guard @chunk.chunk_element_count(metadata) is Some(count) else { return None }
   if count > 2147483647 / 8 {
     return None
   }
-  Some({ store: self, metadata, path, fill, chunk_bytes: count * 8, big_endian })
+  Some({ store, metadata, path, fill, chunk_bytes: count * 8, big_endian })
 }
 
 ///|
@@ -94,7 +52,7 @@ fn F64Array::encoded_fill(self : F64Array) -> Bytes {
 
 ///|
 pub fn F64Array::read(self : F64Array, indices : Array[Int]) -> Double? {
-  guard self.metadata.element_location(indices, self.path)
+  guard @chunk.element_location(self.metadata, indices, self.path)
     is Some((key, offset)) else {
     return None
   }
@@ -122,7 +80,7 @@ pub fn F64Array::write(
   indices : Array[Int],
   value : Double,
 ) -> Bool {
-  guard self.metadata.element_location(indices, self.path)
+  guard @chunk.element_location(self.metadata, indices, self.path)
     is Some((key, offset)) else {
     return false
   }
@@ -155,7 +113,7 @@ pub fn F64Array::read_region(
   origin : Array[Int],
   extent : Array[Int],
 ) -> Array[Double]? {
-  guard self.metadata.region_len(origin, extent) is Some(length) else {
+  guard region_len(self.metadata, origin, extent) is Some(length) else {
     return None
   }
   let result : Array[Double] = []
@@ -176,7 +134,7 @@ pub fn F64Array::write_region(
   extent : Array[Int],
   values : Array[Double],
 ) -> Bool {
-  guard self.metadata.region_len(origin, extent) is Some(length) else {
+  guard region_len(self.metadata, origin, extent) is Some(length) else {
     return false
   }
   if values.length() != length {

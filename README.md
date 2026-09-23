@@ -34,7 +34,22 @@ The example creates a v3 `uint8` array and writes a slice across chunks. It prin
 
 ## Design
 
-Both formats share a storage-neutral array API, but retain their distinct metadata, chunk-key, dtype, and codec rules. Unknown or unsupported encodings must fail explicitly instead of returning incorrect values. See [the roadmap](docs/ROADMAP.md) for the staged interoperability targets.
+Both formats share a storage-neutral array API, but retain their distinct metadata, chunk-key, dtype, and codec rules. Unknown or unsupported encodings must fail explicitly instead of returning incorrect values. The MoonBit packages follow one-way dependencies:
+
+```text
+metadata/        Parse and validate v2/v3 array and group documents
+chunk/           Regular-grid indexing and metadata/chunk keys
+dtype/           Numeric dtype and fill-value checks
+codec/           Supported codec-chain validation
+store/           In-memory encoded-byte store
+store/fs/        Native-only filesystem store
+array/           Typed array creation, element and region I/O
+hierarchy/       Group and attribute operations
+integration/     Cross-package tests
+cmd/main/        Runnable example
+```
+
+The public array functions live in `zlhahaha/zarr/array`; `MemoryStore` lives in `zlhahaha/zarr/store`, and format constants in `zlhahaha/zarr/metadata`. For example, `@array.create_u8(store, @metadata.V3, "samples", [4], [2], b'\x00')` creates a v3 array without hand-writing metadata JSON. See [the roadmap](docs/ROADMAP.md) for the staged interoperability targets.
 
 ## Specification and attribution
 

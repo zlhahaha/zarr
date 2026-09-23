@@ -2,78 +2,47 @@
 /// An uncompressed uint8 array backed by MemoryStore. This is the first
 /// typed slice of the future format-neutral array API.
 pub struct U8Array {
-  store : MemoryStore
-  metadata : ArrayMetadata
+  store : @store.MemoryStore
+  metadata : @metadata.ArrayMetadata
   path : String
   fill : Byte
   chunk_len : Int
 }
 
 ///|
-fn u8_fill(value : Json) -> Byte? {
-  guard value is Number(n, ..) else { return None }
-  if n < 0.0 || n > 255.0 {
-    return None
-  }
-  let i = n.to_int()
-  if i.to_double() != n {
-    return None
-  }
-  Some(i.to_byte())
-}
-
-///|
-fn is_plain_u8(metadata : ArrayMetadata) -> Bool {
-  if metadata.storage_transformers.length() != 0 {
-    return false
-  }
-  match metadata.format {
-    V2 => metadata.data_type == "|u1" && metadata.codecs.length() == 0
-    V3 => {
-      if metadata.data_type != "uint8" || metadata.codecs.length() != 1 {
-        return false
-      }
-      match metadata.codecs[0] {
-        String("bytes") => true
-        Object(map) => map.get("name") == Some(Json::string("bytes"))
-        _ => false
-      }
-    }
-  }
-}
-
-///|
 /// Open a uint8 array only if all its encoding steps are implemented.
-pub fn MemoryStore::open_u8(self : MemoryStore, path : String) -> U8Array? {
-  guard self.open_array(path) is Some(metadata) else { return None }
-  self.open_u8_from_metadata(metadata, path)
+pub fn open_u8(store : @store.MemoryStore, path : String) -> U8Array? {
+  guard store.open_array(path) is Some(metadata) else { return None }
+  open_u8_from_metadata(store, metadata, path)
 }
 
 ///|
 /// Construct a uint8 view from metadata already loaded by another store.
 /// The caller must ensure the metadata belongs to this logical path.
-pub fn MemoryStore::open_u8_from_metadata(
-  self : MemoryStore,
-  metadata : ArrayMetadata,
+pub fn open_u8_from_metadata(
+  store : @store.MemoryStore,
+  metadata : @metadata.ArrayMetadata,
   path : String,
 ) -> U8Array? {
-  guard array_metadata_key(metadata.format, path) is Some(_) else {
+  guard @chunk.array_metadata_key(metadata.format, path) is Some(_) else {
     return None
   }
   if metadata.shape.length() != metadata.chunk_shape.length() {
     return None
   }
-  if !is_plain_u8(metadata) {
+  if !@codec.is_plain_u8(metadata) {
     return None
   }
-  guard u8_fill(metadata.fill_value) is Some(fill) else { return None }
-  guard metadata.chunk_element_count() is Some(chunk_len) else { return None }
-  Some({ store: self, metadata, path, fill, chunk_len })
+  guard @dtype.u8_fill(metadata.fill_value) is Some(fill) else { return None }
+  guard @chunk.chunk_element_count(metadata) is Some(chunk_len) else {
+    return None
+  }
+  Some({ store, metadata, path, fill, chunk_len })
 }
 
 ///|
 fn U8Array::locate(self : U8Array, indices : Array[Int]) -> (String, Int)? {
-  self.metadata.element_location(indices, self.path)
+  @chunk.element_location(self.metadata, indices, self.path)
 }
 
 ///|
@@ -115,20 +84,20 @@ pub fn U8Array::write(
 }
 
 ///|
-fn ArrayMetadata::region_len(
-  self : ArrayMetadata,
+fn region_len(
+  metadata : @metadata.ArrayMetadata,
   origin : Array[Int],
   extent : Array[Int],
 ) -> Int? {
-  if origin.length() != self.shape.length() ||
-    extent.length() != self.shape.length() {
+  if origin.length() != metadata.shape.length() ||
+    extent.length() != metadata.shape.length() {
     return None
   }
   let mut empty = false
   for i in 0..<origin.length() {
     let start = origin[i]
     let count = extent[i]
-    let size = self.shape[i]
+    let size = metadata.shape[i]
     if start < 0 || count < 0 || start > size || count > size - start {
       return None
     }
@@ -176,7 +145,7 @@ pub fn U8Array::read_region(
   origin : Array[Int],
   extent : Array[Int],
 ) -> Bytes? {
-  guard self.metadata.region_len(origin, extent) is Some(length) else {
+  guard region_len(self.metadata, origin, extent) is Some(length) else {
     return None
   }
   let result = Bytes::make(length, b'\x00').to_array()
@@ -198,7 +167,7 @@ pub fn U8Array::write_region(
   extent : Array[Int],
   values : Bytes,
 ) -> Bool {
-  guard self.metadata.region_len(origin, extent) is Some(length) else {
+  guard region_len(self.metadata, origin, extent) is Some(length) else {
     return false
   }
   if values.length() != length {

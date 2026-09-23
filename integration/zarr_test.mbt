@@ -2,71 +2,74 @@
 test "v2 array metadata and chunk keys" {
   let raw =
     #|{"zarr_format":2,"shape":[5,7],"chunks":[2,3],"dtype":"<i4","compressor":null,"fill_value":0,"order":"C","filters":null}
-  guard @zarr.parse_array_metadata(raw) is Some(meta) else {
+  guard @metadata.parse_array_metadata(raw) is Some(meta) else {
     fail("expected v2 metadata")
   }
-  assert_true(meta.format == @zarr.V2)
+  assert_true(meta.format == @metadata.V2)
   assert_eq(meta.shape, [5, 7])
   assert_eq(meta.chunk_shape, [2, 3])
   assert_eq(
-    @zarr.array_metadata_key(@zarr.V2, "group/data"),
+    @chunk.array_metadata_key(@metadata.V2, "group/data"),
     Some("group/data/.zarray"),
   )
-  assert_eq(@zarr.chunk_key(meta, [2, 2], "group/data"), Some("group/data/2.2"))
-  assert_eq(@zarr.chunk_key(meta, [3, 0], "group/data"), None)
+  assert_eq(
+    @chunk.chunk_key(meta, [2, 2], "group/data"),
+    Some("group/data/2.2"),
+  )
+  assert_eq(@chunk.chunk_key(meta, [3, 0], "group/data"), None)
 }
 
 ///|
 test "v3 array metadata and default chunk keys" {
   let raw =
     #|{"zarr_format":3,"node_type":"array","shape":[5,7],"data_type":"int32","chunk_grid":{"name":"regular","configuration":{"chunk_shape":[2,3]}},"chunk_key_encoding":{"name":"default","configuration":{"separator":"/"}},"fill_value":0,"codecs":[{"name":"bytes","configuration":{"endian":"little"}}]}
-  guard @zarr.parse_array_metadata(raw) is Some(meta) else {
+  guard @metadata.parse_array_metadata(raw) is Some(meta) else {
     fail("expected v3 metadata")
   }
-  assert_true(meta.format == @zarr.V3)
+  assert_true(meta.format == @metadata.V3)
   assert_eq(
-    @zarr.array_metadata_key(@zarr.V3, "group/data"),
+    @chunk.array_metadata_key(@metadata.V3, "group/data"),
     Some("group/data/zarr.json"),
   )
   assert_eq(
-    @zarr.chunk_key(meta, [2, 2], "group/data"),
+    @chunk.chunk_key(meta, [2, 2], "group/data"),
     Some("group/data/c/2/2"),
   )
-  assert_eq(@zarr.chunk_key(meta, [2, 3], "group/data"), None)
+  assert_eq(@chunk.chunk_key(meta, [2, 3], "group/data"), None)
 }
 
 ///|
 test "v3 v2-compatible key encoding and scalar" {
   let raw =
     #|{"zarr_format":3,"node_type":"array","shape":[],"data_type":"uint8","chunk_grid":{"name":"regular","configuration":{"chunk_shape":[]}},"chunk_key_encoding":{"name":"v2"},"fill_value":0,"codecs":[{"name":"bytes"}]}
-  guard @zarr.parse_array_metadata(raw) is Some(meta) else {
+  guard @metadata.parse_array_metadata(raw) is Some(meta) else {
     fail("expected scalar metadata")
   }
-  assert_eq(@zarr.chunk_key(meta, [], ""), Some("0"))
+  assert_eq(@chunk.chunk_key(meta, [], ""), Some("0"))
 }
 
 ///|
 test "reject malformed grids and unsafe paths" {
   let bad =
     #|{"zarr_format":2,"shape":[5,7],"chunks":[0],"dtype":"<i4","compressor":null,"fill_value":0,"order":"C","filters":null}
-  assert_true(@zarr.parse_array_metadata(bad) is None)
-  assert_eq(@zarr.array_metadata_key(@zarr.V2, "foo/../bar"), None)
-  assert_eq(@zarr.array_metadata_key(@zarr.V3, "foo/__hidden"), None)
+  assert_true(@metadata.parse_array_metadata(bad) is None)
+  assert_eq(@chunk.array_metadata_key(@metadata.V2, "foo/../bar"), None)
+  assert_eq(@chunk.array_metadata_key(@metadata.V3, "foo/__hidden"), None)
   assert_eq(
-    @zarr.array_metadata_key(@zarr.V3, "\\foo\\bar/"),
+    @chunk.array_metadata_key(@metadata.V3, "\\foo\\bar/"),
     Some("foo/bar/zarr.json"),
   )
 }
 
 ///|
 test "memory store round-trip for both metadata formats and raw chunks" {
-  let store = @zarr.MemoryStore::new()
+  let store = @store.MemoryStore::new()
   let v2 =
     #|{"zarr_format":2,"shape":[4],"chunks":[2],"dtype":"|u1","compressor":null,"fill_value":0,"order":"C","filters":null}
   let v3 =
     #|{"zarr_format":3,"node_type":"array","shape":[4],"data_type":"uint8","chunk_grid":{"name":"regular","configuration":{"chunk_shape":[2]}},"chunk_key_encoding":{"name":"default"},"fill_value":0,"codecs":[{"name":"bytes"}]}
-  assert_true(store.put_array_metadata(@zarr.V2, "old", v2))
-  assert_true(store.put_array_metadata(@zarr.V3, "new", v3))
+  assert_true(store.put_array_metadata(@metadata.V2, "old", v2))
+  assert_true(store.put_array_metadata(@metadata.V3, "new", v3))
   guard store.open_array("old") is Some(old_meta) else { fail("v2 missing") }
   guard store.open_array("new") is Some(new_meta) else { fail("v3 missing") }
   assert_true(store.put_chunk(old_meta, [1], "old", b"\x03\x04"))
@@ -74,28 +77,28 @@ test "memory store round-trip for both metadata formats and raw chunks" {
   assert_eq(store.get_chunk(old_meta, [1], "old"), Some(b"\x03\x04"))
   assert_eq(store.get_chunk(new_meta, [1], "new"), Some(b"\x05\x06"))
   assert_eq(store.get_chunk(new_meta, [2], "new"), None)
-  assert_true(!store.put_array_metadata(@zarr.V3, "bad", v2))
+  assert_true(!store.put_array_metadata(@metadata.V3, "bad", v2))
 }
 
 ///|
 test "ambiguous version path is not autodetected" {
-  let store = @zarr.MemoryStore::new()
+  let store = @store.MemoryStore::new()
   let v2 =
     #|{"zarr_format":2,"shape":[1],"chunks":[1],"dtype":"|u1","compressor":null,"fill_value":0,"order":"C","filters":null}
   let v3 =
     #|{"zarr_format":3,"node_type":"array","shape":[1],"data_type":"uint8","chunk_grid":{"name":"regular","configuration":{"chunk_shape":[1]}},"chunk_key_encoding":{"name":"default"},"fill_value":0,"codecs":[{"name":"bytes"}]}
-  assert_true(store.put_array_metadata(@zarr.V2, "mixed", v2))
-  assert_true(store.put_array_metadata(@zarr.V3, "mixed", v3))
+  assert_true(store.put_array_metadata(@metadata.V2, "mixed", v2))
+  assert_true(store.put_array_metadata(@metadata.V3, "mixed", v3))
   assert_true(store.open_array("mixed") is None)
 }
 
 ///|
 test "v2 uint8 element read write, fill, and F order" {
-  let store = @zarr.MemoryStore::new()
+  let store = @store.MemoryStore::new()
   let raw =
     #|{"zarr_format":2,"shape":[3,3],"chunks":[2,2],"dtype":"|u1","compressor":null,"fill_value":9,"order":"F","filters":null}
-  assert_true(store.put_array_metadata(@zarr.V2, "matrix", raw))
-  guard store.open_u8("matrix") is Some(array) else { fail("open_u8") }
+  assert_true(store.put_array_metadata(@metadata.V2, "matrix", raw))
+  guard @array.open_u8(store, "matrix") is Some(array) else { fail("open_u8") }
   assert_eq(array.read([2, 2]), Some(b'\x09'))
   assert_true(array.write([0, 1], b'\x07'))
   assert_eq(array.read([0, 1]), Some(b'\x07'))
@@ -111,11 +114,11 @@ test "v2 uint8 element read write, fill, and F order" {
 
 ///|
 test "v3 uint8 edge chunk materializes full chunk" {
-  let store = @zarr.MemoryStore::new()
+  let store = @store.MemoryStore::new()
   let raw =
     #|{"zarr_format":3,"node_type":"array","shape":[3],"data_type":"uint8","chunk_grid":{"name":"regular","configuration":{"chunk_shape":[2]}},"chunk_key_encoding":{"name":"default"},"fill_value":5,"codecs":[{"name":"bytes"}]}
-  assert_true(store.put_array_metadata(@zarr.V3, "edge", raw))
-  guard store.open_u8("edge") is Some(array) else { fail("open_u8") }
+  assert_true(store.put_array_metadata(@metadata.V3, "edge", raw))
+  guard @array.open_u8(store, "edge") is Some(array) else { fail("open_u8") }
   assert_eq(array.read([2]), Some(b'\x05'))
   assert_true(array.write([2], b'\x11'))
   assert_eq(array.read([2]), Some(b'\x11'))
@@ -125,15 +128,15 @@ test "v3 uint8 edge chunk materializes full chunk" {
 
 ///|
 test "u8 array rejects unsupported codecs and corrupt chunks" {
-  let store = @zarr.MemoryStore::new()
+  let store = @store.MemoryStore::new()
   let compressed =
     #|{"zarr_format":3,"node_type":"array","shape":[2],"data_type":"uint8","chunk_grid":{"name":"regular","configuration":{"chunk_shape":[2]}},"chunk_key_encoding":{"name":"default"},"fill_value":0,"codecs":[{"name":"bytes"},{"name":"zstd"}]}
-  assert_true(store.put_array_metadata(@zarr.V3, "compressed", compressed))
-  assert_true(store.open_u8("compressed") is None)
+  assert_true(store.put_array_metadata(@metadata.V3, "compressed", compressed))
+  assert_true(@array.open_u8(store, "compressed") is None)
   let plain =
     #|{"zarr_format":3,"node_type":"array","shape":[2],"data_type":"uint8","chunk_grid":{"name":"regular","configuration":{"chunk_shape":[2]}},"chunk_key_encoding":{"name":"default"},"fill_value":0,"codecs":[{"name":"bytes"}]}
-  assert_true(store.put_array_metadata(@zarr.V3, "plain", plain))
-  guard store.open_u8("plain") is Some(array) else { fail("open_u8") }
+  assert_true(store.put_array_metadata(@metadata.V3, "plain", plain))
+  guard @array.open_u8(store, "plain") is Some(array) else { fail("open_u8") }
   store.put("plain/c/0", b"\x01")
   assert_eq(array.read([0]), None)
   assert_true(!array.write([0], b'\x02'))
@@ -141,11 +144,11 @@ test "u8 array rejects unsupported codecs and corrupt chunks" {
 
 ///|
 test "uint8 rectangular read crosses chunks in C output order" {
-  let store = @zarr.MemoryStore::new()
+  let store = @store.MemoryStore::new()
   let raw =
     #|{"zarr_format":3,"node_type":"array","shape":[3,4],"data_type":"uint8","chunk_grid":{"name":"regular","configuration":{"chunk_shape":[2,2]}},"chunk_key_encoding":{"name":"default"},"fill_value":0,"codecs":[{"name":"bytes"}]}
-  assert_true(store.put_array_metadata(@zarr.V3, "image", raw))
-  guard store.open_u8("image") is Some(array) else { fail("open_u8") }
+  assert_true(store.put_array_metadata(@metadata.V3, "image", raw))
+  guard @array.open_u8(store, "image") is Some(array) else { fail("open_u8") }
   assert_true(array.write([1, 2], b'\x07'))
   assert_true(array.write([2, 3], b'\x08'))
   assert_eq(
@@ -162,11 +165,11 @@ test "uint8 rectangular read crosses chunks in C output order" {
 
 ///|
 test "scalar uint8 array uses c chunk key and one value" {
-  let store = @zarr.MemoryStore::new()
+  let store = @store.MemoryStore::new()
   let raw =
     #|{"zarr_format":3,"node_type":"array","shape":[],"data_type":"uint8","chunk_grid":{"name":"regular","configuration":{"chunk_shape":[]}},"chunk_key_encoding":{"name":"default"},"fill_value":6,"codecs":[{"name":"bytes"}]}
-  assert_true(store.put_array_metadata(@zarr.V3, "scalar", raw))
-  guard store.open_u8("scalar") is Some(array) else { fail("open_u8") }
+  assert_true(store.put_array_metadata(@metadata.V3, "scalar", raw))
+  guard @array.open_u8(store, "scalar") is Some(array) else { fail("open_u8") }
   assert_eq(array.read([]), Some(b'\x06'))
   assert_true(array.write([], b'\x0a'))
   assert_eq(array.read_region([], []), Some(b"\x0a"))
@@ -175,11 +178,13 @@ test "scalar uint8 array uses c chunk key and one value" {
 
 ///|
 test "v3 float64 little-endian values and edge fill" {
-  let store = @zarr.MemoryStore::new()
+  let store = @store.MemoryStore::new()
   let raw =
     #|{"zarr_format":3,"node_type":"array","shape":[3],"data_type":"float64","chunk_grid":{"name":"regular","configuration":{"chunk_shape":[2]}},"chunk_key_encoding":{"name":"default"},"fill_value":1.5,"codecs":[{"name":"bytes","configuration":{"endian":"little"}}]}
-  assert_true(store.put_array_metadata(@zarr.V3, "science", raw))
-  guard store.open_f64("science") is Some(array) else { fail("open_f64") }
+  assert_true(store.put_array_metadata(@metadata.V3, "science", raw))
+  guard @array.open_f64(store, "science") is Some(array) else {
+    fail("open_f64")
+  }
   assert_eq(array.read([2]), Some(1.5))
   assert_true(array.write([2], 42.25))
   assert_eq(array.read([2]), Some(42.25))
@@ -196,11 +201,13 @@ test "v3 float64 little-endian values and edge fill" {
 
 ///|
 test "v2 float64 big-endian F-order and unsupported endian" {
-  let store = @zarr.MemoryStore::new()
+  let store = @store.MemoryStore::new()
   let raw =
     #|{"zarr_format":2,"shape":[2,2],"chunks":[2,2],"dtype":">f8","compressor":null,"fill_value":0,"order":"F","filters":null}
-  assert_true(store.put_array_metadata(@zarr.V2, "matrix", raw))
-  guard store.open_f64("matrix") is Some(array) else { fail("open_f64") }
+  assert_true(store.put_array_metadata(@metadata.V2, "matrix", raw))
+  guard @array.open_f64(store, "matrix") is Some(array) else {
+    fail("open_f64")
+  }
   assert_true(array.write([0, 1], 2.5))
   assert_eq(array.read([0, 1]), Some(2.5))
   assert_eq(array.read([1, 0]), Some(0.0))
@@ -210,36 +217,52 @@ test "v2 float64 big-endian F-order and unsupported endian" {
   assert_eq(chunk[17], b'\x04')
   let invalid =
     #|{"zarr_format":3,"node_type":"array","shape":[1],"data_type":"float64","chunk_grid":{"name":"regular","configuration":{"chunk_shape":[1]}},"chunk_key_encoding":{"name":"default"},"fill_value":0,"codecs":[{"name":"bytes"}]}
-  assert_true(store.put_array_metadata(@zarr.V3, "invalid", invalid))
-  assert_true(store.open_f64("invalid") is None)
+  assert_true(store.put_array_metadata(@metadata.V3, "invalid", invalid))
+  assert_true(@array.open_f64(store, "invalid") is None)
 }
 
 ///|
 test "v2 and v3 groups keep attributes in their respective metadata" {
-  let store = @zarr.MemoryStore::new()
-  assert_true(store.put_group_metadata(@zarr.V2, "old", "{\"zarr_format\":2}"))
+  let store = @store.MemoryStore::new()
   assert_true(
-    store.put_group_metadata(
-      @zarr.V3,
+    @hierarchy.put_group_metadata(
+      store,
+      @metadata.V2,
+      "old",
+      "{\"zarr_format\":2}",
+    ),
+  )
+  assert_true(
+    @hierarchy.put_group_metadata(
+      store,
+      @metadata.V3,
       "new",
       "{\"zarr_format\":3,\"node_type\":\"group\",\"attributes\":{\"unit\":\"m\"}}",
     ),
   )
   store.put("old/.zattrs", b"{\"unit\":\"s\"}")
-  guard store.open_group("old") is Some(old) else { fail("v2 group") }
-  guard store.open_group("new") is Some(new) else { fail("v3 group") }
-  assert_eq(old.format, @zarr.V2)
-  assert_eq(new.format, @zarr.V3)
+  guard @hierarchy.open_group(store, "old") is Some(old) else {
+    fail("v2 group")
+  }
+  guard @hierarchy.open_group(store, "new") is Some(new) else {
+    fail("v3 group")
+  }
+  assert_eq(old.format, @metadata.V2)
+  assert_eq(new.format, @metadata.V3)
   assert_eq(old.attributes, @json.parse("{\"unit\":\"s\"}"))
   assert_eq(new.attributes, @json.parse("{\"unit\":\"m\"}"))
-  assert_true(store.put_attributes(@zarr.V2, "old", "{\"unit\":\"kg\"}"))
-  assert_true(store.put_attributes(@zarr.V3, "new", "{\"unit\":\"km\"}"))
+  assert_true(
+    @hierarchy.put_attributes(store, @metadata.V2, "old", "{\"unit\":\"kg\"}"),
+  )
+  assert_true(
+    @hierarchy.put_attributes(store, @metadata.V3, "new", "{\"unit\":\"km\"}"),
+  )
   assert_eq(
-    store.read_attributes(@zarr.V2, "old"),
+    @hierarchy.read_attributes(store, @metadata.V2, "old"),
     Some(@json.parse("{\"unit\":\"kg\"}")),
   )
   assert_eq(
-    store.read_attributes(@zarr.V3, "new"),
+    @hierarchy.read_attributes(store, @metadata.V3, "new"),
     Some(@json.parse("{\"unit\":\"km\"}")),
   )
   assert_eq(store.get("old/.zgroup"), Some(b"{\"zarr_format\":2}"))
@@ -249,42 +272,89 @@ test "v2 and v3 groups keep attributes in their respective metadata" {
 
 ///|
 test "groups reject mixed formats invalid attributes and v2 array collision" {
-  let store = @zarr.MemoryStore::new()
+  let store = @store.MemoryStore::new()
   assert_true(
-    !store.put_group_metadata(
-      @zarr.V3,
+    !@hierarchy.put_group_metadata(
+      store,
+      @metadata.V3,
       "bad",
       "{\"zarr_format\":3,\"node_type\":\"group\",\"attributes\":[]}",
     ),
   )
   assert_true(
-    store.put_group_metadata(@zarr.V2, "mixed", "{\"zarr_format\":2}"),
+    @hierarchy.put_group_metadata(
+      store,
+      @metadata.V2,
+      "mixed",
+      "{\"zarr_format\":2}",
+    ),
   )
   assert_true(
-    store.put_group_metadata(
-      @zarr.V3,
+    @hierarchy.put_group_metadata(
+      store,
+      @metadata.V3,
       "mixed",
       "{\"zarr_format\":3,\"node_type\":\"group\"}",
     ),
   )
-  assert_true(store.open_group("mixed") is None)
+  assert_true(@hierarchy.open_group(store, "mixed") is None)
   assert_true(
-    store.put_group_metadata(@zarr.V2, "corrupt", "{\"zarr_format\":2}"),
+    @hierarchy.put_group_metadata(
+      store,
+      @metadata.V2,
+      "corrupt",
+      "{\"zarr_format\":2}",
+    ),
   )
   store.put("corrupt/.zattrs", b"[]")
-  assert_true(store.open_group("corrupt") is None)
-  assert_eq(@zarr.group_metadata_key(@zarr.V3, "../escape"), None)
-  assert_true(!store.put_attributes(@zarr.V2, "absent", "{}"))
-  assert_true(!store.put_attributes(@zarr.V3, "mixed", "[]"))
+  assert_true(@hierarchy.open_group(store, "corrupt") is None)
+  assert_eq(@chunk.group_metadata_key(@metadata.V3, "../escape"), None)
+  assert_true(!@hierarchy.put_attributes(store, @metadata.V2, "absent", "{}"))
+  assert_true(!@hierarchy.put_attributes(store, @metadata.V3, "mixed", "[]"))
   let array_raw =
     #|{"zarr_format":3,"node_type":"array","shape":[1],"data_type":"uint8","chunk_grid":{"name":"regular","configuration":{"chunk_shape":[1]}},"chunk_key_encoding":{"name":"default"},"fill_value":0,"codecs":[{"name":"bytes"}]}
-  assert_true(!store.put_array_metadata(@zarr.V3, "mixed", array_raw))
-  assert_true(store.put_array_metadata(@zarr.V3, "array", array_raw))
+  assert_true(!store.put_array_metadata(@metadata.V3, "mixed", array_raw))
+  assert_true(store.put_array_metadata(@metadata.V3, "array", array_raw))
   assert_true(
-    !store.put_group_metadata(
-      @zarr.V3,
+    !@hierarchy.put_group_metadata(
+      store,
+      @metadata.V3,
       "array",
       "{\"zarr_format\":3,\"node_type\":\"group\"}",
     ),
+  )
+}
+
+///|
+test "typed array creation validates dimensions and prevents overwrite" {
+  let store = @store.MemoryStore::new()
+  guard @array.create_u8(store, @metadata.V3, "image", [3, 4], [2, 2], b'\x06')
+    is Some(image) else {
+    fail("create u8")
+  }
+  assert_eq(image.read([2, 3]), Some(b'\x06'))
+  assert_true(image.write([2, 3], b'\x09'))
+  assert_true(
+    @array.create_u8(store, @metadata.V3, "image", [3, 4], [2, 2], b'\x00')
+    is None,
+  )
+  assert_true(
+    @array.create_u8(store, @metadata.V2, "bad", [2], [0], b'\x00') is None,
+  )
+  guard @array.create_f64(
+      store,
+      @metadata.V2,
+      "signal",
+      [2],
+      [2],
+      1.5,
+      big_endian=true,
+    )
+    is Some(signal) else {
+    fail("create f64")
+  }
+  assert_eq(signal.read([1]), Some(1.5))
+  assert_true(
+    @array.create_f64(store, @metadata.V3, "signal", [2], [2], 0.0) is None,
   )
 }

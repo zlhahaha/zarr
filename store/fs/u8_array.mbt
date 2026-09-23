@@ -3,7 +3,7 @@
 /// load one chunk at a time; cross-chunk writes are not yet transactional.
 pub struct FileU8Array {
   store : FileStore
-  metadata : @zarr.ArrayMetadata
+  metadata : @metadata.ArrayMetadata
   path : String
 }
 
@@ -13,8 +13,8 @@ pub async fn FileStore::open_u8(
   path : String,
 ) -> FileU8Array? {
   guard self.open_array(path) is Some(metadata) else { return None }
-  let scratch = @zarr.MemoryStore::new()
-  guard scratch.open_u8_from_metadata(metadata, path) is Some(_) else {
+  let scratch = @store.MemoryStore::new()
+  guard @array.open_u8_from_metadata(scratch, metadata, path) is Some(_) else {
     return None
   }
   Some({ store: self, metadata, path })
@@ -46,8 +46,9 @@ pub async fn FileU8Array::read(
   indices : Array[Int],
 ) -> Byte? {
   guard self.chunk_coords(indices) is Some(coordinates) else { return None }
-  let scratch = @zarr.MemoryStore::new()
-  guard scratch.open_u8_from_metadata(self.metadata, self.path) is Some(array) else {
+  let scratch = @store.MemoryStore::new()
+  guard @array.open_u8_from_metadata(scratch, self.metadata, self.path)
+    is Some(array) else {
     return None
   }
   match self.store.get_chunk(self.metadata, coordinates, self.path) {
@@ -68,8 +69,9 @@ pub async fn FileU8Array::write(
   value : Byte,
 ) -> Bool {
   guard self.chunk_coords(indices) is Some(coordinates) else { return false }
-  let scratch = @zarr.MemoryStore::new()
-  guard scratch.open_u8_from_metadata(self.metadata, self.path) is Some(array) else {
+  let scratch = @store.MemoryStore::new()
+  guard @array.open_u8_from_metadata(scratch, self.metadata, self.path)
+    is Some(array) else {
     return false
   }
   match self.store.get_chunk(self.metadata, coordinates, self.path) {
