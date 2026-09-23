@@ -21,6 +21,10 @@ license = "Apache-2.0"
 
 keywords = [ "zarr", "array", "scientific-data", "storage" ]
 
-preferred_target = "wasm-gc"
+preferred_target = "native"
 
 description = "Zarr v2 and v3 chunked array storage for MoonBit"
+
+import {
+  "moonbitlang/async@0.20.3",
+}

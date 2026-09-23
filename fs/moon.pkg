@@ -1,0 +1,12 @@
+import {
+  "zlhahaha/zarr",
+  "moonbitlang/async/fs" @async_fs,
+  "moonbitlang/async/io",
+  "moonbitlang/core/encoding/utf8",
+}
+
+import {
+  "moonbitlang/async",
+} for "test"
+
+supported_targets = "native"

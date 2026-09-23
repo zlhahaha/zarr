@@ -58,6 +58,23 @@ fn checked_chunk_len(shape : Array[Int]) -> Int? {
 /// Open a uint8 array only if all its encoding steps are implemented.
 pub fn MemoryStore::open_u8(self : MemoryStore, path : String) -> U8Array? {
   guard self.open_array(path) is Some(metadata) else { return None }
+  self.open_u8_from_metadata(metadata, path)
+}
+
+///|
+/// Construct a uint8 view from metadata already loaded by another store.
+/// The caller must ensure the metadata belongs to this logical path.
+pub fn MemoryStore::open_u8_from_metadata(
+  self : MemoryStore,
+  metadata : ArrayMetadata,
+  path : String,
+) -> U8Array? {
+  guard array_metadata_key(metadata.format, path) is Some(_) else {
+    return None
+  }
+  if metadata.shape.length() != metadata.chunk_shape.length() {
+    return None
+  }
   if !is_plain_u8(metadata) {
     return None
   }

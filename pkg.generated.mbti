@@ -42,6 +42,7 @@ pub fn MemoryStore::get_chunk(Self, ArrayMetadata, Array[Int], String) -> Bytes?
 pub fn MemoryStore::new() -> Self
 pub fn MemoryStore::open_array(Self, String) -> ArrayMetadata?
 pub fn MemoryStore::open_u8(Self, String) -> U8Array?
+pub fn MemoryStore::open_u8_from_metadata(Self, ArrayMetadata, String) -> U8Array?
 pub fn MemoryStore::put(Self, String, Bytes) -> Unit
 pub fn MemoryStore::put_array_metadata(Self, Format, String, String) -> Bool
 pub fn MemoryStore::put_chunk(Self, ArrayMetadata, Array[Int], String, Bytes) -> Bool

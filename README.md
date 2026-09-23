@@ -4,16 +4,17 @@ A MoonBit implementation of the Zarr v2 and v3 storage formats for chunked N-dim
 
 ## Status
 
-Early development. The library can read and write uncompressed `uint8` arrays in an in-memory store, including element access, rectangular slices, missing-chunk fill values and edge chunks. It also structurally parses regular-grid metadata for both formats and exposes raw encoded chunks. Other dtypes/codecs and local/cloud file access are not implemented yet. Do not use it as a general Zarr reader/writer yet.
+Early development. The library can read and write uncompressed `uint8` arrays in memory, including element access, rectangular slices, missing-chunk fill values and edge chunks. On the native backend, a filesystem store persists v2/v3 metadata and raw chunks, with `uint8` element I/O. Other dtypes/codecs, filesystem slicing and cloud access are not implemented yet. Do not use it as a general Zarr reader/writer yet.
 
 | Capability | Zarr v2 | Zarr v3 |
 | --- | --- | --- |
 | Parse regular-grid array metadata | Yes, common string dtypes | Yes, common string data types |
 | Metadata and chunk keys | `.` and `/` separators | default and v2-compatible encodings |
-| Raw encoded chunk storage | In-memory only | In-memory only |
-| Uncompressed `uint8` element and rectangular slice I/O | In-memory; C/F order | In-memory; bytes codec |
+| Raw encoded chunk storage | Memory and native filesystem | Memory and native filesystem |
+| Uncompressed `uint8` element I/O | Memory and native filesystem; C/F order | Memory and native filesystem; bytes codec |
+| Rectangular slice I/O | In-memory | In-memory |
 | Other dtypes and compressed codecs | Planned | Planned |
-| Groups, attributes, filesystem/cloud stores | Planned | Planned |
+| Groups, attributes, cloud stores | Planned | Planned |
 
 ## Build and run
 
@@ -24,6 +25,7 @@ moon check --deny-warn
 moon build
 moon test --deny-warn
 moon run cmd/main
+moon test --target native --deny-warn
 ```
 
 The example creates a v3 `uint8` array and writes a slice across chunks. It prints `Zarr v3 uint8 values: 0,7,9,11`.

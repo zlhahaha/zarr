@@ -11,6 +11,10 @@ permissions:
 jobs:
   moonbit:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [wasm-gc, native]
     steps:
       - uses: actions/checkout@v4
       - name: Install MoonBit
@@ -22,10 +26,10 @@ jobs:
       - name: Update dependencies
         run: moon update
       - name: Check
-        run: moon check --deny-warn
+        run: moon check --target ${{ matrix.target }} --deny-warn
       - name: Build
-        run: moon build
+        run: moon build --target ${{ matrix.target }}
       - name: Test
-        run: moon test --deny-warn
+        run: moon test --target ${{ matrix.target }} --deny-warn
       - name: Run example
-        run: moon run cmd/main
+        run: moon run --target ${{ matrix.target }} cmd/main
