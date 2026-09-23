@@ -173,6 +173,29 @@ pub fn f32_metadata_json(
 }
 
 ///|
+pub fn i32_metadata_json(
+  format : @metadata.Format,
+  shape : Array[Int],
+  chunk_shape : Array[Int],
+  fill : Int,
+  big_endian? : Bool = false,
+) -> String? {
+  numeric_metadata_json(
+    format,
+    shape,
+    chunk_shape,
+    if big_endian {
+      ">i4"
+    } else {
+      "<i4"
+    },
+    "int32",
+    Json::number(fill.to_double()),
+    big_endian,
+  )
+}
+
+///|
 pub fn create_u8(
   store : @store.MemoryStore,
   format : @metadata.Format,
@@ -237,6 +260,29 @@ pub fn create_f32(
     return None
   }
   open_f32(store, path)
+}
+
+///|
+pub fn create_i32(
+  store : @store.MemoryStore,
+  format : @metadata.Format,
+  path : String,
+  shape : Array[Int],
+  chunk_shape : Array[Int],
+  fill : Int,
+  big_endian? : Bool = false,
+) -> I32Array? {
+  if node_exists(store, path) {
+    return None
+  }
+  guard i32_metadata_json(format, shape, chunk_shape, fill, big_endian~)
+    is Some(raw) else {
+    return None
+  }
+  if !store.put_array_metadata(format, path, raw) {
+    return None
+  }
+  open_i32(store, path)
 }
 
 ///|

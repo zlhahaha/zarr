@@ -79,3 +79,26 @@ pub async fn FileStore::create_f32(
   }
   self.open_f32(path)
 }
+
+///|
+pub async fn FileStore::create_i32(
+  self : FileStore,
+  format : @metadata.Format,
+  path : String,
+  shape : Array[Int],
+  chunk_shape : Array[Int],
+  fill : Int,
+  big_endian? : Bool = false,
+) -> FileI32Array? {
+  if self.node_exists(path) {
+    return None
+  }
+  guard @array.i32_metadata_json(format, shape, chunk_shape, fill, big_endian~)
+    is Some(raw) else {
+    return None
+  }
+  if !self.put_array_metadata(format, path, raw) {
+    return None
+  }
+  self.open_i32(path)
+}

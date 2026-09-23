@@ -385,3 +385,31 @@ test "float32 v2 and v3 round-trip with endian and slices" {
   assert_eq(store.get("big/0"), Some(b"\x40\x20\x00\x00\x3f\xc0\x00\x00"))
   assert_eq(v2.read([0]), Some(2.5))
 }
+
+///|
+test "int32 v2 and v3 round-trip signed values and chunk edges" {
+  let store = @store.MemoryStore::new()
+  guard @array.create_i32(store, @metadata.V3, "labels", [3], [2], -1)
+    is Some(v3) else {
+    fail("create v3 int32")
+  }
+  assert_eq(v3.read([2]), Some(-1))
+  assert_true(v3.write_region([1], [2], [100, -200]))
+  assert_eq(v3.read_region([0], [3]), Some([-1, 100, -200]))
+  assert_eq(store.get("labels/c/1"), Some(b"\x38\xff\xff\xff\xff\xff\xff\xff"))
+  guard @array.create_i32(
+      store,
+      @metadata.V2,
+      "big",
+      [2],
+      [2],
+      -1,
+      big_endian=true,
+    )
+    is Some(v2) else {
+    fail("create v2 int32")
+  }
+  assert_true(v2.write([0], 100))
+  assert_eq(store.get("big/0"), Some(b"\x00\x00\x00\x64\xff\xff\xff\xff"))
+  assert_eq(v2.read([1]), Some(-1))
+}

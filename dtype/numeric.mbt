@@ -28,6 +28,19 @@ pub fn f32_fill(value : Json) -> Float? {
 }
 
 ///|
+pub fn i32_fill(value : Json) -> Int? {
+  guard value is Number(n, ..) else { return None }
+  if n < -2147483648.0 || n > 2147483647.0 {
+    return None
+  }
+  let i = n.to_int()
+  if i.to_double() != n {
+    return None
+  }
+  Some(i)
+}
+
+///|
 pub fn is_u8(metadata : @metadata.ArrayMetadata) -> Bool {
   match metadata.format {
     @metadata.V2 => metadata.data_type == "|u1"
@@ -65,6 +78,24 @@ pub fn f32_endian(metadata : @metadata.ArrayMetadata) -> Bool? {
       }
     @metadata.V3 =>
       if metadata.data_type == "float32" {
+        Some(false)
+      } else {
+        None
+      }
+  }
+}
+
+///|
+pub fn i32_endian(metadata : @metadata.ArrayMetadata) -> Bool? {
+  match metadata.format {
+    @metadata.V2 =>
+      match metadata.data_type {
+        "<i4" => Some(false)
+        ">i4" => Some(true)
+        _ => None
+      }
+    @metadata.V3 =>
+      if metadata.data_type == "int32" {
         Some(false)
       } else {
         None
