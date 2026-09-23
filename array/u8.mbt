@@ -97,17 +97,17 @@ pub fn U8Array::read_region(
   origin : Array[Int],
   extent : Array[Int],
 ) -> Bytes? {
-  guard @chunk.region_len(self.metadata, origin, extent) is Some(length) else {
-    return None
-  }
-  let result = Bytes::make(length, b'\x00').to_array()
-  for linear in 0..<length {
-    guard self.read(@chunk.region_coords(origin, extent, linear)) is Some(value) else {
-      return None
-    }
-    result[linear] = value
-  }
-  Some(Bytes::from_array(result[:]))
+  read_region_bytes(
+    self.store,
+    self.metadata,
+    self.path,
+    self.compression,
+    self.chunk_len,
+    Bytes::make(1, self.fill),
+    1,
+    origin,
+    extent,
+  )
 }
 
 ///|
@@ -119,16 +119,16 @@ pub fn U8Array::write_region(
   extent : Array[Int],
   values : Bytes,
 ) -> Bool {
-  guard @chunk.region_len(self.metadata, origin, extent) is Some(length) else {
-    return false
-  }
-  if values.length() != length {
-    return false
-  }
-  for linear in 0..<length {
-    if !self.write(@chunk.region_coords(origin, extent, linear), values[linear]) {
-      return false
-    }
-  }
-  true
+  write_region_bytes(
+    self.store,
+    self.metadata,
+    self.path,
+    self.compression,
+    self.chunk_len,
+    Bytes::make(1, self.fill),
+    1,
+    origin,
+    extent,
+    values,
+  )
 }

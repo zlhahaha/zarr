@@ -36,6 +36,9 @@ def main() -> None:
     check("v3_gzip_i32", np.array([-1, -1, -200], dtype=np.int32))
     check("v2_zstd_u8", np.array([5, 5, 9], dtype=np.uint8))
     check("v3_zstd_f32", np.array([1.5, 1.5, 42.25], dtype=np.float32))
+    image = np.full((3, 4), 5, dtype=np.uint8)
+    image[1:3, 1:4] = np.array([[1, 2, 3], [4, 5, 6]], dtype=np.uint8)
+    check("v3_zstd_image", image)
 
 
 if __name__ == "__main__":

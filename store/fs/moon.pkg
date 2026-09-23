@@ -13,6 +13,7 @@ import {
 import {
   "moonbitlang/async",
   "moonbitlang/core/json",
+  "zlhahaha/zarr/codec",
 } for "test"
 
 supported_targets = "native"

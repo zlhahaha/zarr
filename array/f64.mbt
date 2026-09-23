@@ -128,15 +128,35 @@ pub fn F64Array::read_region(
   origin : Array[Int],
   extent : Array[Int],
 ) -> Array[Double]? {
-  guard @chunk.region_len(self.metadata, origin, extent) is Some(length) else {
+  let fill_element = if self.big_endian {
+    self.fill.reinterpret_as_uint64().to_be_bytes()
+  } else {
+    self.fill.reinterpret_as_uint64().to_le_bytes()
+  }
+  guard read_region_bytes(
+      self.store,
+      self.metadata,
+      self.path,
+      self.compression,
+      self.chunk_bytes,
+      fill_element,
+      8,
+      origin,
+      extent,
+    )
+    is Some(bytes) else {
     return None
   }
   let result : Array[Double] = []
-  for linear in 0..<length {
-    guard self.read(@chunk.region_coords(origin, extent, linear)) is Some(value) else {
-      return None
+  for linear in 0..<(bytes.length() / 8) {
+    let value = bytes.view(start=linear * 8, end=linear * 8 + 8)
+    if self.big_endian {
+      guard value is [u64be(bits), ..] else { return None }
+      result.push(bits.reinterpret_as_double())
+    } else {
+      guard value is [u64le(bits), ..] else { return None }
+      result.push(bits.reinterpret_as_double())
     }
-    result.push(value)
   }
   Some(result)
 }
@@ -155,10 +175,35 @@ pub fn F64Array::write_region(
   if values.length() != length {
     return false
   }
+  if length > 2147483647 / 8 {
+    return false
+  }
+  let bytes = Bytes::make(length * 8, b'\x00').to_array()
   for linear in 0..<length {
-    if !self.write(@chunk.region_coords(origin, extent, linear), values[linear]) {
-      return false
+    let element = if self.big_endian {
+      values[linear].reinterpret_as_uint64().to_be_bytes()
+    } else {
+      values[linear].reinterpret_as_uint64().to_le_bytes()
+    }
+    for i in 0..<8 {
+      bytes[linear * 8 + i] = element[i]
     }
   }
-  true
+  let fill_element = if self.big_endian {
+    self.fill.reinterpret_as_uint64().to_be_bytes()
+  } else {
+    self.fill.reinterpret_as_uint64().to_le_bytes()
+  }
+  write_region_bytes(
+    self.store,
+    self.metadata,
+    self.path,
+    self.compression,
+    self.chunk_bytes,
+    fill_element,
+    8,
+    origin,
+    extent,
+    Bytes::from_array(bytes[:]),
+  )
 }

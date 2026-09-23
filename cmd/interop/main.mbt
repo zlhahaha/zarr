@@ -178,5 +178,26 @@ async fn main {
     println("v3 zstd write failed")
     return
   }
+
+  guard @fs.FileStore::new("\{base}/v3_zstd_image.zarr") is Some(image_store) else {
+    println("invalid compressed image output path")
+    return
+  }
+  guard image_store.create_u8(
+      @metadata.V3,
+      "",
+      [3, 4],
+      [2, 2],
+      b'\x05',
+      compression=@codec.Zstd(3),
+    )
+    is Some(image) else {
+    println("compressed image creation failed")
+    return
+  }
+  if !image.write_region([1, 1], [2, 3], b"\x01\x02\x03\x04\x05\x06") {
+    println("compressed image slice write failed")
+    return
+  }
   println("MoonBit interop stores created")
 }

@@ -169,7 +169,7 @@ fn numeric_metadata_json(
 }
 
 ///|
-/// Build validated, uncompressed uint8 metadata for either Zarr format.
+/// Build validated uint8 metadata for either Zarr format.
 pub fn u8_metadata_json(
   format : @metadata.Format,
   shape : Array[Int],
@@ -190,7 +190,7 @@ pub fn u8_metadata_json(
 }
 
 ///|
-/// Build validated, uncompressed float64 metadata. Non-finite fill values
+/// Build validated float64 metadata. Non-finite fill values
 /// need format-specific string encoding and are not supported yet.
 pub fn f64_metadata_json(
   format : @metadata.Format,

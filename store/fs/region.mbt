@@ -34,13 +34,15 @@ pub async fn FileU8Array::read_region(
       is Some(piece_len) else {
       return None
     }
+    guard array.read_region(piece.origin, piece.extent) is Some(piece_values) else {
+      return None
+    }
     for linear in 0..<piece_len {
       let indices = @chunk.region_coords(piece.origin, piece.extent, linear)
-      guard array.read(indices) is Some(value) else { return None }
       guard @chunk.region_index(origin, extent, indices) is Some(index) else {
         return None
       }
-      result[index] = value
+      result[index] = piece_values[linear]
     }
   }
   Some(Bytes::from_array(result[:]))
@@ -85,14 +87,20 @@ pub async fn FileU8Array::write_region(
       is Some(piece_len) else {
       return false
     }
+    let piece_values = Bytes::make(piece_len, b'\x00').to_array()
     for linear in 0..<piece_len {
       let indices = @chunk.region_coords(piece.origin, piece.extent, linear)
       guard @chunk.region_index(origin, extent, indices) is Some(index) else {
         return false
       }
-      if !array.write(indices, values[index]) {
-        return false
-      }
+      piece_values[linear] = values[index]
+    }
+    if !array.write_region(
+        piece.origin,
+        piece.extent,
+        Bytes::from_array(piece_values[:]),
+      ) {
+      return false
     }
     guard scratch.get_chunk(self.metadata, piece.coordinates, self.path)
       is Some(encoded) else {
@@ -146,13 +154,15 @@ pub async fn FileF32Array::read_region(
       is Some(piece_len) else {
       return None
     }
+    guard array.read_region(piece.origin, piece.extent) is Some(piece_values) else {
+      return None
+    }
     for linear in 0..<piece_len {
       let indices = @chunk.region_coords(piece.origin, piece.extent, linear)
-      guard array.read(indices) is Some(value) else { return None }
       guard @chunk.region_index(origin, extent, indices) is Some(index) else {
         return None
       }
-      result[index] = value
+      result[index] = piece_values[linear]
     }
   }
   Some(result)
@@ -197,14 +207,16 @@ pub async fn FileF32Array::write_region(
       is Some(piece_len) else {
       return false
     }
+    let piece_values : Array[Float] = []
     for linear in 0..<piece_len {
       let indices = @chunk.region_coords(piece.origin, piece.extent, linear)
       guard @chunk.region_index(origin, extent, indices) is Some(index) else {
         return false
       }
-      if !array.write(indices, values[index]) {
-        return false
-      }
+      piece_values.push(values[index])
+    }
+    if !array.write_region(piece.origin, piece.extent, piece_values) {
+      return false
     }
     guard scratch.get_chunk(self.metadata, piece.coordinates, self.path)
       is Some(encoded) else {
@@ -258,13 +270,15 @@ pub async fn FileF64Array::read_region(
       is Some(piece_len) else {
       return None
     }
+    guard array.read_region(piece.origin, piece.extent) is Some(piece_values) else {
+      return None
+    }
     for linear in 0..<piece_len {
       let indices = @chunk.region_coords(piece.origin, piece.extent, linear)
-      guard array.read(indices) is Some(value) else { return None }
       guard @chunk.region_index(origin, extent, indices) is Some(index) else {
         return None
       }
-      result[index] = value
+      result[index] = piece_values[linear]
     }
   }
   Some(result)
@@ -309,14 +323,16 @@ pub async fn FileF64Array::write_region(
       is Some(piece_len) else {
       return false
     }
+    let piece_values : Array[Double] = []
     for linear in 0..<piece_len {
       let indices = @chunk.region_coords(piece.origin, piece.extent, linear)
       guard @chunk.region_index(origin, extent, indices) is Some(index) else {
         return false
       }
-      if !array.write(indices, values[index]) {
-        return false
-      }
+      piece_values.push(values[index])
+    }
+    if !array.write_region(piece.origin, piece.extent, piece_values) {
+      return false
     }
     guard scratch.get_chunk(self.metadata, piece.coordinates, self.path)
       is Some(encoded) else {
@@ -370,13 +386,15 @@ pub async fn FileI32Array::read_region(
       is Some(piece_len) else {
       return None
     }
+    guard array.read_region(piece.origin, piece.extent) is Some(piece_values) else {
+      return None
+    }
     for linear in 0..<piece_len {
       let indices = @chunk.region_coords(piece.origin, piece.extent, linear)
-      guard array.read(indices) is Some(value) else { return None }
       guard @chunk.region_index(origin, extent, indices) is Some(index) else {
         return None
       }
-      result[index] = value
+      result[index] = piece_values[linear]
     }
   }
   Some(result)
@@ -421,14 +439,16 @@ pub async fn FileI32Array::write_region(
       is Some(piece_len) else {
       return false
     }
+    let piece_values : Array[Int] = []
     for linear in 0..<piece_len {
       let indices = @chunk.region_coords(piece.origin, piece.extent, linear)
       guard @chunk.region_index(origin, extent, indices) is Some(index) else {
         return false
       }
-      if !array.write(indices, values[index]) {
-        return false
-      }
+      piece_values.push(values[index])
+    }
+    if !array.write_region(piece.origin, piece.extent, piece_values) {
+      return false
     }
     guard scratch.get_chunk(self.metadata, piece.coordinates, self.path)
       is Some(encoded) else {

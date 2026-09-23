@@ -1,5 +1,5 @@
 ///|
-/// Native filesystem view of an uncompressed uint8 Zarr array. Operations
+/// Native filesystem view of a uint8 Zarr array. Operations
 /// load one chunk at a time; cross-chunk writes are not yet transactional.
 pub struct FileU8Array {
   store : FileStore

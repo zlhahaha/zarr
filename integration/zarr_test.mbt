@@ -561,3 +561,64 @@ test "zstd chunks round-trip with declared chunk bound" {
   )
   assert_true(@array.open_u8(store, "checksummed") is None)
 }
+
+///|
+test "compressed regions process whole chunks across dtype and order" {
+  let store = @store.MemoryStore::new()
+  let f_order =
+    #|{"zarr_format":2,"shape":[3,3],"chunks":[2,2],"dtype":"|u1","compressor":{"id":"gzip","level":1},"fill_value":5,"order":"F","filters":null}
+  assert_true(store.put_array_metadata(@metadata.V2, "image", f_order))
+  guard @array.open_u8(store, "image") is Some(image) else { fail("image") }
+  assert_true(image.write_region([1, 1], [2, 2], b"\x01\x02\x03\x04"))
+  assert_eq(
+    image.read_region([0, 0], [3, 3]),
+    Some(b"\x05\x05\x05\x05\x01\x02\x05\x03\x04"),
+  )
+
+  guard @array.create_f32(
+      store,
+      @metadata.V3,
+      "f32",
+      [3],
+      [2],
+      1.5,
+      compression=@codec.Zstd(3),
+    )
+    is Some(f32) else {
+    fail("f32")
+  }
+  assert_true(f32.write_region([1], [2], [2.5, 42.25]))
+  assert_eq(f32.read_region([0], [3]), Some([1.5, 2.5, 42.25]))
+
+  guard @array.create_f64(
+      store,
+      @metadata.V2,
+      "f64",
+      [3],
+      [2],
+      1.5,
+      big_endian=true,
+      compression=@codec.Zlib(1),
+    )
+    is Some(f64) else {
+    fail("f64")
+  }
+  assert_true(f64.write_region([1], [2], [2.5, 42.25]))
+  assert_eq(f64.read_region([0], [3]), Some([1.5, 2.5, 42.25]))
+
+  guard @array.create_i32(
+      store,
+      @metadata.V3,
+      "i32",
+      [3],
+      [2],
+      -1,
+      big_endian=true,
+      compression=@codec.Gzip(1),
+    )
+    is Some(i32) else {
+    fail("i32")
+  }
+  assert_true(i32.write_region([1], [2], [100, -200]))
+  assert_eq(i32.read_region([0], [3]), Some([-1, 100, -200]))
+}

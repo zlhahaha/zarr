@@ -1,5 +1,5 @@
 ///|
-/// Native filesystem view of an uncompressed float64 Zarr array.
+/// Native filesystem view of a float64 Zarr array.
 pub struct FileF64Array {
   store : FileStore
   metadata : @metadata.ArrayMetadata

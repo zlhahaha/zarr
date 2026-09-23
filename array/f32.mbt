@@ -131,15 +131,30 @@ pub fn F32Array::read_region(
   origin : Array[Int],
   extent : Array[Int],
 ) -> Array[Float]? {
-  guard @chunk.region_len(self.metadata, origin, extent) is Some(length) else {
+  guard read_region_bytes(
+      self.store,
+      self.metadata,
+      self.path,
+      self.compression,
+      self.chunk_bytes,
+      f32_bytes(self.fill, self.big_endian),
+      4,
+      origin,
+      extent,
+    )
+    is Some(bytes) else {
     return None
   }
   let result : Array[Float] = []
-  for linear in 0..<length {
-    guard self.read(@chunk.region_coords(origin, extent, linear)) is Some(value) else {
-      return None
+  for linear in 0..<(bytes.length() / 4) {
+    let value = bytes.view(start=linear * 4, end=linear * 4 + 4)
+    if self.big_endian {
+      guard value is [u32be(bits), ..] else { return None }
+      result.push(Float::reinterpret_from_uint(bits))
+    } else {
+      guard value is [u32le(bits), ..] else { return None }
+      result.push(Float::reinterpret_from_uint(bits))
     }
-    result.push(value)
   }
   Some(result)
 }
@@ -158,10 +173,26 @@ pub fn F32Array::write_region(
   if values.length() != length {
     return false
   }
+  if length > 2147483647 / 4 {
+    return false
+  }
+  let bytes = Bytes::make(length * 4, b'\x00').to_array()
   for linear in 0..<length {
-    if !self.write(@chunk.region_coords(origin, extent, linear), values[linear]) {
-      return false
+    let element = f32_bytes(values[linear], self.big_endian)
+    for i in 0..<4 {
+      bytes[linear * 4 + i] = element[i]
     }
   }
-  true
+  write_region_bytes(
+    self.store,
+    self.metadata,
+    self.path,
+    self.compression,
+    self.chunk_bytes,
+    f32_bytes(self.fill, self.big_endian),
+    4,
+    origin,
+    extent,
+    Bytes::from_array(bytes[:]),
+  )
 }

@@ -278,3 +278,51 @@ async test "read independent zarr-python zstd fixtures" {
   assert_eq(v3.read([0]), Some(1.5))
   assert_eq(v3.read([2]), Some(42.25))
 }
+
+///|
+async test "native compressed regions span chunks and persist" {
+  let dir = @async_fs.tmpdir(prefix="zarr-compressed-region-test")
+  guard @fs.FileStore::new(dir) is Some(store) else { fail("store") }
+  guard store.create_u8(
+      @metadata.V3,
+      "image",
+      [3, 4],
+      [2, 2],
+      b'\x05',
+      compression=@codec.Zstd(3),
+    )
+    is Some(image) else {
+    fail("image")
+  }
+  assert_true(image.write_region([1, 1], [2, 3], b"\x01\x02\x03\x04\x05\x06"))
+  assert_eq(
+    image.read_region([1, 1], [2, 3]),
+    Some(b"\x01\x02\x03\x04\x05\x06"),
+  )
+
+  guard store.create_f32(
+      @metadata.V3,
+      "signal",
+      [3],
+      [2],
+      1.5,
+      compression=@codec.Gzip(1),
+    )
+    is Some(signal) else {
+    fail("signal")
+  }
+  assert_true(signal.write_region([1], [2], [2.5, 42.25]))
+  guard @fs.FileStore::new(dir) is Some(reopened) else { fail("reopened") }
+  guard reopened.open_u8("image") is Some(saved_image) else {
+    fail("saved image")
+  }
+  assert_eq(
+    saved_image.read_region([1, 1], [2, 3]),
+    Some(b"\x01\x02\x03\x04\x05\x06"),
+  )
+  guard reopened.open_f32("signal") is Some(saved_signal) else {
+    fail("saved signal")
+  }
+  assert_eq(saved_signal.read_region([0], [3]), Some([1.5, 2.5, 42.25]))
+  @async_fs.rmdir(dir, recursive=true)
+}
