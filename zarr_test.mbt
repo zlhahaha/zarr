@@ -172,3 +172,44 @@ test "scalar uint8 array uses c chunk key and one value" {
   assert_eq(array.read_region([], []), Some(b"\x0a"))
   assert_eq(store.get("scalar/c"), Some(b"\x0a"))
 }
+
+///|
+test "v3 float64 little-endian values and edge fill" {
+  let store = @zarr.MemoryStore::new()
+  let raw =
+    #|{"zarr_format":3,"node_type":"array","shape":[3],"data_type":"float64","chunk_grid":{"name":"regular","configuration":{"chunk_shape":[2]}},"chunk_key_encoding":{"name":"default"},"fill_value":1.5,"codecs":[{"name":"bytes","configuration":{"endian":"little"}}]}
+  assert_true(store.put_array_metadata(@zarr.V3, "science", raw))
+  guard store.open_f64("science") is Some(array) else { fail("open_f64") }
+  assert_eq(array.read([2]), Some(1.5))
+  assert_true(array.write([2], 42.25))
+  assert_eq(array.read([2]), Some(42.25))
+  assert_eq(array.read([3]), None)
+  assert_eq(array.read_region([1], [2]), Some([1.5, 42.25]))
+  assert_true(array.write_region([0], [2], [3.0, 4.0]))
+  assert_eq(array.read_region([0], [3]), Some([3.0, 4.0, 42.25]))
+  assert_true(!array.write_region([0], [2], [1.0]))
+  assert_eq(
+    store.get("science/c/1"),
+    Some(b"\x00\x00\x00\x00\x00\x20\x45\x40\x00\x00\x00\x00\x00\x00\xf8\x3f"),
+  )
+}
+
+///|
+test "v2 float64 big-endian F-order and unsupported endian" {
+  let store = @zarr.MemoryStore::new()
+  let raw =
+    #|{"zarr_format":2,"shape":[2,2],"chunks":[2,2],"dtype":">f8","compressor":null,"fill_value":0,"order":"F","filters":null}
+  assert_true(store.put_array_metadata(@zarr.V2, "matrix", raw))
+  guard store.open_f64("matrix") is Some(array) else { fail("open_f64") }
+  assert_true(array.write([0, 1], 2.5))
+  assert_eq(array.read([0, 1]), Some(2.5))
+  assert_eq(array.read([1, 0]), Some(0.0))
+  guard store.get("matrix/0.0") is Some(chunk) else { fail("missing chunk") }
+  assert_eq(chunk.length(), 32)
+  assert_eq(chunk[16], b'\x40')
+  assert_eq(chunk[17], b'\x04')
+  let invalid =
+    #|{"zarr_format":3,"node_type":"array","shape":[1],"data_type":"float64","chunk_grid":{"name":"regular","configuration":{"chunk_shape":[1]}},"chunk_key_encoding":{"name":"default"},"fill_value":0,"codecs":[{"name":"bytes"}]}
+  assert_true(store.put_array_metadata(@zarr.V3, "invalid", invalid))
+  assert_true(store.open_f64("invalid") is None)
+}

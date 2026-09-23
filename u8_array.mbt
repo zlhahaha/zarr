@@ -43,18 +43,6 @@ fn is_plain_u8(metadata : ArrayMetadata) -> Bool {
 }
 
 ///|
-fn checked_chunk_len(shape : Array[Int]) -> Int? {
-  let mut length = 1
-  for side in shape {
-    if side <= 0 || length > 2147483647 / side {
-      return None
-    }
-    length *= side
-  }
-  Some(length)
-}
-
-///|
 /// Open a uint8 array only if all its encoding steps are implemented.
 pub fn MemoryStore::open_u8(self : MemoryStore, path : String) -> U8Array? {
   guard self.open_array(path) is Some(metadata) else { return None }
@@ -79,44 +67,13 @@ pub fn MemoryStore::open_u8_from_metadata(
     return None
   }
   guard u8_fill(metadata.fill_value) is Some(fill) else { return None }
-  guard checked_chunk_len(metadata.chunk_shape) is Some(chunk_len) else {
-    return None
-  }
+  guard metadata.chunk_element_count() is Some(chunk_len) else { return None }
   Some({ store: self, metadata, path, fill, chunk_len })
 }
 
 ///|
 fn U8Array::locate(self : U8Array, indices : Array[Int]) -> (String, Int)? {
-  let metadata = self.metadata
-  if indices.length() != metadata.shape.length() {
-    return None
-  }
-  let chunk_coords : Array[Int] = []
-  let local_coords : Array[Int] = []
-  for i in 0..<indices.length() {
-    let index = indices[i]
-    if index < 0 || index >= metadata.shape[i] {
-      return None
-    }
-    chunk_coords.push(index / metadata.chunk_shape[i])
-    local_coords.push(index % metadata.chunk_shape[i])
-  }
-  guard chunk_key(metadata, chunk_coords, self.path) is Some(key) else {
-    return None
-  }
-  let mut offset = 0
-  if metadata.order == "F" {
-    let mut stride = 1
-    for i in 0..<local_coords.length() {
-      offset += local_coords[i] * stride
-      stride *= metadata.chunk_shape[i]
-    }
-  } else {
-    for i in 0..<local_coords.length() {
-      offset = offset * metadata.chunk_shape[i] + local_coords[i]
-    }
-  }
-  Some((key, offset))
+  self.metadata.element_location(indices, self.path)
 }
 
 ///|
@@ -158,20 +115,20 @@ pub fn U8Array::write(
 }
 
 ///|
-fn U8Array::region_len(
-  self : U8Array,
+fn ArrayMetadata::region_len(
+  self : ArrayMetadata,
   origin : Array[Int],
   extent : Array[Int],
 ) -> Int? {
-  if origin.length() != self.metadata.shape.length() ||
-    extent.length() != self.metadata.shape.length() {
+  if origin.length() != self.shape.length() ||
+    extent.length() != self.shape.length() {
     return None
   }
   let mut empty = false
   for i in 0..<origin.length() {
     let start = origin[i]
     let count = extent[i]
-    let size = self.metadata.shape[i]
+    let size = self.shape[i]
     if start < 0 || count < 0 || start > size || count > size - start {
       return None
     }
@@ -219,7 +176,9 @@ pub fn U8Array::read_region(
   origin : Array[Int],
   extent : Array[Int],
 ) -> Bytes? {
-  guard self.region_len(origin, extent) is Some(length) else { return None }
+  guard self.metadata.region_len(origin, extent) is Some(length) else {
+    return None
+  }
   let result = Bytes::make(length, b'\x00').to_array()
   for linear in 0..<length {
     guard self.read(region_coords(origin, extent, linear)) is Some(value) else {
@@ -239,7 +198,9 @@ pub fn U8Array::write_region(
   extent : Array[Int],
   values : Bytes,
 ) -> Bool {
-  guard self.region_len(origin, extent) is Some(length) else { return false }
+  guard self.metadata.region_len(origin, extent) is Some(length) else {
+    return false
+  }
   if values.length() != length {
     return false
   }

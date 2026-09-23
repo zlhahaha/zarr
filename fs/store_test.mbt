@@ -35,3 +35,24 @@ async test "native uint8 element writes persist after reopening" {
   assert_eq(saved.read([3]), None)
   @async_fs.rmdir(dir, recursive=true)
 }
+
+///|
+async test "native float64 little-endian writes persist after reopening" {
+  let dir = @async_fs.tmpdir(prefix="zarr-f64-test")
+  guard @fs.FileStore::new(dir) is Some(store) else { fail("store") }
+  let raw =
+    #|{"zarr_format":3,"node_type":"array","shape":[3],"data_type":"float64","chunk_grid":{"name":"regular","configuration":{"chunk_shape":[2]}},"chunk_key_encoding":{"name":"default"},"fill_value":1.5,"codecs":[{"name":"bytes","configuration":{"endian":"little"}}]}
+  assert_true(store.put_array_metadata(@zarr.V3, "values", raw))
+  guard store.open_f64("values") is Some(array) else { fail("array") }
+  assert_eq(array.read([2]), Some(1.5))
+  assert_true(array.write([2], 42.25))
+  guard @fs.FileStore::new(dir) is Some(reopened) else { fail("reopen store") }
+  guard reopened.open_f64("values") is Some(saved) else { fail("reopen array") }
+  assert_eq(saved.read([2]), Some(42.25))
+  assert_eq(saved.read([1]), Some(1.5))
+  assert_eq(
+    reopened.get("values/c/1").map(fn(bytes) { bytes.length() }),
+    Some(16),
+  )
+  @async_fs.rmdir(dir, recursive=true)
+}
