@@ -30,6 +30,58 @@ pub fn put_group_metadata(
 }
 
 ///|
+/// Create the root and every missing ancestor group through `path`.
+/// Existing groups of the same format are preserved. An array, conflicting
+/// format or malformed group anywhere on the path rejects the operation.
+pub fn create_group_tree(
+  store : @store.MemoryStore,
+  format : @metadata.Format,
+  path : String,
+) -> Bool {
+  guard @chunk.group_prefixes(format, path) is Some(prefixes) else {
+    return false
+  }
+  let other = if format == @metadata.V2 { @metadata.V3 } else { @metadata.V2 }
+  for prefix in prefixes {
+    guard @chunk.group_metadata_key(format, prefix) is Some(own_key) else {
+      return false
+    }
+    guard @chunk.array_metadata_key(format, prefix) is Some(own_array_key) else {
+      return false
+    }
+    let other_group = match @chunk.group_metadata_key(other, prefix) {
+      Some(key) => store.get(key) is Some(_)
+      None => false
+    }
+    let other_array = match @chunk.array_metadata_key(other, prefix) {
+      Some(key) => store.get(key) is Some(_)
+      None => false
+    }
+    if other_group ||
+      other_array ||
+      (format == @metadata.V2 && store.get(own_array_key) is Some(_)) {
+      return false
+    }
+    if store.get(own_key) is Some(_) {
+      guard open_group(store, prefix) is Some(group) else { return false }
+      if group.format != format {
+        return false
+      }
+    }
+  }
+  let raw = @metadata.empty_group_metadata_json(format)
+  for prefix in prefixes {
+    guard @chunk.group_metadata_key(format, prefix) is Some(key) else {
+      return false
+    }
+    if store.get(key) is None && !put_group_metadata(store, format, prefix, raw) {
+      return false
+    }
+  }
+  true
+}
+
+///|
 /// Open a group only when the path unambiguously identifies a format and
 /// node type. Missing v2 `.zattrs` is an empty object.
 pub fn open_group(

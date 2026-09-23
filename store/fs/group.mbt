@@ -30,6 +30,57 @@ pub async fn FileStore::put_group_metadata(
 }
 
 ///|
+/// Create the root and missing ancestor groups through `path`.
+/// Existing groups of the same format are preserved.
+pub async fn FileStore::create_group_tree(
+  self : FileStore,
+  format : @metadata.Format,
+  path : String,
+) -> Bool {
+  guard @chunk.group_prefixes(format, path) is Some(prefixes) else {
+    return false
+  }
+  let other = if format == @metadata.V2 { @metadata.V3 } else { @metadata.V2 }
+  for prefix in prefixes {
+    guard @chunk.group_metadata_key(format, prefix) is Some(own_key) else {
+      return false
+    }
+    guard @chunk.array_metadata_key(format, prefix) is Some(own_array_key) else {
+      return false
+    }
+    let other_group = match @chunk.group_metadata_key(other, prefix) {
+      Some(key) => self.get(key) is Some(_)
+      None => false
+    }
+    let other_array = match @chunk.array_metadata_key(other, prefix) {
+      Some(key) => self.get(key) is Some(_)
+      None => false
+    }
+    if other_group ||
+      other_array ||
+      (format == @metadata.V2 && self.get(own_array_key) is Some(_)) {
+      return false
+    }
+    if self.get(own_key) is Some(_) {
+      guard self.open_group(prefix) is Some(group) else { return false }
+      if group.format != format {
+        return false
+      }
+    }
+  }
+  let raw = @metadata.empty_group_metadata_json(format)
+  for prefix in prefixes {
+    guard @chunk.group_metadata_key(format, prefix) is Some(key) else {
+      return false
+    }
+    if self.get(key) is None && !self.put_group_metadata(format, prefix, raw) {
+      return false
+    }
+  }
+  true
+}
+
+///|
 pub async fn FileStore::open_group(
   self : FileStore,
   path : String,

@@ -665,3 +665,52 @@ test "uint16 supports endian, fill, compression and slices" {
   assert_true(store.put_array_metadata(@metadata.V2, "bad", bad_fill))
   assert_true(@array.open_u16(store, "bad") is None)
 }
+
+///|
+test "group tree creates ancestors and preserves existing attributes" {
+  let store = @store.MemoryStore::new()
+  assert_true(@hierarchy.create_group_tree(store, @metadata.V3, "science/run"))
+  assert_true(store.get("zarr.json") is Some(_))
+  assert_true(store.get("science/zarr.json") is Some(_))
+  assert_true(store.get("science/run/zarr.json") is Some(_))
+  assert_true(
+    @hierarchy.put_attributes(
+      store,
+      @metadata.V3,
+      "science",
+      "{\"title\":\"experiment\"}",
+    ),
+  )
+  assert_true(
+    @hierarchy.create_group_tree(store, @metadata.V3, "science/other"),
+  )
+  assert_eq(
+    @hierarchy.read_attributes(store, @metadata.V3, "science"),
+    Some(@json.parse("{\"title\":\"experiment\"}")),
+  )
+  assert_true(
+    @hierarchy.create_group_tree(store, @metadata.V2, "legacy") is false,
+  )
+  guard @array.create_u8(
+      store,
+      @metadata.V3,
+      "science/run/data",
+      [2],
+      [2],
+      b'\x00',
+    )
+    is Some(_) else {
+    fail("nested array")
+  }
+  assert_true(
+    !@hierarchy.create_group_tree(store, @metadata.V3, "science/run/data/child"),
+  )
+  assert_true(
+    !@hierarchy.create_group_tree(store, @metadata.V3, "science/../bad"),
+  )
+  let legacy = @store.MemoryStore::new()
+  assert_true(
+    @hierarchy.create_group_tree(legacy, @metadata.V2, "__legacy/data"),
+  )
+  assert_true(legacy.get("__legacy/.zgroup") is Some(_))
+}

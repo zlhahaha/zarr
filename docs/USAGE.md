@@ -33,6 +33,7 @@ Then use the typed API inside an `async` function:
 
 ```moonbit
 guard @fs.FileStore::new("data.zarr") is Some(store) else { return }
+if !store.create_group_tree(@metadata.V3, "") { return }
 guard store.create_u16(
     @metadata.V3, "pixels", [100, 200], [32, 32], (0 : UInt16),
     compression=@codec.Zstd(3),
@@ -43,7 +44,7 @@ let _ = pixels.write_region(
 )
 ```
 
-`create_u8`, `create_u16`, `create_i32`, `create_f32`, and `create_f64` exist on `FileStore`; matching functions accept a `MemoryStore` in the `array` package. Omit `compression` for raw chunks. `Gzip(level)` works with v2/v3, `Zlib(level)` with v2 only, and `Zstd(level)` with v2/v3. `big_endian=true` is available for multi-byte types. The same typed API opens existing arrays with `store.open_u16("pixels")` and supports `read`, `write`, `read_region`, and `write_region`.
+`create_u8`, `create_u16`, `create_i32`, `create_f32`, and `create_f64` exist on `FileStore`; matching functions accept a `MemoryStore` in the `array` package. Create a root group before adding named arrays so other Zarr readers can traverse the hierarchy. For deeper paths, `store.create_group_tree(@metadata.V3, "science/run")` creates missing ancestors without overwriting existing groups; use `@hierarchy.create_group_tree` with a `MemoryStore`. Omit `compression` for raw chunks. `Gzip(level)` works with v2/v3, `Zlib(level)` with v2 only, and `Zstd(level)` with v2/v3. `big_endian=true` is available for multi-byte types. The same typed API opens existing arrays with `store.open_u16("pixels")` and supports `read`, `write`, `read_region`, and `write_region`.
 
 The first argument to region operations is the zero-based origin, the second is the extent. Values are in C order regardless of a v2 array's on-disk C/F chunk order. A missing chunk reads as the declared fill value; writing creates a full-sized chunk, including at array edges.
 

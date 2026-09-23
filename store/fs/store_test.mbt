@@ -345,3 +345,63 @@ async test "read independent zarr-python uint16 fixtures" {
     Some([(60000 : UInt16), (60000 : UInt16), (65530 : UInt16)]),
   )
 }
+
+///|
+async test "native group tree creates root and parents without overwriting" {
+  let dir = @async_fs.tmpdir(prefix="zarr-group-tree-test")
+  guard @fs.FileStore::new(dir) is Some(store) else { fail("store") }
+  assert_true(store.create_group_tree(@metadata.V3, "science/run"))
+  assert_true(
+    store.put_attributes(@metadata.V3, "science", "{\"title\":\"sample\"}"),
+  )
+  assert_true(store.create_group_tree(@metadata.V3, "science/other"))
+  assert_eq(
+    store.read_attributes(@metadata.V3, "science"),
+    Some(@json.parse("{\"title\":\"sample\"}")),
+  )
+  guard store.create_u16(
+      @metadata.V3,
+      "science/run/data",
+      [2],
+      [2],
+      (0 : UInt16),
+    )
+    is Some(data) else {
+    fail("nested array")
+  }
+  assert_true(data.write([1], (65530 : UInt16)))
+  assert_true(!store.create_group_tree(@metadata.V3, "science/run/data/child"))
+  @async_fs.rmdir(dir, recursive=true)
+}
+
+///|
+async test "read independent zarr-python nested groups and arrays" {
+  let base = "integration/fixtures/zarr-python"
+  guard @fs.FileStore::new("\{base}/v2_grouped_u8.zarr") is Some(v2_store) else {
+    fail("v2 group fixture")
+  }
+  guard v2_store.open_group("") is Some(root_v2) else { fail("v2 root") }
+  assert_true(root_v2.format == @metadata.V2)
+  guard v2_store.open_group("science") is Some(science_v2) else {
+    fail("v2 science")
+  }
+  assert_eq(science_v2.attributes, @json.parse("{\"title\":\"v2\"}"))
+  guard v2_store.open_u8("science/image") is Some(image_v2) else {
+    fail("v2 image")
+  }
+  assert_eq(image_v2.read_region([0], [3]), Some(b"\x05\x05\x09"))
+
+  guard @fs.FileStore::new("\{base}/v3_grouped_u8.zarr") is Some(v3_store) else {
+    fail("v3 group fixture")
+  }
+  guard v3_store.open_group("") is Some(root_v3) else { fail("v3 root") }
+  assert_true(root_v3.format == @metadata.V3)
+  guard v3_store.open_group("science") is Some(science_v3) else {
+    fail("v3 science")
+  }
+  assert_eq(science_v3.attributes, @json.parse("{\"title\":\"v3\"}"))
+  guard v3_store.open_u8("science/image") is Some(image_v3) else {
+    fail("v3 image")
+  }
+  assert_eq(image_v3.read_region([0], [3]), Some(b"\x05\x05\x09"))
+}

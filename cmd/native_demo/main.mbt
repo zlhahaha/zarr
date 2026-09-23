@@ -7,6 +7,10 @@ async fn main {
     println("invalid store path")
     return
   }
+  if !store.create_group_tree(@metadata.V3, "") {
+    println("root group creation failed")
+    return
+  }
   guard store.create_u16(
       @metadata.V3,
       "pixels",

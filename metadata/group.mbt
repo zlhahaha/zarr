@@ -7,6 +7,15 @@ pub(all) struct GroupMetadata {
 } derive(Debug)
 
 ///|
+/// A minimal valid group document. V2 attributes are stored separately.
+pub fn empty_group_metadata_json(format : Format) -> String {
+  match format {
+    V2 => "{\"zarr_format\":2}"
+    V3 => "{\"zarr_format\":3,\"node_type\":\"group\",\"attributes\":{}}"
+  }
+}
+
+///|
 pub fn parse_group_metadata(raw : String) -> GroupMetadata? {
   let value = @json.parse(raw) catch { _ => return None }
   guard value is Object(_) else { return None }

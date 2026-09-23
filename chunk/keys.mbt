@@ -22,6 +22,26 @@ pub fn normalized_path(path : String, format : @metadata.Format) -> String? {
 }
 
 ///|
+/// Root-to-leaf group paths needed before an array can be traversed by a
+/// Zarr hierarchy reader. The empty string denotes the root group.
+pub fn group_prefixes(
+  format : @metadata.Format,
+  path : String,
+) -> Array[String]? {
+  guard normalized_path(path, format) is Some(normalized) else { return None }
+  let prefixes = [""]
+  if normalized == "" {
+    return Some(prefixes)
+  }
+  let mut current = ""
+  for part in normalized.split("/") {
+    current = if current == "" { "\{part}" } else { "\{current}/\{part}" }
+    prefixes.push(current)
+  }
+  Some(prefixes)
+}
+
+///|
 /// Key for the metadata of an array at a logical path.
 pub fn array_metadata_key(format : @metadata.Format, path : String) -> String? {
   guard normalized_path(path, format) is Some(prefix) else { return None }

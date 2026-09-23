@@ -241,5 +241,63 @@ async fn main {
     println("v3 uint16 write failed")
     return
   }
+
+  guard @fs.FileStore::new("\{base}/v2_grouped_u8.zarr") is Some(v2_group_store) else {
+    println("invalid v2 group output path")
+    return
+  }
+  if !v2_group_store.create_group_tree(@metadata.V2, "science") ||
+    !v2_group_store.put_attributes(
+      @metadata.V2,
+      "science",
+      "{\"title\":\"v2\"}",
+    ) {
+    println("v2 group creation failed")
+    return
+  }
+  guard v2_group_store.create_u8(
+      @metadata.V2,
+      "science/image",
+      [3],
+      [2],
+      b'\x05',
+    )
+    is Some(v2_image) else {
+    println("v2 nested array creation failed")
+    return
+  }
+  if !v2_image.write([2], b'\x09') {
+    println("v2 nested array write failed")
+    return
+  }
+
+  guard @fs.FileStore::new("\{base}/v3_grouped_u8.zarr") is Some(v3_group_store) else {
+    println("invalid v3 group output path")
+    return
+  }
+  if !v3_group_store.create_group_tree(@metadata.V3, "science") ||
+    !v3_group_store.put_attributes(
+      @metadata.V3,
+      "science",
+      "{\"title\":\"v3\"}",
+    ) {
+    println("v3 group creation failed")
+    return
+  }
+  guard v3_group_store.create_u8(
+      @metadata.V3,
+      "science/image",
+      [3],
+      [2],
+      b'\x05',
+    )
+    is Some(v3_image) else {
+    println("v3 nested array creation failed")
+    return
+  }
+  if !v3_image.write([2], b'\x09') {
+    println("v3 nested array write failed")
+    return
+  }
   println("MoonBit interop stores created")
 }

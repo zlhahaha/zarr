@@ -20,6 +20,16 @@ def check(name: str, expected: np.ndarray) -> None:
     print(f"{name}: {actual.dtype}, shape={actual.shape}")
 
 
+def check_group(name: str, title: str) -> None:
+    path = PROJECT / "integration" / ".roundtrip" / f"{name}.zarr"
+    root = zarr.open_group(store=str(path), mode="r")
+    assert root["science"].attrs["title"] == title
+    np.testing.assert_array_equal(
+        root["science/image"][:], np.array([5, 5, 9], dtype=np.uint8)
+    )
+    print(f"{name}: nested group and array")
+
+
 def main() -> None:
     if zarr.__version__ != "3.4.0":
         raise RuntimeError(f"expected zarr-python 3.4.0, got {zarr.__version__}")
@@ -41,6 +51,8 @@ def main() -> None:
     check("v3_zstd_image", image)
     check("v2_u16_be", np.array([60000, 60000, 65530], dtype=np.uint16))
     check("v3_u16_le_zstd", np.array([60000, 60000, 65530], dtype=np.uint16))
+    check_group("v2_grouped_u8", "v2")
+    check_group("v3_grouped_u8", "v3")
 
 
 if __name__ == "__main__":
