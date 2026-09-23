@@ -30,3 +30,16 @@ import {
   "moonbit-community/flate@0.8.0",
   "Milky2018/zstd@0.1.3",
 }
+
+// The pinned July 2026 moon toolchain does not yet apply .moonignore to
+// moon package. Keep the published archive small until the toolchain catches up.
+
+options(
+  exclude: [
+    "AGENTS.md",
+    "PROPOSAL.md",
+    "integration",
+    "scripts",
+    "cmd/interop",
+  ],
+)

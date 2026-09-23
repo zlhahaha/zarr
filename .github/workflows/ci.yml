@@ -33,6 +33,12 @@ jobs:
         run: moon test --target ${{ matrix.target }} --deny-warn
       - name: Run example
         run: moon run --target ${{ matrix.target }} cmd/main
+      - name: Run native filesystem example
+        if: matrix.target == 'native'
+        run: moon run --target native cmd/native_demo
+      - name: Validate release archive
+        if: matrix.target == 'native'
+        run: moon package --list
       - name: Set up Python for interoperability
         if: matrix.target == 'native'
         uses: actions/setup-python@v5

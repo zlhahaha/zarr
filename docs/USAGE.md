@@ -1,0 +1,56 @@
+# Using Zarr from MoonBit
+
+This library is still pre-release. Build it locally with MoonBit; the Mooncakes installation command will be added after publication. The module name is `zlhahaha/zarr`.
+
+## Packages
+
+| Package | Purpose |
+| --- | --- |
+| `zlhahaha/zarr/metadata` | v2/v3 formats and parsed metadata |
+| `zlhahaha/zarr/store` | In-memory encoded-byte store |
+| `zlhahaha/zarr/store/fs` | Native filesystem store and typed arrays |
+| `zlhahaha/zarr/array` | In-memory typed arrays and creation helpers |
+| `zlhahaha/zarr/codec` | Compression choices (`Raw`, `Gzip`, `Zlib`, `Zstd`) |
+| `zlhahaha/zarr/hierarchy` | In-memory group and attribute operations |
+
+The repository contains two executable examples. Run `moon run --target wasm-gc cmd/main` for a portable in-memory array, or `moon run --target native cmd/native_demo` for a compressed array on disk. The latter creates a temporary store, reopens it, reads a slice, and removes the temporary store.
+
+## Native array example
+
+Add these imports to a native package's `moon.pkg`:
+
+```text
+import {
+  "zlhahaha/zarr/metadata",
+  "zlhahaha/zarr/codec",
+  "zlhahaha/zarr/store/fs",
+  "moonbitlang/async",
+}
+supported_targets = "native"
+```
+
+Then use the typed API inside an `async` function:
+
+```moonbit
+guard @fs.FileStore::new("data.zarr") is Some(store) else { return }
+guard store.create_u16(
+    @metadata.V3, "pixels", [100, 200], [32, 32], (0 : UInt16),
+    compression=@codec.Zstd(3),
+  ) is Some(pixels) else { return }
+let _ = pixels.write_region(
+  [10, 20], [1, 3],
+  [(100 : UInt16), (200 : UInt16), (300 : UInt16)],
+)
+```
+
+`create_u8`, `create_u16`, `create_i32`, `create_f32`, and `create_f64` exist on `FileStore`; matching functions accept a `MemoryStore` in the `array` package. Omit `compression` for raw chunks. `Gzip(level)` works with v2/v3, `Zlib(level)` with v2 only, and `Zstd(level)` with v2/v3. `big_endian=true` is available for multi-byte types. The same typed API opens existing arrays with `store.open_u16("pixels")` and supports `read`, `write`, `read_region`, and `write_region`.
+
+The first argument to region operations is the zero-based origin, the second is the extent. Values are in C order regardless of a v2 array's on-disk C/F chunk order. A missing chunk reads as the declared fill value; writing creates a full-sized chunk, including at array edges.
+
+## Supported format subset
+
+Both formats support regular chunk grids, safe logical paths, groups and attributes, and the five numeric types above. v2 supports `.`/`/` chunk separators and C/F chunk order; v3 supports default and v2-compatible chunk keys plus the bytes serializer. Raw, gzip and zstd chunks are supported in both formats; zlib is supported in v2. Unsupported filters, storage transformers and codec chains are rejected rather than silently decoded incorrectly.
+
+The API returns `None` or `false` for invalid metadata, unsupported encodings, out-of-bounds coordinates, corrupt chunks, and I/O failures. A region write spanning multiple chunks is **not atomic**: if a later chunk fails, earlier chunks may already be saved. Large reads and writes still buffer the requested region. A `FileStore` uses native async filesystem APIs and is not available on wasm-gc; `MemoryStore` works on the tested native and wasm-gc targets.
+
+Zstd decoding first checks the dependency's conservative frame-size bound against the declared uncompressed chunk length. Consequently, a valid frame without known content size may be rejected. v3 zstd `checksum=true`, Blosc, sharding, consolidated metadata, HTTP/cloud stores, additional dtypes, and general ndarray arithmetic are not implemented yet. See [ROADMAP.md](ROADMAP.md) and the [support table](../README.md#status).

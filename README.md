@@ -34,9 +34,11 @@ moon build
 moon test --deny-warn
 moon run cmd/main
 moon test --target native --deny-warn
+moon run --target native cmd/native_demo
 ```
 
 The example creates a v3 `uint8` array and writes a slice across chunks. It prints `Zarr v3 uint8 values: 0,7,9,11`.
+The native example creates and reopens a zstd-compressed `uint16` array in a temporary filesystem store. See [docs/USAGE.md](docs/USAGE.md) for the public API and format limits.
 
 ## Interoperability tests
 
