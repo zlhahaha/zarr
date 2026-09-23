@@ -23,6 +23,7 @@ pub(all) struct ArrayMetadata {
   separator : String
   key_encoding : String
   codecs : Array[Json]
+  storage_transformers : Array[Json]
   fill_value : Json
   order : String
 } derive(@debug.Debug)
@@ -40,9 +41,22 @@ pub fn MemoryStore::get(Self, String) -> Bytes?
 pub fn MemoryStore::get_chunk(Self, ArrayMetadata, Array[Int], String) -> Bytes?
 pub fn MemoryStore::new() -> Self
 pub fn MemoryStore::open_array(Self, String) -> ArrayMetadata?
+pub fn MemoryStore::open_u8(Self, String) -> U8Array?
 pub fn MemoryStore::put(Self, String, Bytes) -> Unit
 pub fn MemoryStore::put_array_metadata(Self, Format, String, String) -> Bool
 pub fn MemoryStore::put_chunk(Self, ArrayMetadata, Array[Int], String, Bytes) -> Bool
+
+pub struct U8Array {
+  store : MemoryStore
+  metadata : ArrayMetadata
+  path : String
+  fill : Byte
+  chunk_len : Int
+}
+pub fn U8Array::read(Self, Array[Int]) -> Byte?
+pub fn U8Array::read_region(Self, Array[Int], Array[Int]) -> Bytes?
+pub fn U8Array::write(Self, Array[Int], Byte) -> Bool
+pub fn U8Array::write_region(Self, Array[Int], Array[Int], Bytes) -> Bool
 
 // Type aliases
 

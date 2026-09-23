@@ -88,3 +88,87 @@ test "ambiguous version path is not autodetected" {
   assert_true(store.put_array_metadata(@zarr.V3, "mixed", v3))
   assert_true(store.open_array("mixed") is None)
 }
+
+///|
+test "v2 uint8 element read write, fill, and F order" {
+  let store = @zarr.MemoryStore::new()
+  let raw =
+    #|{"zarr_format":2,"shape":[3,3],"chunks":[2,2],"dtype":"|u1","compressor":null,"fill_value":9,"order":"F","filters":null}
+  assert_true(store.put_array_metadata(@zarr.V2, "matrix", raw))
+  guard store.open_u8("matrix") is Some(array) else { fail("open_u8") }
+  assert_eq(array.read([2, 2]), Some(b'\x09'))
+  assert_true(array.write([0, 1], b'\x07'))
+  assert_eq(array.read([0, 1]), Some(b'\x07'))
+  assert_eq(array.read([1, 0]), Some(b'\x09'))
+  guard store.open_array("matrix") is Some(metadata) else { fail("metadata") }
+  assert_eq(
+    store.get_chunk(metadata, [0, 0], "matrix"),
+    Some(b"\x09\x09\x07\x09"),
+  )
+  assert_eq(array.read([3, 0]), None)
+  assert_true(!array.write([3, 0], b'\x01'))
+}
+
+///|
+test "v3 uint8 edge chunk materializes full chunk" {
+  let store = @zarr.MemoryStore::new()
+  let raw =
+    #|{"zarr_format":3,"node_type":"array","shape":[3],"data_type":"uint8","chunk_grid":{"name":"regular","configuration":{"chunk_shape":[2]}},"chunk_key_encoding":{"name":"default"},"fill_value":5,"codecs":[{"name":"bytes"}]}
+  assert_true(store.put_array_metadata(@zarr.V3, "edge", raw))
+  guard store.open_u8("edge") is Some(array) else { fail("open_u8") }
+  assert_eq(array.read([2]), Some(b'\x05'))
+  assert_true(array.write([2], b'\x11'))
+  assert_eq(array.read([2]), Some(b'\x11'))
+  guard store.open_array("edge") is Some(metadata) else { fail("metadata") }
+  assert_eq(store.get_chunk(metadata, [1], "edge"), Some(b"\x11\x05"))
+}
+
+///|
+test "u8 array rejects unsupported codecs and corrupt chunks" {
+  let store = @zarr.MemoryStore::new()
+  let compressed =
+    #|{"zarr_format":3,"node_type":"array","shape":[2],"data_type":"uint8","chunk_grid":{"name":"regular","configuration":{"chunk_shape":[2]}},"chunk_key_encoding":{"name":"default"},"fill_value":0,"codecs":[{"name":"bytes"},{"name":"zstd"}]}
+  assert_true(store.put_array_metadata(@zarr.V3, "compressed", compressed))
+  assert_true(store.open_u8("compressed") is None)
+  let plain =
+    #|{"zarr_format":3,"node_type":"array","shape":[2],"data_type":"uint8","chunk_grid":{"name":"regular","configuration":{"chunk_shape":[2]}},"chunk_key_encoding":{"name":"default"},"fill_value":0,"codecs":[{"name":"bytes"}]}
+  assert_true(store.put_array_metadata(@zarr.V3, "plain", plain))
+  guard store.open_u8("plain") is Some(array) else { fail("open_u8") }
+  store.put("plain/c/0", b"\x01")
+  assert_eq(array.read([0]), None)
+  assert_true(!array.write([0], b'\x02'))
+}
+
+///|
+test "uint8 rectangular read crosses chunks in C output order" {
+  let store = @zarr.MemoryStore::new()
+  let raw =
+    #|{"zarr_format":3,"node_type":"array","shape":[3,4],"data_type":"uint8","chunk_grid":{"name":"regular","configuration":{"chunk_shape":[2,2]}},"chunk_key_encoding":{"name":"default"},"fill_value":0,"codecs":[{"name":"bytes"}]}
+  assert_true(store.put_array_metadata(@zarr.V3, "image", raw))
+  guard store.open_u8("image") is Some(array) else { fail("open_u8") }
+  assert_true(array.write([1, 2], b'\x07'))
+  assert_true(array.write([2, 3], b'\x08'))
+  assert_eq(
+    array.read_region([1, 1], [2, 3]),
+    Some(b"\x00\x07\x00\x00\x00\x08"),
+  )
+  assert_eq(array.read_region([3, 0], [0, 4]), Some(b""))
+  assert_eq(array.read_region([2, 3], [2, 1]), None)
+  assert_eq(array.read_region([1], [2]), None)
+  assert_true(array.write_region([0, 1], [2, 2], b"\x01\x02\x03\x04"))
+  assert_eq(array.read_region([0, 1], [2, 2]), Some(b"\x01\x02\x03\x04"))
+  assert_true(!array.write_region([0, 0], [2, 2], b"\x01"))
+}
+
+///|
+test "scalar uint8 array uses c chunk key and one value" {
+  let store = @zarr.MemoryStore::new()
+  let raw =
+    #|{"zarr_format":3,"node_type":"array","shape":[],"data_type":"uint8","chunk_grid":{"name":"regular","configuration":{"chunk_shape":[]}},"chunk_key_encoding":{"name":"default"},"fill_value":6,"codecs":[{"name":"bytes"}]}
+  assert_true(store.put_array_metadata(@zarr.V3, "scalar", raw))
+  guard store.open_u8("scalar") is Some(array) else { fail("open_u8") }
+  assert_eq(array.read([]), Some(b'\x06'))
+  assert_true(array.write([], b'\x0a'))
+  assert_eq(array.read_region([], []), Some(b"\x0a"))
+  assert_eq(store.get("scalar/c"), Some(b"\x0a"))
+}

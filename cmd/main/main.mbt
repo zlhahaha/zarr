@@ -1,6 +1,6 @@
 ///|
-/// Small in-memory example. This exercises metadata and raw chunk storage,
-/// not yet the codec pipeline or numeric array API.
+/// Small in-memory uint8 example. The filesystem backend and codecs are
+/// separate future work.
 fn main {
   let store = @zarr.MemoryStore::new()
   let metadata =
@@ -9,17 +9,19 @@ fn main {
     println("metadata rejected")
     return
   }
-  guard store.open_array("samples") is Some(array) else {
+  guard store.open_u8("samples") is Some(array) else {
     println("array not found")
     return
   }
-  if !store.put_chunk(array, [0], "samples", b"\x07\x09") {
-    println("chunk rejected")
+  if !array.write_region([1], [3], b"\x07\x09\x0b") {
+    println("write rejected")
     return
   }
-  guard store.get_chunk(array, [0], "samples") is Some(bytes) else {
-    println("chunk not found")
+  guard array.read_region([0], [4]) is Some(bytes) else {
+    println("read rejected")
     return
   }
-  println("Zarr v3 chunk samples/c/0: \{bytes.length()} bytes")
+  println(
+    "Zarr v3 uint8 values: \{bytes[0].to_int()},\{bytes[1].to_int()},\{bytes[2].to_int()},\{bytes[3].to_int()}",
+  )
 }

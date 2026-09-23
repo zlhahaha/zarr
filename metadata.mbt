@@ -16,6 +16,7 @@ pub(all) struct ArrayMetadata {
   separator : String
   key_encoding : String
   codecs : Array[Json]
+  storage_transformers : Array[Json]
   fill_value : Json
   order : String
 } derive(Debug)
@@ -115,6 +116,7 @@ fn parse_v2(value : Json) -> ArrayMetadata? {
     separator,
     key_encoding: "v2",
     codecs,
+    storage_transformers: [],
     fill_value,
     order,
   })
@@ -162,6 +164,11 @@ fn parse_v3(value : Json) -> ArrayMetadata? {
   if codecs.length() == 0 {
     return None
   }
+  let storage_transformers = match field(value, "storage_transformers") {
+    None => []
+    Some(Array(items)) => items
+    _ => return None
+  }
   guard field(value, "fill_value") is Some(fill_value) else { return None }
   Some({
     format: V3,
@@ -171,6 +178,7 @@ fn parse_v3(value : Json) -> ArrayMetadata? {
     separator,
     key_encoding,
     codecs,
+    storage_transformers,
     fill_value,
     order: "C",
   })
