@@ -37,7 +37,7 @@ pub fn open_u8_from_metadata(
   guard @chunk.chunk_element_count(metadata) is Some(chunk_len) else {
     return None
   }
-  Some({ store, metadata, path, fill, chunk_len, compression })
+  Some({ store, metadata, path, fill, chunk_len, compression, })
 }
 
 ///|

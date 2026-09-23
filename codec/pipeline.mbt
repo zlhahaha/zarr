@@ -9,6 +9,9 @@ pub(all) enum Compression {
 } derive(Debug)
 
 ///|
+pub extend Compression with Debug::{to_repr}
+
+///|
 fn level(value : Json?, default : Int, minimum : Int, maximum : Int) -> Int? {
   match value {
     None => Some(default)

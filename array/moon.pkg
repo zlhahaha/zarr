@@ -4,6 +4,4 @@ import {
   "zlhahaha/zarr/dtype",
   "zlhahaha/zarr/codec",
   "zlhahaha/zarr/store",
-  "moonbitlang/core/json",
-  "moonbitlang/core/float",
 }

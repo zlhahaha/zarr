@@ -16,7 +16,7 @@ pub async fn FileStore::open_u16(
   guard @array.open_u16_from_metadata(scratch, metadata, path) is Some(_) else {
     return None
   }
-  Some({ store: self, metadata, path })
+  Some({ store: self, metadata, path, })
 }
 
 ///|

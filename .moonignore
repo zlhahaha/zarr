@@ -1,0 +1,10 @@
+# Development-only files are kept in Git but omitted from Mooncakes archives.
+/AGENTS.md
+/PROPOSAL.md
+/integration/
+/scripts/
+/cmd/interop/
+/fs/
+*_test.mbt
+*_wbtest.mbt
+pkg.generated.mbti

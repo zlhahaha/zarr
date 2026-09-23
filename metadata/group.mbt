@@ -7,6 +7,9 @@ pub(all) struct GroupMetadata {
 } derive(Debug)
 
 ///|
+pub extend GroupMetadata with Debug::{to_repr}
+
+///|
 /// A minimal valid group document. V2 attributes are stored separately.
 pub fn empty_group_metadata_json(format : Format) -> String {
   match format {
@@ -21,7 +24,7 @@ pub fn parse_group_metadata(raw : String) -> GroupMetadata? {
   guard value is Object(_) else { return None }
   guard field(value, "zarr_format") is Some(version) else { return None }
   match nonnegative_int(version) {
-    Some(2) => Some({ format: V2, attributes: Json::empty_object() })
+    Some(2) => Some({ format: V2, attributes: Json::empty_object(), })
     Some(3) => {
       guard string_field(value, "node_type") is Some("group") else {
         return None
@@ -31,7 +34,7 @@ pub fn parse_group_metadata(raw : String) -> GroupMetadata? {
         Some(Object(map)) => Json::object(map)
         _ => return None
       }
-      Some({ format: V3, attributes })
+      Some({ format: V3, attributes, })
     }
     _ => None
   }

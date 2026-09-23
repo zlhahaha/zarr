@@ -72,7 +72,7 @@ pub fn F64Array::read(self : F64Array, indices : Array[Int]) -> Double? {
         is Some(raw) else {
         return None
       }
-      let value = raw.view(start=offset * 8, end=offset * 8 + 8)
+      let value = raw[offset * 8:offset * 8 + 8]
       if self.big_endian {
         guard value is [u64be(bits), ..] else { return None }
         Some(bits.reinterpret_as_double())
@@ -149,7 +149,7 @@ pub fn F64Array::read_region(
   }
   let result : Array[Double] = []
   for linear in 0..<(bytes.length() / 8) {
-    let value = bytes.view(start=linear * 8, end=linear * 8 + 8)
+    let value = bytes[linear * 8:linear * 8 + 8]
     if self.big_endian {
       guard value is [u64be(bits), ..] else { return None }
       result.push(bits.reinterpret_as_double())

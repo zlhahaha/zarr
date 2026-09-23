@@ -140,7 +140,7 @@ pub async fn FileStore::open_group(
       attrs
     }
   }
-  Some({ format, attributes })
+  Some({ format, attributes, })
 }
 
 ///|

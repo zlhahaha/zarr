@@ -17,7 +17,7 @@ pub async fn FileStore::open_u8(
   guard @array.open_u8_from_metadata(scratch, metadata, path) is Some(_) else {
     return None
   }
-  Some({ store: self, metadata, path })
+  Some({ store: self, metadata, path, })
 }
 
 ///|

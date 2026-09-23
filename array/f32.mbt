@@ -79,7 +79,7 @@ pub fn F32Array::read(self : F32Array, indices : Array[Int]) -> Float? {
         is Some(raw) else {
         return None
       }
-      let value = raw.view(start=offset * 4, end=offset * 4 + 4)
+      let value = raw[offset * 4:offset * 4 + 4]
       if self.big_endian {
         guard value is [u32be(bits), ..] else { return None }
         Some(Float::reinterpret_from_uint(bits))
@@ -147,7 +147,7 @@ pub fn F32Array::read_region(
   }
   let result : Array[Float] = []
   for linear in 0..<(bytes.length() / 4) {
-    let value = bytes.view(start=linear * 4, end=linear * 4 + 4)
+    let value = bytes[linear * 4:linear * 4 + 4]
     if self.big_endian {
       guard value is [u32be(bits), ..] else { return None }
       result.push(Float::reinterpret_from_uint(bits))

@@ -6,6 +6,12 @@ pub(all) enum Format {
 } derive(Eq, Debug)
 
 ///|
+pub extend Format with Eq::{not_equal, equal}
+
+///|
+pub extend Format with Debug::{to_repr}
+
+///|
 /// Validated metadata needed to locate chunks in a regular grid.
 /// Codecs are retained verbatim; decoding them is a separate capability.
 pub(all) struct ArrayMetadata {
@@ -21,6 +27,9 @@ pub(all) struct ArrayMetadata {
   fill_value : Json
   order : String
 } derive(Debug)
+
+///|
+pub extend ArrayMetadata with Debug::{to_repr}
 
 ///|
 fn field(value : Json, name : String) -> Json? {

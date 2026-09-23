@@ -81,7 +81,7 @@ pub fn U16Array::read(self : U16Array, indices : Array[Int]) -> UInt16? {
         is Some(raw) else {
         return None
       }
-      let value = raw.view(start=offset * 2, end=offset * 2 + 2)
+      let value = raw[offset * 2:offset * 2 + 2]
       if self.big_endian {
         guard value is [u16be(bits), ..] else { return None }
         Some(bits.to_uint16())
@@ -145,7 +145,7 @@ pub fn U16Array::read_region(
   }
   let result : Array[UInt16] = []
   for linear in 0..<(bytes.length() / 2) {
-    let value = bytes.view(start=linear * 2, end=linear * 2 + 2)
+    let value = bytes[linear * 2:linear * 2 + 2]
     if self.big_endian {
       guard value is [u16be(bits), ..] else { return None }
       result.push(bits.to_uint16())

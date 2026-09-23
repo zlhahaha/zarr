@@ -64,6 +64,9 @@ pub(all) struct ChunkRegion {
 } derive(Debug)
 
 ///|
+pub extend ChunkRegion with Debug::{to_repr}
+
+///|
 /// Enumerate chunks touched by a validated rectangle in chunk-grid C order.
 pub fn region_chunks(
   metadata : @metadata.ArrayMetadata,
@@ -126,7 +129,7 @@ pub fn region_chunks(
       overlap_origin.push(start)
       overlap_extent.push(end - start)
     }
-    result.push({ coordinates, origin: overlap_origin, extent: overlap_extent })
+    result.push({ coordinates, origin: overlap_origin, extent: overlap_extent, })
   }
   Some(result)
 }

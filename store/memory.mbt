@@ -7,7 +7,7 @@ pub struct MemoryStore {
 
 ///|
 pub fn MemoryStore::new() -> MemoryStore {
-  { entries: Map([]) }
+  { entries: Map([]), }
 }
 
 ///|
