@@ -12,6 +12,19 @@ pub fn u8_fill(value : Json) -> Byte? {
 }
 
 ///|
+pub fn u16_fill(value : Json) -> UInt16? {
+  guard value is Number(n, ..) else { return None }
+  if n < 0.0 || n > 65535.0 {
+    return None
+  }
+  let i = n.to_int()
+  if i.to_double() != n {
+    return None
+  }
+  Some(i.to_uint16())
+}
+
+///|
 pub fn f64_fill(value : Json) -> Double? {
   match value {
     Number(n, ..) => Some(n)
@@ -45,6 +58,24 @@ pub fn is_u8(metadata : @metadata.ArrayMetadata) -> Bool {
   match metadata.format {
     @metadata.V2 => metadata.data_type == "|u1"
     @metadata.V3 => metadata.data_type == "uint8"
+  }
+}
+
+///|
+pub fn u16_endian(metadata : @metadata.ArrayMetadata) -> Bool? {
+  match metadata.format {
+    @metadata.V2 =>
+      match metadata.data_type {
+        "<u2" => Some(false)
+        ">u2" => Some(true)
+        _ => None
+      }
+    @metadata.V3 =>
+      if metadata.data_type == "uint16" {
+        Some(false)
+      } else {
+        None
+      }
   }
 }
 

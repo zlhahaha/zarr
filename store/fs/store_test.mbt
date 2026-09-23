@@ -326,3 +326,22 @@ async test "native compressed regions span chunks and persist" {
   assert_eq(saved_signal.read_region([0], [3]), Some([1.5, 2.5, 42.25]))
   @async_fs.rmdir(dir, recursive=true)
 }
+
+///|
+async test "read independent zarr-python uint16 fixtures" {
+  let base = "integration/fixtures/zarr-python"
+  guard @fs.FileStore::new("\{base}/v2_u16_be.zarr") is Some(v2_store) else {
+    fail("v2 uint16 store")
+  }
+  guard v2_store.open_u16("") is Some(v2) else { fail("v2 uint16 array") }
+  assert_eq(v2.read([0]), Some((60000 : UInt16)))
+  assert_eq(v2.read([2]), Some((65530 : UInt16)))
+  guard @fs.FileStore::new("\{base}/v3_u16_le_zstd.zarr") is Some(v3_store) else {
+    fail("v3 uint16 store")
+  }
+  guard v3_store.open_u16("") is Some(v3) else { fail("v3 uint16 array") }
+  assert_eq(
+    v3.read_region([0], [3]),
+    Some([(60000 : UInt16), (60000 : UInt16), (65530 : UInt16)]),
+  )
+}

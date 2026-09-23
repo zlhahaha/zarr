@@ -114,6 +114,12 @@ pub fn f32_plan(metadata : @metadata.ArrayMetadata) -> (Bool, Compression)? {
 }
 
 ///|
+pub fn u16_plan(metadata : @metadata.ArrayMetadata) -> (Bool, Compression)? {
+  guard @dtype.u16_endian(metadata) is Some(v2_endian) else { return None }
+  numeric_plan(metadata, v2_endian)
+}
+
+///|
 pub fn f64_plan(metadata : @metadata.ArrayMetadata) -> (Bool, Compression)? {
   guard @dtype.f64_endian(metadata) is Some(v2_endian) else { return None }
   numeric_plan(metadata, v2_endian)

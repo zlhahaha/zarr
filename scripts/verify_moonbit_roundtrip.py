@@ -39,6 +39,8 @@ def main() -> None:
     image = np.full((3, 4), 5, dtype=np.uint8)
     image[1:3, 1:4] = np.array([[1, 2, 3], [4, 5, 6]], dtype=np.uint8)
     check("v3_zstd_image", image)
+    check("v2_u16_be", np.array([60000, 60000, 65530], dtype=np.uint16))
+    check("v3_u16_le_zstd", np.array([60000, 60000, 65530], dtype=np.uint16))
 
 
 if __name__ == "__main__":

@@ -199,5 +199,47 @@ async fn main {
     println("compressed image slice write failed")
     return
   }
+
+  guard @fs.FileStore::new("\{base}/v2_u16_be.zarr") is Some(v2_u16_store) else {
+    println("invalid v2 uint16 output path")
+    return
+  }
+  guard v2_u16_store.create_u16(
+      @metadata.V2,
+      "",
+      [3],
+      [2],
+      (60000 : UInt16),
+      big_endian=true,
+    )
+    is Some(v2_u16) else {
+    println("v2 uint16 creation failed")
+    return
+  }
+  if !v2_u16.write([2], (65530 : UInt16)) {
+    println("v2 uint16 write failed")
+    return
+  }
+
+  guard @fs.FileStore::new("\{base}/v3_u16_le_zstd.zarr") is Some(v3_u16_store) else {
+    println("invalid v3 uint16 output path")
+    return
+  }
+  guard v3_u16_store.create_u16(
+      @metadata.V3,
+      "",
+      [3],
+      [2],
+      (60000 : UInt16),
+      compression=@codec.Zstd(3),
+    )
+    is Some(v3_u16) else {
+    println("v3 uint16 creation failed")
+    return
+  }
+  if !v3_u16.write([2], (65530 : UInt16)) {
+    println("v3 uint16 write failed")
+    return
+  }
   println("MoonBit interop stores created")
 }

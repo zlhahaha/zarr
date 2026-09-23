@@ -622,3 +622,46 @@ test "compressed regions process whole chunks across dtype and order" {
   assert_true(i32.write_region([1], [2], [100, -200]))
   assert_eq(i32.read_region([0], [3]), Some([-1, 100, -200]))
 }
+
+///|
+test "uint16 supports endian, fill, compression and slices" {
+  let store = @store.MemoryStore::new()
+  guard @array.create_u16(
+      store,
+      @metadata.V2,
+      "big",
+      [3],
+      [2],
+      (60000 : UInt16),
+      big_endian=true,
+    )
+    is Some(big) else {
+    fail("big-endian u16")
+  }
+  assert_eq(big.read([0]), Some((60000 : UInt16)))
+  assert_true(big.write([2], (65530 : UInt16)))
+  assert_eq(big.read([2]), Some((65530 : UInt16)))
+  assert_eq(store.get("big/1"), Some(b"\xff\xfa\xea\x60"))
+
+  guard @array.create_u16(
+      store,
+      @metadata.V3,
+      "compressed",
+      [3],
+      [2],
+      (60000 : UInt16),
+      compression=@codec.Zstd(3),
+    )
+    is Some(array) else {
+    fail("compressed u16")
+  }
+  assert_true(array.write_region([1], [2], [(1234 : UInt16), (65530 : UInt16)]))
+  assert_eq(
+    array.read_region([0], [3]),
+    Some([(60000 : UInt16), (1234 : UInt16), (65530 : UInt16)]),
+  )
+  let bad_fill =
+    #|{"zarr_format":2,"shape":[2],"chunks":[2],"dtype":"<u2","compressor":null,"fill_value":65536,"order":"C","filters":null}
+  assert_true(store.put_array_metadata(@metadata.V2, "bad", bad_fill))
+  assert_true(@array.open_u16(store, "bad") is None)
+}
