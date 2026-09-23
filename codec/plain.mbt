@@ -53,3 +53,36 @@ pub fn plain_f64_endian(metadata : @metadata.ArrayMetadata) -> Bool? {
     }
   }
 }
+
+///|
+pub fn plain_f32_endian(metadata : @metadata.ArrayMetadata) -> Bool? {
+  if metadata.storage_transformers.length() != 0 {
+    return None
+  }
+  guard @dtype.f32_endian(metadata) is Some(v2_endian) else { return None }
+  match metadata.format {
+    @metadata.V2 =>
+      if metadata.codecs.length() == 0 {
+        Some(v2_endian)
+      } else {
+        None
+      }
+    @metadata.V3 => {
+      if metadata.codecs.length() != 1 {
+        return None
+      }
+      guard metadata.codecs[0] is Object(codec) else { return None }
+      guard codec.get("name") == Some(Json::string("bytes")) else {
+        return None
+      }
+      guard codec.get("configuration") is Some(Object(config)) else {
+        return None
+      }
+      match config.get("endian") {
+        Some(String("little")) => Some(false)
+        Some(String("big")) => Some(true)
+        _ => None
+      }
+    }
+  }
+}

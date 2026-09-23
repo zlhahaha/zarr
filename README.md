@@ -4,7 +4,7 @@ A MoonBit implementation of the Zarr v2 and v3 storage formats for chunked N-dim
 
 ## Status
 
-Early development. The library can read and write uncompressed `uint8` and `float64` arrays in memory, including element access, rectangular slices, missing-chunk fill values and edge chunks. On the native backend, a filesystem store persists v2/v3 metadata and raw chunks, with `uint8` and `float64` element I/O. Groups and attributes can be read and written for both formats. Other dtypes/codecs, filesystem slicing and cloud access are not implemented yet. Do not use it as a general Zarr reader/writer yet.
+Early development. The library can read and write uncompressed `uint8`, `float32`, and `float64` arrays in memory, including element access, rectangular slices, missing-chunk fill values and edge chunks. On the native backend, a filesystem store persists v2/v3 metadata and raw chunks, with typed element I/O for those three dtypes. Groups and attributes can be read and written for both formats. Other dtypes/codecs, filesystem slicing and cloud access are not implemented yet. Do not use it as a general Zarr reader/writer yet.
 
 | Capability | Zarr v2 | Zarr v3 |
 | --- | --- | --- |
@@ -13,7 +13,8 @@ Early development. The library can read and write uncompressed `uint8` and `floa
 | Raw encoded chunk storage | Memory and native filesystem | Memory and native filesystem |
 | Uncompressed `uint8` element I/O | Memory and native filesystem; C/F order | Memory and native filesystem; bytes codec |
 | Uncompressed `float64` element I/O | Memory and native filesystem; little/big endian, C/F order | Memory and native filesystem; little/big endian bytes codec |
-| Rectangular slice I/O (`uint8`, `float64`) | In-memory | In-memory |
+| Uncompressed `float32` element I/O | Memory and native filesystem; little/big endian, C/F order | Memory and native filesystem; little/big endian bytes codec |
+| Rectangular slice I/O (`uint8`, `float32`, `float64`) | In-memory | In-memory |
 | Other dtypes and compressed codecs | Planned | Planned |
 | Groups and attributes | Memory and native filesystem (`.zgroup`/`.zattrs`) | Memory and native filesystem (`zarr.json`) |
 | Cloud stores | Planned | Planned |

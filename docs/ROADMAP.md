@@ -13,7 +13,7 @@ Local native/wasm-gc checks, builds, tests and example runs pass. GitHub Actions
 
 ## Stage 1 — Useful uncompressed numeric arrays
 
-Current implementation: typed `uint8` and endian-aware `float64` create/open/element I/O in memory and native filesystem, plus in-memory rectangular slices and v2/v3 group/attribute operations. The remaining dtype breadth, filesystem slicing and independent zarr-python compatibility gate are still open.
+Current implementation: typed `uint8`, `float32`, and `float64` create/open/element I/O in memory and native filesystem, plus in-memory rectangular slices and v2/v3 group/attribute operations. The remaining dtype breadth, filesystem slicing and independent zarr-python compatibility gate are still open.
 
 - Store abstraction and native filesystem backend; create/open arrays and groups, metadata/attributes, and chunks for v2/v3.
 - Core numeric dtypes (`bool`, signed/unsigned 8/16/32/64-bit, float32/64) with specified endian handling; C-order v2 and v3 bytes codec.

@@ -147,6 +147,32 @@ pub fn f64_metadata_json(
 }
 
 ///|
+pub fn f32_metadata_json(
+  format : @metadata.Format,
+  shape : Array[Int],
+  chunk_shape : Array[Int],
+  fill : Float,
+  big_endian? : Bool = false,
+) -> String? {
+  if fill.is_nan() || fill.is_inf() {
+    return None
+  }
+  numeric_metadata_json(
+    format,
+    shape,
+    chunk_shape,
+    if big_endian {
+      ">f4"
+    } else {
+      "<f4"
+    },
+    "float32",
+    Json::number(fill.to_double()),
+    big_endian,
+  )
+}
+
+///|
 pub fn create_u8(
   store : @store.MemoryStore,
   format : @metadata.Format,
@@ -188,6 +214,29 @@ pub fn create_f64(
     return None
   }
   open_f64(store, path)
+}
+
+///|
+pub fn create_f32(
+  store : @store.MemoryStore,
+  format : @metadata.Format,
+  path : String,
+  shape : Array[Int],
+  chunk_shape : Array[Int],
+  fill : Float,
+  big_endian? : Bool = false,
+) -> F32Array? {
+  if node_exists(store, path) {
+    return None
+  }
+  guard f32_metadata_json(format, shape, chunk_shape, fill, big_endian~)
+    is Some(raw) else {
+    return None
+  }
+  if !store.put_array_metadata(format, path, raw) {
+    return None
+  }
+  open_f32(store, path)
 }
 
 ///|

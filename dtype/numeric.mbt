@@ -20,6 +20,14 @@ pub fn f64_fill(value : Json) -> Double? {
 }
 
 ///|
+pub fn f32_fill(value : Json) -> Float? {
+  match value {
+    Number(n, ..) => Some(Float::from_double(n))
+    _ => None
+  }
+}
+
+///|
 pub fn is_u8(metadata : @metadata.ArrayMetadata) -> Bool {
   match metadata.format {
     @metadata.V2 => metadata.data_type == "|u1"
@@ -39,6 +47,24 @@ pub fn f64_endian(metadata : @metadata.ArrayMetadata) -> Bool? {
       }
     @metadata.V3 =>
       if metadata.data_type == "float64" {
+        Some(false)
+      } else {
+        None
+      }
+  }
+}
+
+///|
+pub fn f32_endian(metadata : @metadata.ArrayMetadata) -> Bool? {
+  match metadata.format {
+    @metadata.V2 =>
+      match metadata.data_type {
+        "<f4" => Some(false)
+        ">f4" => Some(true)
+        _ => None
+      }
+    @metadata.V3 =>
+      if metadata.data_type == "float32" {
         Some(false)
       } else {
         None

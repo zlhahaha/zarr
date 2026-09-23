@@ -115,3 +115,19 @@ async test "native typed creation writes persistent v2 and v3 arrays" {
   assert_eq(saved_signal.read([1]), Some(2.5))
   @async_fs.rmdir(dir, recursive=true)
 }
+
+///|
+async test "native float32 writes persist with big endian" {
+  let dir = @async_fs.tmpdir(prefix="zarr-f32-test")
+  guard @fs.FileStore::new(dir) is Some(store) else { fail("store") }
+  guard store.create_f32(@metadata.V3, "signal", [2], [2], 1.5, big_endian=true)
+    is Some(array) else {
+    fail("create f32")
+  }
+  assert_true(array.write([0], 2.5))
+  assert_eq(store.get("signal/c/0"), Some(b"\x40\x20\x00\x00\x3f\xc0\x00\x00"))
+  guard @fs.FileStore::new(dir) is Some(saved) else { fail("saved store") }
+  guard saved.open_f32("signal") is Some(saved_array) else { fail("open f32") }
+  assert_eq(saved_array.read([0]), Some(2.5))
+  @async_fs.rmdir(dir, recursive=true)
+}

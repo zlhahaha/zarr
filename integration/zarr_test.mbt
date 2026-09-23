@@ -358,3 +358,30 @@ test "typed array creation validates dimensions and prevents overwrite" {
     @array.create_f64(store, @metadata.V3, "signal", [2], [2], 0.0) is None,
   )
 }
+
+///|
+test "float32 v2 and v3 round-trip with endian and slices" {
+  let store = @store.MemoryStore::new()
+  guard @array.create_f32(store, @metadata.V3, "f32", [3], [2], 1.5) is Some(v3) else {
+    fail("create v3 float32")
+  }
+  assert_eq(v3.read([2]), Some(1.5))
+  assert_true(v3.write_region([1], [2], [2.5, 42.25]))
+  assert_eq(v3.read_region([0], [3]), Some([1.5, 2.5, 42.25]))
+  assert_eq(store.get("f32/c/1"), Some(b"\x00\x00\x29\x42\x00\x00\xc0\x3f"))
+  guard @array.create_f32(
+      store,
+      @metadata.V2,
+      "big",
+      [2],
+      [2],
+      1.5,
+      big_endian=true,
+    )
+    is Some(v2) else {
+    fail("create v2 float32")
+  }
+  assert_true(v2.write([0], 2.5))
+  assert_eq(store.get("big/0"), Some(b"\x40\x20\x00\x00\x3f\xc0\x00\x00"))
+  assert_eq(v2.read([0]), Some(2.5))
+}
