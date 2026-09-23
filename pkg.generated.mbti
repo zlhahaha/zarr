@@ -1,0 +1,50 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "zlhahaha/zarr"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn array_metadata_key(Format, String) -> String?
+
+pub fn chunk_key(ArrayMetadata, Array[Int], String) -> String?
+
+pub fn parse_array_metadata(String) -> ArrayMetadata?
+
+// Errors
+
+// Types and methods
+pub(all) struct ArrayMetadata {
+  format : Format
+  shape : Array[Int]
+  chunk_shape : Array[Int]
+  data_type : String
+  separator : String
+  key_encoding : String
+  codecs : Array[Json]
+  fill_value : Json
+  order : String
+} derive(@debug.Debug)
+
+pub(all) enum Format {
+  V2
+  V3
+} derive(Eq, @debug.Debug)
+
+pub struct MemoryStore {
+  entries : Map[String, Bytes]
+}
+pub fn MemoryStore::delete(Self, String) -> Unit
+pub fn MemoryStore::get(Self, String) -> Bytes?
+pub fn MemoryStore::get_chunk(Self, ArrayMetadata, Array[Int], String) -> Bytes?
+pub fn MemoryStore::new() -> Self
+pub fn MemoryStore::open_array(Self, String) -> ArrayMetadata?
+pub fn MemoryStore::put(Self, String, Bytes) -> Unit
+pub fn MemoryStore::put_array_metadata(Self, Format, String, String) -> Bool
+pub fn MemoryStore::put_chunk(Self, ArrayMetadata, Array[Int], String, Bytes) -> Bool
+
+// Type aliases
+
+// Traits
+

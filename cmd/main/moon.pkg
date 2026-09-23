@@ -1,0 +1,5 @@
+import {
+  "zlhahaha/zarr",
+}
+
+pkgtype(kind: "executable")
