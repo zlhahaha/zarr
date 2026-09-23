@@ -34,6 +34,8 @@ def main() -> None:
     check("v2_gzip_u8", np.array([5, 5, 9], dtype=np.uint8))
     check("v2_zlib_f64", np.array([1.5, 1.5, 42.25], dtype=np.float64))
     check("v3_gzip_i32", np.array([-1, -1, -200], dtype=np.int32))
+    check("v2_zstd_u8", np.array([5, 5, 9], dtype=np.uint8))
+    check("v3_zstd_f32", np.array([1.5, 1.5, 42.25], dtype=np.float32))
 
 
 if __name__ == "__main__":

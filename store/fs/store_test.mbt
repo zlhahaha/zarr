@@ -260,3 +260,21 @@ async test "read independent zarr-python compressed fixtures" {
   assert_eq(v3.read([0]), Some(-1))
   assert_eq(v3.read([2]), Some(-200))
 }
+
+///|
+async test "read independent zarr-python zstd fixtures" {
+  let base = "integration/fixtures/zarr-python"
+  guard @fs.FileStore::new("\{base}/v2_zstd_u8.zarr") is Some(v2_store) else {
+    fail("v2 zstd store")
+  }
+  guard v2_store.open_u8("") is Some(v2) else { fail("v2 zstd array") }
+  assert_eq(v2.read([0]), Some(b'\x05'))
+  assert_eq(v2.read([2]), Some(b'\x09'))
+
+  guard @fs.FileStore::new("\{base}/v3_zstd_f32.zarr") is Some(v3_store) else {
+    fail("v3 zstd store")
+  }
+  guard v3_store.open_f32("") is Some(v3) else { fail("v3 zstd array") }
+  assert_eq(v3.read([0]), Some(1.5))
+  assert_eq(v3.read([2]), Some(42.25))
+}

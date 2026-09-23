@@ -136,5 +136,47 @@ async fn main {
     println("v3 gzip write failed")
     return
   }
+
+  guard @fs.FileStore::new("\{base}/v2_zstd_u8.zarr") is Some(v2_zstd_store) else {
+    println("invalid v2 zstd output path")
+    return
+  }
+  guard v2_zstd_store.create_u8(
+      @metadata.V2,
+      "",
+      [3],
+      [2],
+      b'\x05',
+      compression=@codec.Zstd(3),
+    )
+    is Some(v2_zstd) else {
+    println("v2 zstd creation failed")
+    return
+  }
+  if !v2_zstd.write([2], b'\x09') {
+    println("v2 zstd write failed")
+    return
+  }
+
+  guard @fs.FileStore::new("\{base}/v3_zstd_f32.zarr") is Some(v3_zstd_store) else {
+    println("invalid v3 zstd output path")
+    return
+  }
+  guard v3_zstd_store.create_f32(
+      @metadata.V3,
+      "",
+      [3],
+      [2],
+      1.5,
+      compression=@codec.Zstd(3),
+    )
+    is Some(v3_zstd) else {
+    println("v3 zstd creation failed")
+    return
+  }
+  if !v3_zstd.write([2], 42.25) {
+    println("v3 zstd write failed")
+    return
+  }
   println("MoonBit interop stores created")
 }

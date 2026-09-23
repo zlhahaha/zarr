@@ -474,12 +474,15 @@ test "gzip and zlib chunks round-trip and reject invalid payloads" {
   store.put("gzip/c/1", b"broken")
   assert_eq(gzip.read([2]), None)
   assert_true(!gzip.write([2], b'\x01'))
-  store.put("gzip/c/1", @codec.encode_chunk(@codec.Gzip(1), b"\x01\x02\x03"))
+  guard @codec.encode_chunk(@codec.Gzip(1), b"\x01\x02\x03") is Some(oversized) else {
+    fail("encode gzip")
+  }
+  store.put("gzip/c/1", oversized)
   assert_eq(gzip.read([2]), None)
-  store.put(
-    "gzip/c/1",
-    @codec.encode_chunk(@codec.Gzip(1), b"\x01\x02") + b"junk",
-  )
+  guard @codec.encode_chunk(@codec.Gzip(1), b"\x01\x02") is Some(valid) else {
+    fail("encode gzip")
+  }
+  store.put("gzip/c/1", valid + b"junk")
   assert_eq(gzip.read([2]), None)
 
   guard @array.create_f64(
@@ -524,4 +527,37 @@ test "gzip and zlib chunks round-trip and reject invalid payloads" {
     #|{"zarr_format":2,"shape":[2],"chunks":[2],"dtype":"|u1","compressor":null,"fill_value":0,"order":"C","filters":[{"id":"gzip","level":1}]}
   assert_true(store.put_array_metadata(@metadata.V2, "filtered", filtered))
   assert_true(@array.open_u8(store, "filtered") is None)
+}
+
+///|
+test "zstd chunks round-trip with declared chunk bound" {
+  let store = @store.MemoryStore::new()
+  guard @array.create_u8(
+      store,
+      @metadata.V3,
+      "zstd",
+      [3],
+      [2],
+      b'\x05',
+      compression=@codec.Zstd(3),
+    )
+    is Some(array) else {
+    fail("create zstd array")
+  }
+  assert_true(array.write([2], b'\x09'))
+  assert_eq(array.read([0]), Some(b'\x05'))
+  assert_eq(array.read([2]), Some(b'\x09'))
+  guard @codec.encode_chunk(@codec.Zstd(3), b"\x01\x02\x03") is Some(oversized) else {
+    fail("encode oversized zstd")
+  }
+  store.put("zstd/c/1", oversized)
+  assert_eq(array.read([2]), None)
+  assert_true(!array.write([2], b'\x01'))
+
+  let checksummed =
+    #|{"zarr_format":3,"node_type":"array","shape":[2],"data_type":"uint8","chunk_grid":{"name":"regular","configuration":{"chunk_shape":[2]}},"chunk_key_encoding":{"name":"default"},"fill_value":0,"codecs":[{"name":"bytes"},{"name":"zstd","configuration":{"level":3,"checksum":true}}]}
+  assert_true(
+    store.put_array_metadata(@metadata.V3, "checksummed", checksummed),
+  )
+  assert_true(@array.open_u8(store, "checksummed") is None)
 }

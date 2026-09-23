@@ -5,15 +5,16 @@ pub(all) enum Compression {
   Raw
   Gzip(Int)
   Zlib(Int)
+  Zstd(Int)
 } derive(Debug)
 
 ///|
-fn level(value : Json?) -> Int? {
+fn level(value : Json?, default : Int, minimum : Int, maximum : Int) -> Int? {
   match value {
-    None => Some(6)
+    None => Some(default)
     Some(Number(n, ..)) => {
       let integer = n.to_int()
-      if n == integer.to_double() && integer >= 0 && integer <= 9 {
+      if n == integer.to_double() && integer >= minimum && integer <= maximum {
         Some(integer)
       } else {
         None
@@ -36,10 +37,32 @@ fn compressor(codec : Json, v3 : Bool) -> Compression? {
   } else {
     map.get("level")
   }
-  guard level(configured_level) is Some(compression_level) else { return None }
   match name {
-    Some(String("gzip")) => Some(Gzip(compression_level))
-    Some(String("zlib")) if !v3 => Some(Zlib(compression_level))
+    Some(String("gzip")) =>
+      match level(configured_level, 6, 0, 9) {
+        Some(value) => Some(Gzip(value))
+        None => None
+      }
+    Some(String("zlib")) if !v3 =>
+      match level(configured_level, 6, 0, 9) {
+        Some(value) => Some(Zlib(value))
+        None => None
+      }
+    Some(String("zstd")) => {
+      if v3 {
+        guard map.get("configuration") is Some(Object(config)) else {
+          return None
+        }
+        match config.get("checksum") {
+          None | Some(False) => ()
+          _ => return None
+        }
+      }
+      match level(configured_level, 3, 0, 22) {
+        Some(value) => Some(Zstd(value))
+        None => None
+      }
+    }
     _ => None
   }
 }
@@ -140,6 +163,21 @@ pub fn decode_chunk(
     Raw => if encoded.length() == expected_len { Some(encoded) } else { None }
     Gzip(_) => decode_gzip(encoded, expected_len)
     Zlib(_) => decode_zlib(encoded, expected_len)
+    Zstd(_) => decode_zstd(encoded, expected_len)
+  }
+}
+
+///|
+fn decode_zstd(encoded : Bytes, expected_len : Int) -> Bytes? {
+  let bound = @zstd.decompress_bound(encoded) catch { _ => return None }
+  if bound > expected_len.to_uint64() {
+    return None
+  }
+  let raw = @zstd.decompress(encoded) catch { _ => return None }
+  if raw.length() == expected_len {
+    Some(raw)
+  } else {
+    None
   }
 }
 
@@ -212,10 +250,11 @@ fn decode_zlib(encoded : Bytes, expected_len : Int) -> Bytes? {
 }
 
 ///|
-pub fn encode_chunk(plan : Compression, raw : Bytes) -> Bytes {
+pub fn encode_chunk(plan : Compression, raw : Bytes) -> Bytes? {
   match plan {
-    Raw => raw
-    Gzip(level) => @gzip.gzip_compress(raw, level~)
-    Zlib(level) => @zlib.zlib_compress(raw, level~)
+    Raw => Some(raw)
+    Gzip(level) => Some(@gzip.gzip_compress(raw, level~))
+    Zlib(level) => Some(@zlib.zlib_compress(raw, level~))
+    Zstd(level) => Some(@zstd.compress(raw, level~)) catch { _ => None }
   }
 }

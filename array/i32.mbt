@@ -116,10 +116,11 @@ pub fn I32Array::write(
   for i in 0..<4 {
     mutable[offset * 4 + i] = value_bytes[i]
   }
-  self.store.put(
-    key,
-    @codec.encode_chunk(self.compression, Bytes::from_array(mutable[:])),
-  )
+  guard @codec.encode_chunk(self.compression, Bytes::from_array(mutable[:]))
+    is Some(encoded) else {
+    return false
+  }
+  self.store.put(key, encoded)
   true
 }
 

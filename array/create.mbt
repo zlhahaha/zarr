@@ -44,6 +44,13 @@ fn numeric_metadata_json(
           ("level", Json::number(level.to_double())),
         ]),
       )
+    @codec.Zstd(level) =>
+      Json::object(
+        Map([
+          ("id", Json::string("zstd")),
+          ("level", Json::number(level.to_double())),
+        ]),
+      )
   }
   let v3_compressor_json = match compression {
     @codec.Raw => None
@@ -59,11 +66,29 @@ fn numeric_metadata_json(
           ]),
         ),
       )
+    @codec.Zstd(level) =>
+      Some(
+        Json::object(
+          Map([
+            ("name", Json::string("zstd")),
+            (
+              "configuration",
+              Json::object(
+                Map([
+                  ("level", Json::number(level.to_double())),
+                  ("checksum", Json::boolean(false)),
+                ]),
+              ),
+            ),
+          ]),
+        ),
+      )
     @codec.Zlib(_) => if format == @metadata.V2 { None } else { return None }
   }
   match compression {
     @codec.Gzip(level) | @codec.Zlib(level) if level < 0 || level > 9 =>
       return None
+    @codec.Zstd(level) if level < 0 || level > 22 => return None
     _ => ()
   }
   let metadata = if format == @metadata.V2 {

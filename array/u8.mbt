@@ -81,10 +81,11 @@ pub fn U8Array::write(
   }
   let mutable = raw.to_array()
   mutable[offset] = value
-  self.store.put(
-    key,
-    @codec.encode_chunk(self.compression, Bytes::from_array(mutable[:])),
-  )
+  guard @codec.encode_chunk(self.compression, Bytes::from_array(mutable[:]))
+    is Some(encoded) else {
+    return false
+  }
+  self.store.put(key, encoded)
   true
 }
 
