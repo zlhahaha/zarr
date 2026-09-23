@@ -187,3 +187,47 @@ async test "read independent zarr-python 3.4.0 v2 and v3 fixtures" {
   assert_eq(v3_i32.read([0]), Some(-1))
   assert_eq(v3_i32.read([2]), Some(-200))
 }
+
+///|
+async test "native rectangular slices cross chunks for all supported dtypes" {
+  let dir = @async_fs.tmpdir(prefix="zarr-slices-test")
+  guard @fs.FileStore::new(dir) is Some(store) else { fail("store") }
+  guard store.create_u8(@metadata.V3, "image", [3, 4], [2, 2], b'\x00')
+    is Some(image) else {
+    fail("image")
+  }
+  assert_true(image.write_region([1, 1], [2, 3], b"\x01\x02\x03\x04\x05\x06"))
+  assert_eq(
+    image.read_region([1, 1], [2, 3]),
+    Some(b"\x01\x02\x03\x04\x05\x06"),
+  )
+  assert_eq(image.read_region([3, 0], [0, 4]), Some(b""))
+  assert_eq(image.read_region([2, 3], [2, 1]), None)
+  assert_true(!image.write_region([0, 0], [2, 2], b"\x01"))
+
+  guard store.create_f32(@metadata.V3, "f32", [3], [2], 1.5) is Some(f32) else {
+    fail("f32")
+  }
+  assert_true(f32.write_region([1], [2], [2.5, 3.5]))
+  assert_eq(f32.read_region([0], [3]), Some([1.5, 2.5, 3.5]))
+
+  guard store.create_f64(@metadata.V2, "f64", [3], [2], 1.5) is Some(f64) else {
+    fail("f64")
+  }
+  assert_true(f64.write_region([1], [2], [2.5, 3.5]))
+  assert_eq(f64.read_region([0], [3]), Some([1.5, 2.5, 3.5]))
+
+  guard store.create_i32(@metadata.V3, "i32", [3], [2], -1) is Some(i32) else {
+    fail("i32")
+  }
+  assert_true(i32.write_region([1], [2], [2, -3]))
+  assert_eq(i32.read_region([0], [3]), Some([-1, 2, -3]))
+
+  guard @fs.FileStore::new(dir) is Some(saved) else { fail("saved") }
+  guard saved.open_u8("image") is Some(saved_image) else { fail("saved image") }
+  assert_eq(
+    saved_image.read_region([1, 1], [2, 3]),
+    Some(b"\x01\x02\x03\x04\x05\x06"),
+  )
+  @async_fs.rmdir(dir, recursive=true)
+}

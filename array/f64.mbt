@@ -113,12 +113,12 @@ pub fn F64Array::read_region(
   origin : Array[Int],
   extent : Array[Int],
 ) -> Array[Double]? {
-  guard region_len(self.metadata, origin, extent) is Some(length) else {
+  guard @chunk.region_len(self.metadata, origin, extent) is Some(length) else {
     return None
   }
   let result : Array[Double] = []
   for linear in 0..<length {
-    guard self.read(region_coords(origin, extent, linear)) is Some(value) else {
+    guard self.read(@chunk.region_coords(origin, extent, linear)) is Some(value) else {
       return None
     }
     result.push(value)
@@ -134,14 +134,14 @@ pub fn F64Array::write_region(
   extent : Array[Int],
   values : Array[Double],
 ) -> Bool {
-  guard region_len(self.metadata, origin, extent) is Some(length) else {
+  guard @chunk.region_len(self.metadata, origin, extent) is Some(length) else {
     return false
   }
   if values.length() != length {
     return false
   }
   for linear in 0..<length {
-    if !self.write(region_coords(origin, extent, linear), values[linear]) {
+    if !self.write(@chunk.region_coords(origin, extent, linear), values[linear]) {
       return false
     }
   }

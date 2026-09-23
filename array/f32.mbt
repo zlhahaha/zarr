@@ -116,12 +116,12 @@ pub fn F32Array::read_region(
   origin : Array[Int],
   extent : Array[Int],
 ) -> Array[Float]? {
-  guard region_len(self.metadata, origin, extent) is Some(length) else {
+  guard @chunk.region_len(self.metadata, origin, extent) is Some(length) else {
     return None
   }
   let result : Array[Float] = []
   for linear in 0..<length {
-    guard self.read(region_coords(origin, extent, linear)) is Some(value) else {
+    guard self.read(@chunk.region_coords(origin, extent, linear)) is Some(value) else {
       return None
     }
     result.push(value)
@@ -137,14 +137,14 @@ pub fn F32Array::write_region(
   extent : Array[Int],
   values : Array[Float],
 ) -> Bool {
-  guard region_len(self.metadata, origin, extent) is Some(length) else {
+  guard @chunk.region_len(self.metadata, origin, extent) is Some(length) else {
     return false
   }
   if values.length() != length {
     return false
   }
   for linear in 0..<length {
-    if !self.write(region_coords(origin, extent, linear), values[linear]) {
+    if !self.write(@chunk.region_coords(origin, extent, linear), values[linear]) {
       return false
     }
   }
