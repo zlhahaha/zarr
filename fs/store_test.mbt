@@ -56,3 +56,38 @@ async test "native float64 little-endian writes persist after reopening" {
   )
   @async_fs.rmdir(dir, recursive=true)
 }
+
+///|
+async test "native store opens v2 and v3 group metadata" {
+  let dir = @async_fs.tmpdir(prefix="zarr-group-test")
+  guard @fs.FileStore::new(dir) is Some(store) else { fail("store") }
+  assert_true(
+    store.put_group_metadata(@zarr.V2, "legacy", "{\"zarr_format\":2}"),
+  )
+  assert_true(
+    store.put_group_metadata(
+      @zarr.V3,
+      "modern",
+      "{\"zarr_format\":3,\"node_type\":\"group\",\"attributes\":{\"title\":\"sample\"}}",
+    ),
+  )
+  assert_true(store.put("legacy/.zattrs", b"{\"title\":\"old\"}"))
+  guard store.open_group("legacy") is Some(v2) else { fail("v2 group") }
+  guard store.open_group("modern") is Some(v3) else { fail("v3 group") }
+  assert_eq(v2.attributes, @json.parse("{\"title\":\"old\"}"))
+  assert_eq(v3.attributes, @json.parse("{\"title\":\"sample\"}"))
+  assert_true(
+    store.put_attributes(@zarr.V2, "legacy", "{\"title\":\"updated\"}"),
+  )
+  assert_true(store.put_attributes(@zarr.V3, "modern", "{\"title\":\"new\"}"))
+  assert_eq(
+    store.read_attributes(@zarr.V2, "legacy"),
+    Some(@json.parse("{\"title\":\"updated\"}")),
+  )
+  assert_eq(
+    store.read_attributes(@zarr.V3, "modern"),
+    Some(@json.parse("{\"title\":\"new\"}")),
+  )
+  assert_true(store.open_array("modern") is None)
+  @async_fs.rmdir(dir, recursive=true)
+}

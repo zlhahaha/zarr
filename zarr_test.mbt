@@ -213,3 +213,78 @@ test "v2 float64 big-endian F-order and unsupported endian" {
   assert_true(store.put_array_metadata(@zarr.V3, "invalid", invalid))
   assert_true(store.open_f64("invalid") is None)
 }
+
+///|
+test "v2 and v3 groups keep attributes in their respective metadata" {
+  let store = @zarr.MemoryStore::new()
+  assert_true(store.put_group_metadata(@zarr.V2, "old", "{\"zarr_format\":2}"))
+  assert_true(
+    store.put_group_metadata(
+      @zarr.V3,
+      "new",
+      "{\"zarr_format\":3,\"node_type\":\"group\",\"attributes\":{\"unit\":\"m\"}}",
+    ),
+  )
+  store.put("old/.zattrs", b"{\"unit\":\"s\"}")
+  guard store.open_group("old") is Some(old) else { fail("v2 group") }
+  guard store.open_group("new") is Some(new) else { fail("v3 group") }
+  assert_eq(old.format, @zarr.V2)
+  assert_eq(new.format, @zarr.V3)
+  assert_eq(old.attributes, @json.parse("{\"unit\":\"s\"}"))
+  assert_eq(new.attributes, @json.parse("{\"unit\":\"m\"}"))
+  assert_true(store.put_attributes(@zarr.V2, "old", "{\"unit\":\"kg\"}"))
+  assert_true(store.put_attributes(@zarr.V3, "new", "{\"unit\":\"km\"}"))
+  assert_eq(
+    store.read_attributes(@zarr.V2, "old"),
+    Some(@json.parse("{\"unit\":\"kg\"}")),
+  )
+  assert_eq(
+    store.read_attributes(@zarr.V3, "new"),
+    Some(@json.parse("{\"unit\":\"km\"}")),
+  )
+  assert_eq(store.get("old/.zgroup"), Some(b"{\"zarr_format\":2}"))
+  assert_true(store.get("new/.zattrs") is None)
+  assert_true(store.open_array("new") is None)
+}
+
+///|
+test "groups reject mixed formats invalid attributes and v2 array collision" {
+  let store = @zarr.MemoryStore::new()
+  assert_true(
+    !store.put_group_metadata(
+      @zarr.V3,
+      "bad",
+      "{\"zarr_format\":3,\"node_type\":\"group\",\"attributes\":[]}",
+    ),
+  )
+  assert_true(
+    store.put_group_metadata(@zarr.V2, "mixed", "{\"zarr_format\":2}"),
+  )
+  assert_true(
+    store.put_group_metadata(
+      @zarr.V3,
+      "mixed",
+      "{\"zarr_format\":3,\"node_type\":\"group\"}",
+    ),
+  )
+  assert_true(store.open_group("mixed") is None)
+  assert_true(
+    store.put_group_metadata(@zarr.V2, "corrupt", "{\"zarr_format\":2}"),
+  )
+  store.put("corrupt/.zattrs", b"[]")
+  assert_true(store.open_group("corrupt") is None)
+  assert_eq(@zarr.group_metadata_key(@zarr.V3, "../escape"), None)
+  assert_true(!store.put_attributes(@zarr.V2, "absent", "{}"))
+  assert_true(!store.put_attributes(@zarr.V3, "mixed", "[]"))
+  let array_raw =
+    #|{"zarr_format":3,"node_type":"array","shape":[1],"data_type":"uint8","chunk_grid":{"name":"regular","configuration":{"chunk_shape":[1]}},"chunk_key_encoding":{"name":"default"},"fill_value":0,"codecs":[{"name":"bytes"}]}
+  assert_true(!store.put_array_metadata(@zarr.V3, "mixed", array_raw))
+  assert_true(store.put_array_metadata(@zarr.V3, "array", array_raw))
+  assert_true(
+    !store.put_group_metadata(
+      @zarr.V3,
+      "array",
+      "{\"zarr_format\":3,\"node_type\":\"group\"}",
+    ),
+  )
+}

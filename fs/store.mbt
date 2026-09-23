@@ -83,6 +83,18 @@ pub async fn FileStore::put_array_metadata(
   guard @zarr.array_metadata_key(format, path) is Some(key) else {
     return false
   }
+  guard @zarr.group_metadata_key(format, path) is Some(group_key) else {
+    return false
+  }
+  if format == @zarr.V2 && self.get(group_key) is Some(_) {
+    return false
+  }
+  if format == @zarr.V3 && self.get(key) is Some(bytes) {
+    let previous = @utf8.decode(bytes[:]) catch { _ => return false }
+    if @zarr.parse_group_metadata(previous) is Some(_) {
+      return false
+    }
+  }
   self.put(key, @utf8.encode(raw))
 }
 
