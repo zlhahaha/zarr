@@ -5,3 +5,5 @@ target
 .mooncakes/
 .moonagent/
 pkg.generated.mbti
+.interop-deps/
+integration/.roundtrip/

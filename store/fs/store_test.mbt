@@ -131,3 +131,59 @@ async test "native float32 writes persist with big endian" {
   assert_eq(saved_array.read([0]), Some(2.5))
   @async_fs.rmdir(dir, recursive=true)
 }
+
+///|
+async test "native int32 signed values persist" {
+  let dir = @async_fs.tmpdir(prefix="zarr-i32-test")
+  guard @fs.FileStore::new(dir) is Some(store) else { fail("store") }
+  guard store.create_i32(@metadata.V3, "labels", [2], [2], -1) is Some(array) else {
+    fail("create i32")
+  }
+  assert_true(array.write([0], -200))
+  guard @fs.FileStore::new(dir) is Some(saved) else { fail("saved store") }
+  guard saved.open_i32("labels") is Some(saved_array) else { fail("open i32") }
+  assert_eq(saved_array.read([0]), Some(-200))
+  assert_eq(saved_array.read([1]), Some(-1))
+  @async_fs.rmdir(dir, recursive=true)
+}
+
+///|
+async test "read independent zarr-python 3.4.0 v2 and v3 fixtures" {
+  let base = "integration/fixtures/zarr-python"
+  guard @fs.FileStore::new("\{base}/v2_u8.zarr") is Some(v2_u8_store) else {
+    fail("v2 u8 store")
+  }
+  guard v2_u8_store.open_u8("") is Some(v2_u8) else { fail("v2 u8") }
+  assert_eq(v2_u8.read([0, 0]), Some(b'\x05'))
+  assert_eq(v2_u8.read([1, 2]), Some(b'\x07'))
+  assert_eq(v2_u8.read([2, 3]), Some(b'\x09'))
+
+  guard @fs.FileStore::new("\{base}/v3_u8.zarr") is Some(v3_u8_store) else {
+    fail("v3 u8 store")
+  }
+  guard v3_u8_store.open_u8("") is Some(v3_u8) else { fail("v3 u8") }
+  assert_eq(v3_u8.read([0, 0]), Some(b'\x05'))
+  assert_eq(v3_u8.read([1, 2]), Some(b'\x07'))
+  assert_eq(v3_u8.read([2, 3]), Some(b'\x09'))
+
+  guard @fs.FileStore::new("\{base}/v2_f64_be.zarr") is Some(v2_f64_store) else {
+    fail("v2 f64 store")
+  }
+  guard v2_f64_store.open_f64("") is Some(v2_f64) else { fail("v2 f64") }
+  assert_eq(v2_f64.read([0]), Some(1.5))
+  assert_eq(v2_f64.read([2]), Some(42.25))
+
+  guard @fs.FileStore::new("\{base}/v3_f32_le.zarr") is Some(v3_f32_store) else {
+    fail("v3 f32 store")
+  }
+  guard v3_f32_store.open_f32("") is Some(v3_f32) else { fail("v3 f32") }
+  assert_eq(v3_f32.read([0]), Some(1.5))
+  assert_eq(v3_f32.read([2]), Some(42.25))
+
+  guard @fs.FileStore::new("\{base}/v3_i32_be.zarr") is Some(v3_i32_store) else {
+    fail("v3 i32 store")
+  }
+  guard v3_i32_store.open_i32("") is Some(v3_i32) else { fail("v3 i32") }
+  assert_eq(v3_i32.read([0]), Some(-1))
+  assert_eq(v3_i32.read([2]), Some(-200))
+}
