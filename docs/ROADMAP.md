@@ -13,7 +13,7 @@ Local native/wasm-gc checks, builds, tests and example runs pass. GitHub Actions
 
 ## Stage 1 — Useful uncompressed numeric arrays
 
-Current implementation: typed `uint8`, `int32`, `float32`, and `float64` create/open/element and rectangular-slice I/O in memory and native filesystem, plus v2/v3 group/attribute operations. Native slices work but use per-element file I/O; chunk batching remains open. Five independent zarr-python 3.4.0 fixtures are read by native tests, and zarr-python reads five MoonBit-generated stores locally. The remaining dtype breadth is open; GitHub CI has not yet run.
+Current implementation: typed `uint8`, `int32`, `float32`, and `float64` create/open/element and rectangular-slice I/O in memory and native filesystem, plus v2/v3 group/attribute operations. Native slices batch file I/O by touched chunk but still buffer the requested result. Five independent zarr-python 3.4.0 fixtures are read by native tests, and zarr-python reads five MoonBit-generated stores locally. The remaining dtype breadth is open; GitHub CI has not yet run.
 
 - Store abstraction and native filesystem backend; create/open arrays and groups, metadata/attributes, and chunks for v2/v3.
 - Core numeric dtypes (`bool`, signed/unsigned 8/16/32/64-bit, float32/64) with specified endian handling; C-order v2 and v3 bytes codec.

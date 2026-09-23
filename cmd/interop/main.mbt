@@ -49,8 +49,7 @@ async fn main {
     println("invalid output path")
     return
   }
-  guard f32_store.create_f32(@metadata.V3, "", [3], [2], 1.5)
-    is Some(f32) else {
+  guard f32_store.create_f32(@metadata.V3, "", [3], [2], 1.5) is Some(f32) else {
     println("v3 float32 creation failed")
     return
   }

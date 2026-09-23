@@ -4,7 +4,7 @@ A MoonBit implementation of the Zarr v2 and v3 storage formats for chunked N-dim
 
 ## Status
 
-Early development. The library can read and write uncompressed `uint8`, `int32`, `float32`, and `float64` arrays in memory and on native filesystems, including element access, rectangular slices, missing-chunk fill values and edge chunks. Groups and attributes can be read and written for both formats. Native slices currently perform per-element file I/O and are best suited to small regions; chunk-batched I/O, other dtypes/codecs and cloud access are not implemented yet. Do not use it as a general Zarr reader/writer yet.
+Early development. The library can read and write uncompressed `uint8`, `int32`, `float32`, and `float64` arrays in memory and on native filesystems, including element access, rectangular slices, missing-chunk fill values and edge chunks. Groups and attributes can be read and written for both formats. Native slices batch file I/O by touched chunk, but still buffer the requested result and are not a streaming interface. Other dtypes/codecs and cloud access are not implemented yet. Do not use it as a general Zarr reader/writer yet.
 
 | Capability | Zarr v2 | Zarr v3 |
 | --- | --- | --- |

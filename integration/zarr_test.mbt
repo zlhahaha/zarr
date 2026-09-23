@@ -413,3 +413,39 @@ test "int32 v2 and v3 round-trip signed values and chunk edges" {
   assert_eq(store.get("big/0"), Some(b"\x00\x00\x00\x64\xff\xff\xff\xff"))
   assert_eq(v2.read([1]), Some(-1))
 }
+
+///|
+test "chunk region planning covers edge chunks and scalar arrays" {
+  let raw =
+    #|{"zarr_format":3,"node_type":"array","shape":[3,4],"data_type":"uint8","chunk_grid":{"name":"regular","configuration":{"chunk_shape":[2,2]}},"chunk_key_encoding":{"name":"default"},"fill_value":0,"codecs":[{"name":"bytes"}]}
+  guard @metadata.parse_array_metadata(raw) is Some(meta) else {
+    fail("metadata")
+  }
+  guard @chunk.region_chunks(meta, [1, 1], [2, 3]) is Some(pieces) else {
+    fail("region chunks")
+  }
+  assert_eq(pieces.length(), 4)
+  assert_eq(pieces[0].coordinates, [0, 0])
+  assert_eq(pieces[0].origin, [1, 1])
+  assert_eq(pieces[0].extent, [1, 1])
+  assert_eq(pieces[3].coordinates, [1, 1])
+  assert_eq(pieces[3].origin, [2, 2])
+  assert_eq(pieces[3].extent, [1, 2])
+  assert_eq(@chunk.region_index([1, 1], [2, 3], [2, 3]), Some(5))
+  assert_eq(@chunk.region_index([1, 1], [2, 3], [2, 4]), None)
+  guard @chunk.region_chunks(meta, [3, 0], [0, 4]) is Some(empty) else {
+    fail("empty region")
+  }
+  assert_eq(empty.length(), 0)
+  assert_true(@chunk.region_chunks(meta, [2, 3], [2, 1]) is None)
+  let scalar_raw =
+    #|{"zarr_format":3,"node_type":"array","shape":[],"data_type":"uint8","chunk_grid":{"name":"regular","configuration":{"chunk_shape":[]}},"chunk_key_encoding":{"name":"default"},"fill_value":0,"codecs":[{"name":"bytes"}]}
+  guard @metadata.parse_array_metadata(scalar_raw) is Some(scalar) else {
+    fail("scalar metadata")
+  }
+  guard @chunk.region_chunks(scalar, [], []) is Some(scalar_pieces) else {
+    fail("scalar region")
+  }
+  assert_eq(scalar_pieces.length(), 1)
+  assert_eq(scalar_pieces[0].coordinates, [])
+}

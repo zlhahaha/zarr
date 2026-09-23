@@ -8,12 +8,40 @@ pub async fn FileU8Array::read_region(
   guard @chunk.region_len(self.metadata, origin, extent) is Some(length) else {
     return None
   }
+  guard @chunk.region_chunks(self.metadata, origin, extent) is Some(pieces) else {
+    return None
+  }
   let result = Bytes::make(length, b'\x00').to_array()
-  for linear in 0..<length {
-    guard self.read(@chunk.region_coords(origin, extent, linear)) is Some(value) else {
+  for piece in pieces {
+    let scratch = @store.MemoryStore::new()
+    guard @array.open_u8_from_metadata(scratch, self.metadata, self.path)
+      is Some(array) else {
       return None
     }
-    result[linear] = value
+    match self.store.get_chunk(self.metadata, piece.coordinates, self.path) {
+      Some(bytes) =>
+        if !scratch.put_chunk(
+            self.metadata,
+            piece.coordinates,
+            self.path,
+            bytes,
+          ) {
+          return None
+        }
+      None => ()
+    }
+    guard @chunk.region_len(self.metadata, piece.origin, piece.extent)
+      is Some(piece_len) else {
+      return None
+    }
+    for linear in 0..<piece_len {
+      let indices = @chunk.region_coords(piece.origin, piece.extent, linear)
+      guard array.read(indices) is Some(value) else { return None }
+      guard @chunk.region_index(origin, extent, indices) is Some(index) else {
+        return None
+      }
+      result[index] = value
+    }
   }
   Some(Bytes::from_array(result[:]))
 }
@@ -32,8 +60,50 @@ pub async fn FileU8Array::write_region(
   if values.length() != length {
     return false
   }
-  for linear in 0..<length {
-    if !self.write(@chunk.region_coords(origin, extent, linear), values[linear]) {
+  guard @chunk.region_chunks(self.metadata, origin, extent) is Some(pieces) else {
+    return false
+  }
+  for piece in pieces {
+    let scratch = @store.MemoryStore::new()
+    guard @array.open_u8_from_metadata(scratch, self.metadata, self.path)
+      is Some(array) else {
+      return false
+    }
+    match self.store.get_chunk(self.metadata, piece.coordinates, self.path) {
+      Some(bytes) =>
+        if !scratch.put_chunk(
+            self.metadata,
+            piece.coordinates,
+            self.path,
+            bytes,
+          ) {
+          return false
+        }
+      None => ()
+    }
+    guard @chunk.region_len(self.metadata, piece.origin, piece.extent)
+      is Some(piece_len) else {
+      return false
+    }
+    for linear in 0..<piece_len {
+      let indices = @chunk.region_coords(piece.origin, piece.extent, linear)
+      guard @chunk.region_index(origin, extent, indices) is Some(index) else {
+        return false
+      }
+      if !array.write(indices, values[index]) {
+        return false
+      }
+    }
+    guard scratch.get_chunk(self.metadata, piece.coordinates, self.path)
+      is Some(encoded) else {
+      return false
+    }
+    if !self.store.put_chunk(
+        self.metadata,
+        piece.coordinates,
+        self.path,
+        encoded,
+      ) {
       return false
     }
   }
@@ -41,6 +111,7 @@ pub async fn FileU8Array::write_region(
 }
 
 ///|
+/// Read a bounded C-order float32 rectangle across native filesystem chunks.
 pub async fn FileF32Array::read_region(
   self : FileF32Array,
   origin : Array[Int],
@@ -49,17 +120,46 @@ pub async fn FileF32Array::read_region(
   guard @chunk.region_len(self.metadata, origin, extent) is Some(length) else {
     return None
   }
-  let result : Array[Float] = []
-  for linear in 0..<length {
-    guard self.read(@chunk.region_coords(origin, extent, linear)) is Some(value) else {
+  guard @chunk.region_chunks(self.metadata, origin, extent) is Some(pieces) else {
+    return None
+  }
+  let result : Array[Float] = Array::make(length, 0.0)
+  for piece in pieces {
+    let scratch = @store.MemoryStore::new()
+    guard @array.open_f32_from_metadata(scratch, self.metadata, self.path)
+      is Some(array) else {
       return None
     }
-    result.push(value)
+    match self.store.get_chunk(self.metadata, piece.coordinates, self.path) {
+      Some(bytes) =>
+        if !scratch.put_chunk(
+            self.metadata,
+            piece.coordinates,
+            self.path,
+            bytes,
+          ) {
+          return None
+        }
+      None => ()
+    }
+    guard @chunk.region_len(self.metadata, piece.origin, piece.extent)
+      is Some(piece_len) else {
+      return None
+    }
+    for linear in 0..<piece_len {
+      let indices = @chunk.region_coords(piece.origin, piece.extent, linear)
+      guard array.read(indices) is Some(value) else { return None }
+      guard @chunk.region_index(origin, extent, indices) is Some(index) else {
+        return None
+      }
+      result[index] = value
+    }
   }
   Some(result)
 }
 
 ///|
+/// Writes spanning chunks are not atomic.
 pub async fn FileF32Array::write_region(
   self : FileF32Array,
   origin : Array[Int],
@@ -72,8 +172,50 @@ pub async fn FileF32Array::write_region(
   if values.length() != length {
     return false
   }
-  for linear in 0..<length {
-    if !self.write(@chunk.region_coords(origin, extent, linear), values[linear]) {
+  guard @chunk.region_chunks(self.metadata, origin, extent) is Some(pieces) else {
+    return false
+  }
+  for piece in pieces {
+    let scratch = @store.MemoryStore::new()
+    guard @array.open_f32_from_metadata(scratch, self.metadata, self.path)
+      is Some(array) else {
+      return false
+    }
+    match self.store.get_chunk(self.metadata, piece.coordinates, self.path) {
+      Some(bytes) =>
+        if !scratch.put_chunk(
+            self.metadata,
+            piece.coordinates,
+            self.path,
+            bytes,
+          ) {
+          return false
+        }
+      None => ()
+    }
+    guard @chunk.region_len(self.metadata, piece.origin, piece.extent)
+      is Some(piece_len) else {
+      return false
+    }
+    for linear in 0..<piece_len {
+      let indices = @chunk.region_coords(piece.origin, piece.extent, linear)
+      guard @chunk.region_index(origin, extent, indices) is Some(index) else {
+        return false
+      }
+      if !array.write(indices, values[index]) {
+        return false
+      }
+    }
+    guard scratch.get_chunk(self.metadata, piece.coordinates, self.path)
+      is Some(encoded) else {
+      return false
+    }
+    if !self.store.put_chunk(
+        self.metadata,
+        piece.coordinates,
+        self.path,
+        encoded,
+      ) {
       return false
     }
   }
@@ -81,6 +223,7 @@ pub async fn FileF32Array::write_region(
 }
 
 ///|
+/// Read a bounded C-order float64 rectangle across native filesystem chunks.
 pub async fn FileF64Array::read_region(
   self : FileF64Array,
   origin : Array[Int],
@@ -89,17 +232,46 @@ pub async fn FileF64Array::read_region(
   guard @chunk.region_len(self.metadata, origin, extent) is Some(length) else {
     return None
   }
-  let result : Array[Double] = []
-  for linear in 0..<length {
-    guard self.read(@chunk.region_coords(origin, extent, linear)) is Some(value) else {
+  guard @chunk.region_chunks(self.metadata, origin, extent) is Some(pieces) else {
+    return None
+  }
+  let result : Array[Double] = Array::make(length, 0.0)
+  for piece in pieces {
+    let scratch = @store.MemoryStore::new()
+    guard @array.open_f64_from_metadata(scratch, self.metadata, self.path)
+      is Some(array) else {
       return None
     }
-    result.push(value)
+    match self.store.get_chunk(self.metadata, piece.coordinates, self.path) {
+      Some(bytes) =>
+        if !scratch.put_chunk(
+            self.metadata,
+            piece.coordinates,
+            self.path,
+            bytes,
+          ) {
+          return None
+        }
+      None => ()
+    }
+    guard @chunk.region_len(self.metadata, piece.origin, piece.extent)
+      is Some(piece_len) else {
+      return None
+    }
+    for linear in 0..<piece_len {
+      let indices = @chunk.region_coords(piece.origin, piece.extent, linear)
+      guard array.read(indices) is Some(value) else { return None }
+      guard @chunk.region_index(origin, extent, indices) is Some(index) else {
+        return None
+      }
+      result[index] = value
+    }
   }
   Some(result)
 }
 
 ///|
+/// Writes spanning chunks are not atomic.
 pub async fn FileF64Array::write_region(
   self : FileF64Array,
   origin : Array[Int],
@@ -112,8 +284,50 @@ pub async fn FileF64Array::write_region(
   if values.length() != length {
     return false
   }
-  for linear in 0..<length {
-    if !self.write(@chunk.region_coords(origin, extent, linear), values[linear]) {
+  guard @chunk.region_chunks(self.metadata, origin, extent) is Some(pieces) else {
+    return false
+  }
+  for piece in pieces {
+    let scratch = @store.MemoryStore::new()
+    guard @array.open_f64_from_metadata(scratch, self.metadata, self.path)
+      is Some(array) else {
+      return false
+    }
+    match self.store.get_chunk(self.metadata, piece.coordinates, self.path) {
+      Some(bytes) =>
+        if !scratch.put_chunk(
+            self.metadata,
+            piece.coordinates,
+            self.path,
+            bytes,
+          ) {
+          return false
+        }
+      None => ()
+    }
+    guard @chunk.region_len(self.metadata, piece.origin, piece.extent)
+      is Some(piece_len) else {
+      return false
+    }
+    for linear in 0..<piece_len {
+      let indices = @chunk.region_coords(piece.origin, piece.extent, linear)
+      guard @chunk.region_index(origin, extent, indices) is Some(index) else {
+        return false
+      }
+      if !array.write(indices, values[index]) {
+        return false
+      }
+    }
+    guard scratch.get_chunk(self.metadata, piece.coordinates, self.path)
+      is Some(encoded) else {
+      return false
+    }
+    if !self.store.put_chunk(
+        self.metadata,
+        piece.coordinates,
+        self.path,
+        encoded,
+      ) {
       return false
     }
   }
@@ -121,6 +335,7 @@ pub async fn FileF64Array::write_region(
 }
 
 ///|
+/// Read a bounded C-order int32 rectangle across native filesystem chunks.
 pub async fn FileI32Array::read_region(
   self : FileI32Array,
   origin : Array[Int],
@@ -129,17 +344,46 @@ pub async fn FileI32Array::read_region(
   guard @chunk.region_len(self.metadata, origin, extent) is Some(length) else {
     return None
   }
-  let result : Array[Int] = []
-  for linear in 0..<length {
-    guard self.read(@chunk.region_coords(origin, extent, linear)) is Some(value) else {
+  guard @chunk.region_chunks(self.metadata, origin, extent) is Some(pieces) else {
+    return None
+  }
+  let result : Array[Int] = Array::make(length, 0)
+  for piece in pieces {
+    let scratch = @store.MemoryStore::new()
+    guard @array.open_i32_from_metadata(scratch, self.metadata, self.path)
+      is Some(array) else {
       return None
     }
-    result.push(value)
+    match self.store.get_chunk(self.metadata, piece.coordinates, self.path) {
+      Some(bytes) =>
+        if !scratch.put_chunk(
+            self.metadata,
+            piece.coordinates,
+            self.path,
+            bytes,
+          ) {
+          return None
+        }
+      None => ()
+    }
+    guard @chunk.region_len(self.metadata, piece.origin, piece.extent)
+      is Some(piece_len) else {
+      return None
+    }
+    for linear in 0..<piece_len {
+      let indices = @chunk.region_coords(piece.origin, piece.extent, linear)
+      guard array.read(indices) is Some(value) else { return None }
+      guard @chunk.region_index(origin, extent, indices) is Some(index) else {
+        return None
+      }
+      result[index] = value
+    }
   }
   Some(result)
 }
 
 ///|
+/// Writes spanning chunks are not atomic.
 pub async fn FileI32Array::write_region(
   self : FileI32Array,
   origin : Array[Int],
@@ -152,8 +396,50 @@ pub async fn FileI32Array::write_region(
   if values.length() != length {
     return false
   }
-  for linear in 0..<length {
-    if !self.write(@chunk.region_coords(origin, extent, linear), values[linear]) {
+  guard @chunk.region_chunks(self.metadata, origin, extent) is Some(pieces) else {
+    return false
+  }
+  for piece in pieces {
+    let scratch = @store.MemoryStore::new()
+    guard @array.open_i32_from_metadata(scratch, self.metadata, self.path)
+      is Some(array) else {
+      return false
+    }
+    match self.store.get_chunk(self.metadata, piece.coordinates, self.path) {
+      Some(bytes) =>
+        if !scratch.put_chunk(
+            self.metadata,
+            piece.coordinates,
+            self.path,
+            bytes,
+          ) {
+          return false
+        }
+      None => ()
+    }
+    guard @chunk.region_len(self.metadata, piece.origin, piece.extent)
+      is Some(piece_len) else {
+      return false
+    }
+    for linear in 0..<piece_len {
+      let indices = @chunk.region_coords(piece.origin, piece.extent, linear)
+      guard @chunk.region_index(origin, extent, indices) is Some(index) else {
+        return false
+      }
+      if !array.write(indices, values[index]) {
+        return false
+      }
+    }
+    guard scratch.get_chunk(self.metadata, piece.coordinates, self.path)
+      is Some(encoded) else {
+      return false
+    }
+    if !self.store.put_chunk(
+        self.metadata,
+        piece.coordinates,
+        self.path,
+        encoded,
+      ) {
       return false
     }
   }
