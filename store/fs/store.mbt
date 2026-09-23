@@ -15,13 +15,58 @@ pub fn FileStore::new(root : String) -> FileStore? {
 }
 
 ///|
+fn reserved_windows_name(segment : String) -> Bool {
+  let name = match segment.split_once(".") {
+    Some((base, _)) => "\{base}".to_upper()
+    None => segment.to_upper()
+  }
+  match name {
+    "CON"
+    | "PRN"
+    | "AUX"
+    | "NUL"
+    | "COM1"
+    | "COM2"
+    | "COM3"
+    | "COM4"
+    | "COM5"
+    | "COM6"
+    | "COM7"
+    | "COM8"
+    | "COM9"
+    | "LPT1"
+    | "LPT2"
+    | "LPT3"
+    | "LPT4"
+    | "LPT5"
+    | "LPT6"
+    | "LPT7"
+    | "LPT8"
+    | "LPT9" => true
+    _ => false
+  }
+}
+
+///|
 fn FileStore::path(self : FileStore, key : String) -> String? {
   if key == "" || key.has_prefix("/") || key.contains("\\") {
     return None
   }
   for part in key.split("/") {
     let segment = "\{part}"
-    if segment == "" || segment == "." || segment == ".." {
+    if segment == "" ||
+      segment == "." ||
+      segment == ".." ||
+      segment.has_suffix(".") ||
+      segment.has_suffix(" ") ||
+      reserved_windows_name(segment) ||
+      segment.contains(":") ||
+      segment.contains("<") ||
+      segment.contains(">") ||
+      segment.contains("\"") ||
+      segment.contains("|") ||
+      segment.contains("?") ||
+      segment.contains("*") {
       return None
     }
   }

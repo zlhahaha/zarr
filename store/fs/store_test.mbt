@@ -15,6 +15,10 @@ async test "filesystem store persists v2 and v3 chunks" {
   assert_eq(store.get_chunk(old, [1], "old"), Some(b"\x01\x02"))
   assert_eq(store.get_chunk(new, [1], "new"), Some(b"\x03\x04"))
   assert_true(!store.put("../escape", b"no"))
+  assert_true(!store.put("dir/file:stream", b"no"))
+  assert_true(!store.put("CON/zarr.json", b"no"))
+  assert_true(!store.put("aux.txt", b"no"))
+  assert_true(!store.put("trailing./zarr.json", b"no"))
   @async_fs.rmdir(dir, recursive=true)
 }
 
