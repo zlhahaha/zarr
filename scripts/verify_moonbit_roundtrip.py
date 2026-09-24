@@ -51,6 +51,8 @@ def main() -> None:
     check("v3_zstd_image", image)
     check("v2_u16_be", np.array([60000, 60000, 65530], dtype=np.uint16))
     check("v3_u16_le_zstd", np.array([60000, 60000, 65530], dtype=np.uint16))
+    check("v2_i16_be", np.array([-1234, -1234, -32768], dtype=np.int16))
+    check("v3_i16_le_zstd", np.array([-1234, -1234, 32767], dtype=np.int16))
     check_group("v2_grouped_u8", "v2")
     check_group("v3_grouped_u8", "v3")
     mask = np.ones((3, 4), dtype=np.bool_)

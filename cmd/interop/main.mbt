@@ -242,6 +242,48 @@ async fn main {
     return
   }
 
+  guard @fs.FileStore::new("\{base}/v2_i16_be.zarr") is Some(v2_i16_store) else {
+    println("invalid v2 int16 output path")
+    return
+  }
+  guard v2_i16_store.create_i16(
+      @metadata.V2,
+      "",
+      [3],
+      [2],
+      (-1234 : Int16),
+      big_endian=true,
+    )
+    is Some(v2_i16) else {
+    println("v2 int16 creation failed")
+    return
+  }
+  if !v2_i16.write([2], (-32768 : Int16)) {
+    println("v2 int16 write failed")
+    return
+  }
+
+  guard @fs.FileStore::new("\{base}/v3_i16_le_zstd.zarr") is Some(v3_i16_store) else {
+    println("invalid v3 int16 output path")
+    return
+  }
+  guard v3_i16_store.create_i16(
+      @metadata.V3,
+      "",
+      [3],
+      [2],
+      (-1234 : Int16),
+      compression=@codec.Zstd(3),
+    )
+    is Some(v3_i16) else {
+    println("v3 int16 creation failed")
+    return
+  }
+  if !v3_i16.write([2], (32767 : Int16)) {
+    println("v3 int16 write failed")
+    return
+  }
+
   guard @fs.FileStore::new("\{base}/v2_grouped_u8.zarr") is Some(v2_group_store) else {
     println("invalid v2 group output path")
     return

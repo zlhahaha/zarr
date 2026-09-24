@@ -482,7 +482,7 @@ pub async fn FileU16Array::read_region(
   let result : Array[UInt16] = Array::make(length, (0 : UInt16))
   for piece in pieces {
     let scratch = @store.MemoryStore::new()
-    guard @array.open_u16_from_metadata(scratch, self.metadata, self.path)
+    guard @array.open_u16_bits_from_metadata(scratch, self.metadata, self.path)
       is Some(array) else {
       return None
     }
@@ -535,7 +535,7 @@ pub async fn FileU16Array::write_region(
   }
   for piece in pieces {
     let scratch = @store.MemoryStore::new()
-    guard @array.open_u16_from_metadata(scratch, self.metadata, self.path)
+    guard @array.open_u16_bits_from_metadata(scratch, self.metadata, self.path)
       is Some(array) else {
       return false
     }

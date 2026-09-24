@@ -97,6 +97,37 @@ pub async fn FileStore::create_u16(
 }
 
 ///|
+pub async fn FileStore::create_i16(
+  self : FileStore,
+  format : @metadata.Format,
+  path : String,
+  shape : Array[Int],
+  chunk_shape : Array[Int],
+  fill : Int16,
+  big_endian? : Bool = false,
+  compression? : @codec.Compression = @codec.Raw,
+) -> FileI16Array? {
+  if self.node_exists(path) {
+    return None
+  }
+  guard @array.i16_metadata_json(
+      format,
+      shape,
+      chunk_shape,
+      fill,
+      big_endian~,
+      compression~,
+    )
+    is Some(raw) else {
+    return None
+  }
+  if !self.put_array_metadata(format, path, raw) {
+    return None
+  }
+  self.open_i16(path)
+}
+
+///|
 pub async fn FileStore::create_f64(
   self : FileStore,
   format : @metadata.Format,

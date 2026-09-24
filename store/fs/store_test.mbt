@@ -374,6 +374,26 @@ async test "read independent zarr-python uint16 fixtures" {
 }
 
 ///|
+async test "read independent zarr-python int16 fixtures" {
+  let base = "integration/fixtures/zarr-python"
+  guard @fs.FileStore::new("\{base}/v2_i16_be.zarr") is Some(v2_store) else {
+    fail("v2 int16 store")
+  }
+  guard v2_store.open_i16("") is Some(v2) else { fail("v2 int16 array") }
+  assert_eq(v2.read([0]), Some((-1234 : Int16)))
+  assert_eq(v2.read([2]), Some((-32768 : Int16)))
+  assert_true(v2_store.open_u16("") is None)
+  guard @fs.FileStore::new("\{base}/v3_i16_le_zstd.zarr") is Some(v3_store) else {
+    fail("v3 int16 store")
+  }
+  guard v3_store.open_i16("") is Some(v3) else { fail("v3 int16 array") }
+  assert_eq(
+    v3.read_region([0], [3]),
+    Some([(-1234 : Int16), (-1234 : Int16), (32767 : Int16)]),
+  )
+}
+
+///|
 async test "native group tree creates root and parents without overwriting" {
   let dir = @async_fs.tmpdir(prefix="zarr-group-tree-test")
   guard @fs.FileStore::new(dir) is Some(store) else { fail("store") }

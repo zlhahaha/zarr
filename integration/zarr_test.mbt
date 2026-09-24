@@ -704,6 +704,50 @@ test "uint16 supports endian, fill, compression and slices" {
 }
 
 ///|
+test "int16 supports negative fill, endian, compression and slices" {
+  let store = @store.MemoryStore::new()
+  guard @array.create_i16(
+      store,
+      @metadata.V2,
+      "big",
+      [3],
+      [2],
+      (-1234 : Int16),
+      big_endian=true,
+    )
+    is Some(big) else {
+    fail("big-endian int16")
+  }
+  assert_eq(big.read([0]), Some((-1234 : Int16)))
+  assert_true(big.write([2], (-32768 : Int16)))
+  assert_eq(big.read([2]), Some((-32768 : Int16)))
+  assert_eq(store.get("big/1"), Some(b"\x80\x00\xfb\x2e"))
+  assert_true(@array.open_u16(store, "big") is None)
+
+  guard @array.create_i16(
+      store,
+      @metadata.V3,
+      "compressed",
+      [3],
+      [2],
+      (-1234 : Int16),
+      compression=@codec.Zstd(3),
+    )
+    is Some(array) else {
+    fail("compressed int16")
+  }
+  assert_true(array.write_region([1], [2], [(32767 : Int16), (-32768 : Int16)]))
+  assert_eq(
+    array.read_region([0], [3]),
+    Some([(-1234 : Int16), (32767 : Int16), (-32768 : Int16)]),
+  )
+  let bad_fill =
+    #|{"zarr_format":2,"shape":[2],"chunks":[2],"dtype":"<i2","compressor":null,"fill_value":32768,"order":"C","filters":null}
+  assert_true(store.put_array_metadata(@metadata.V2, "bad", bad_fill))
+  assert_true(@array.open_i16(store, "bad") is None)
+}
+
+///|
 test "group tree creates ancestors and preserves existing attributes" {
   let store = @store.MemoryStore::new()
   assert_true(@hierarchy.create_group_tree(store, @metadata.V3, "science/run"))

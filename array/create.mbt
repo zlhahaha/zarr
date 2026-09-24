@@ -235,6 +235,31 @@ pub fn u16_metadata_json(
 }
 
 ///|
+pub fn i16_metadata_json(
+  format : @metadata.Format,
+  shape : Array[Int],
+  chunk_shape : Array[Int],
+  fill : Int16,
+  big_endian? : Bool = false,
+  compression? : @codec.Compression = @codec.Raw,
+) -> String? {
+  numeric_metadata_json(
+    format,
+    shape,
+    chunk_shape,
+    if big_endian {
+      ">i2"
+    } else {
+      "<i2"
+    },
+    "int16",
+    Json::number(fill.to_int().to_double()),
+    big_endian,
+    compression,
+  )
+}
+
+///|
 /// Build validated float64 metadata. Non-finite fill values
 /// need format-specific string encoding and are not supported yet.
 pub fn f64_metadata_json(
@@ -392,6 +417,37 @@ pub fn create_u16(
     return None
   }
   open_u16(store, path)
+}
+
+///|
+pub fn create_i16(
+  store : @store.MemoryStore,
+  format : @metadata.Format,
+  path : String,
+  shape : Array[Int],
+  chunk_shape : Array[Int],
+  fill : Int16,
+  big_endian? : Bool = false,
+  compression? : @codec.Compression = @codec.Raw,
+) -> I16Array? {
+  if node_exists(store, path) {
+    return None
+  }
+  guard i16_metadata_json(
+      format,
+      shape,
+      chunk_shape,
+      fill,
+      big_endian~,
+      compression~,
+    )
+    is Some(raw) else {
+    return None
+  }
+  if !store.put_array_metadata(format, path, raw) {
+    return None
+  }
+  open_i16(store, path)
 }
 
 ///|

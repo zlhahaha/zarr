@@ -34,6 +34,19 @@ pub fn u16_fill(value : Json) -> UInt16? {
 }
 
 ///|
+pub fn i16_fill(value : Json) -> Int16? {
+  guard value is Number(n, ..) else { return None }
+  if n < -32768.0 || n > 32767.0 {
+    return None
+  }
+  let i = n.to_int()
+  if i.to_double() != n {
+    return None
+  }
+  Some(Int16::from_int(i))
+}
+
+///|
 pub fn f64_fill(value : Json) -> Double? {
   match value {
     Number(n, ..) => Some(n)
@@ -89,6 +102,24 @@ pub fn u16_endian(metadata : @metadata.ArrayMetadata) -> Bool? {
       }
     @metadata.V3 =>
       if metadata.data_type == "uint16" {
+        Some(false)
+      } else {
+        None
+      }
+  }
+}
+
+///|
+pub fn i16_endian(metadata : @metadata.ArrayMetadata) -> Bool? {
+  match metadata.format {
+    @metadata.V2 =>
+      match metadata.data_type {
+        "<i2" => Some(false)
+        ">i2" => Some(true)
+        _ => None
+      }
+    @metadata.V3 =>
+      if metadata.data_type == "int16" {
         Some(false)
       } else {
         None

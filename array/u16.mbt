@@ -22,13 +22,34 @@ pub fn open_u16_from_metadata(
   metadata : @metadata.ArrayMetadata,
   path : String,
 ) -> U16Array? {
+  guard @dtype.u16_endian(metadata) is Some(_) else { return None }
+  open_u16_bits_from_metadata(store, metadata, path)
+}
+
+///|
+/// Shared two-byte storage path; the typed openers check the signedness first.
+pub fn open_u16_bits_from_metadata(
+  store : @store.MemoryStore,
+  metadata : @metadata.ArrayMetadata,
+  path : String,
+) -> U16Array? {
   guard @chunk.array_metadata_key(metadata.format, path) is Some(_) else {
     return None
   }
-  guard @codec.u16_plan(metadata) is Some((big_endian, compression)) else {
+  let (big_endian, compression, fill) = if @codec.u16_plan(metadata)
+    is Some((endian, plan)) {
+    guard @dtype.u16_fill(metadata.fill_value) is Some(value) else {
+      return None
+    }
+    (endian, plan, value)
+  } else if @codec.i16_plan(metadata) is Some((endian, plan)) {
+    guard @dtype.i16_fill(metadata.fill_value) is Some(value) else {
+      return None
+    }
+    (endian, plan, (value.to_int() & 65535).to_uint16())
+  } else {
     return None
   }
-  guard @dtype.u16_fill(metadata.fill_value) is Some(fill) else { return None }
   guard @chunk.chunk_element_count(metadata) is Some(count) else { return None }
   if count > 2147483647 / 2 {
     return None
