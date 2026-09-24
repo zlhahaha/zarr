@@ -30,6 +30,8 @@ Implemented locally: gzip and zstd read/write for v2/v3, zlib read/write for v2,
 
 ## Stage 3 — Hierarchies, scale and deployment
 
+Partial implementation: `store/http` can hydrate only the v2/v3 metadata and chunks intersecting a requested rectangle from a static HTTP-served hierarchy. It distinguishes 404 missing chunks from transport/server failures and caps metadata bytes, chunk bytes and touched chunk count. It is native-only, read-only and does not yet cache across calls or stream typed values to the caller.
+
 - Group traversal and metadata mutation, filesystem and HTTP read-only stores; configurable chunk cache and bounded streaming.
 - v3 sharding-indexed codec and consolidated metadata; optional cloud/object-store adapter after the base Store API is stable.
 - Gate: read representative scientific datasets without loading the whole array; cross-language tests and performance/memory benchmarks.

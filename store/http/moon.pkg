@@ -1,0 +1,17 @@
+import {
+  "zlhahaha/zarr/metadata",
+  "zlhahaha/zarr/chunk",
+  "zlhahaha/zarr/store",
+  "moonbitlang/async/http" @client_http,
+  "moonbitlang/core/encoding/utf8",
+}
+
+import {
+  "zlhahaha/zarr/array",
+  "zlhahaha/zarr/store/fs",
+  "moonbitlang/async",
+  "moonbitlang/async/socket",
+  "moonbitlang/async/io",
+} for "test"
+
+supported_targets = "native"

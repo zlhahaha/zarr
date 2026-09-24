@@ -6,7 +6,7 @@ A MoonBit implementation of the Zarr v2 and v3 storage formats for chunked N-dim
 
 ## Status
 
-Early development. The library can read and write `bool`, `uint8`, `uint16`, `int16`, `uint32`, `int32`, `float32`, and `float64` arrays in memory and on native filesystems, including element access, rectangular slices, missing-chunk fill values and edge chunks. It supports raw chunks and gzip/zstd in both formats, plus zlib in v2. Groups and attributes can be read and written for both formats. Rectangular slices batch file I/O and codec work by touched chunk, but still buffer the requested result and are not a streaming interface. Other dtypes/codecs and cloud access are not implemented yet. Do not use it as a general Zarr reader/writer yet.
+Early development. The library can read and write `bool`, `uint8`, `uint16`, `int16`, `uint32`, `int32`, `float32`, and `float64` arrays in memory and on native filesystems, including element access, rectangular slices, missing-chunk fill values and edge chunks. It supports raw chunks and gzip/zstd in both formats, plus zlib in v2. Groups and attributes can be read and written for both formats. A native-only HTTP adapter can download the metadata and encoded chunks touched by a bounded rectangle into a `MemoryStore`; it is read-only and has no persistent cache. Rectangular slices batch file I/O and codec work by touched chunk, but still buffer the requested result and are not a streaming typed-array interface. Other dtypes/codecs and cloud object-store adapters are not implemented yet. Do not use it as a general Zarr reader/writer yet.
 
 | Capability | Zarr v2 | Zarr v3 |
 | --- | --- | --- |
@@ -28,7 +28,8 @@ Early development. The library can read and write `bool`, `uint8`, `uint16`, `in
 | Other dtypes, filters and codecs | Planned | Planned |
 | Groups, ancestors and attributes | Memory and native filesystem (`.zgroup`/`.zattrs`) | Memory and native filesystem (`zarr.json`) |
 | Consolidated metadata | Read-only native `.zmetadata` snapshot | Planned |
-| Cloud stores | Planned | Planned |
+| HTTP read-only regional hydration | Native, bounded metadata/chunk downloads | Native, bounded metadata/chunk downloads |
+| Cloud object-store adapters | Planned | Planned |
 
 ## Build and run
 
@@ -61,6 +62,7 @@ dtype/           Numeric dtype and fill-value checks
 codec/           Codec-chain validation and bounded gzip/zlib/zstd decode
 store/           In-memory encoded-byte store
 store/fs/        Native-only filesystem store
+store/http/      Native-only read-only HTTP regional hydration
 array/           Typed array creation, element and region I/O
 hierarchy/       Group and attribute operations
 integration/     Cross-package tests
