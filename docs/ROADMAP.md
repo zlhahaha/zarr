@@ -13,7 +13,7 @@ Native/wasm-gc checks, builds, tests and example runs pass locally and in [GitHu
 
 ## Stage 1 — Useful uncompressed numeric arrays
 
-Current implementation: typed `bool`, `uint8`, `uint16`, `int16`, `int32`, `float32`, and `float64` create/open/element and rectangular-slice I/O in memory and native filesystem, plus v2/v3 group/attribute operations and safe ancestor creation. Slices batch file I/O and codec work by touched chunk but still buffer the requested result. Eighteen independent zarr-python 3.4.0 fixtures are read by native tests, and zarr-python reads nineteen MoonBit-generated stores in CI, including a multi-chunk compressed slice, boolean masks, signed 16-bit values and nested groups. The remaining dtype breadth is open.
+Current implementation: typed `bool`, `uint8`, `uint16`, `int16`, `int32`, `float32`, and `float64` create/open/element and rectangular-slice I/O in memory and native filesystem, plus v2/v3 group/attribute operations and safe ancestor creation. Slices batch file I/O and codec work by touched chunk but still buffer the requested result. Nineteen independent zarr-python 3.4.0 fixtures are read by native tests, and zarr-python reads nineteen MoonBit-generated stores in CI, including a multi-chunk compressed slice, boolean masks, signed 16-bit values and nested groups. The remaining dtype breadth is open.
 
 - Store abstraction and native filesystem backend; create/open arrays and groups, metadata/attributes, and chunks for v2/v3.
 - Core numeric dtypes (`bool`, signed/unsigned 8/16/32/64-bit, float32/64) with specified endian handling; C-order v2 and v3 bytes codec.
@@ -22,10 +22,10 @@ Current implementation: typed `bool`, `uint8`, `uint16`, `int16`, `int32`, `floa
 
 ## Stage 2 — Common real-world codecs and v2 compatibility (partial)
 
-Implemented locally: gzip and zstd read/write for v2/v3, zlib read/write for v2, bounded or preflight-checked decompression, rejection of unsupported v2 filters, and five independent compressed Python fixtures in each interoperability direction. v3 zstd checksum=true is not emitted or accepted yet; zstd frames without content size may be conservatively rejected.
+Implemented locally: gzip and zstd read/write for v2/v3, zlib read/write for v2, bounded or preflight-checked decompression, rejection of unsupported v2 filters, v2 consolidated metadata read-only snapshots, and five independent compressed Python fixtures in each interoperability direction. v3 zstd checksum=true is not emitted or accepted yet; zstd frames without content size may be conservatively rejected.
 
 - v3 codec pipeline: bytes plus zstd and gzip; v2 compressor/filter adapter for raw, gzip/zlib, zstd and Blosc where dependencies permit. Blosc and filters remain open.
-- v2 `.` and `/` chunk separators, F-order, `.zattrs`, `.zgroup`, and consolidated `.zmetadata` reads.
+- v2 `.` and `/` chunk separators, F-order, `.zattrs`, `.zgroup`, and consolidated `.zmetadata` reads (implemented as read-only snapshots).
 - Gate: compare against zarr-python fixtures across dtypes, endianness, fill values, partial chunks and codec combinations; document unsupported codecs.
 
 ## Stage 3 — Hierarchies, scale and deployment

@@ -394,6 +394,48 @@ async test "read independent zarr-python int16 fixtures" {
 }
 
 ///|
+async test "v2 consolidated snapshot reads without per-node files and refuses writes" {
+  let base = "integration/fixtures/zarr-python/v2_consolidated_grouped_u8.zarr"
+  guard @fs.FileStore::new(base) is Some(source) else { fail("source") }
+  guard source.get(".zmetadata") is Some(index) else {
+    fail("consolidated index")
+  }
+  guard source.get("science/image/1") is Some(chunk) else {
+    fail("consolidated chunk")
+  }
+  let dir = @async_fs.tmpdir(prefix="zarr-consolidated-test")
+  guard @fs.FileStore::new(dir) is Some(plain) else { fail("plain") }
+  assert_true(
+    plain.put(".zmetadata", b"{\"zarr_consolidated_format\":2,\"metadata\":{}}"),
+  )
+  assert_true(@fs.FileStore::open_consolidated(dir) is None)
+  assert_true(plain.put(".zmetadata", index))
+  assert_true(plain.put("science/image/1", chunk))
+  assert_true(plain.open_array("science/image") is None)
+  guard @fs.FileStore::open_consolidated(dir) is Some(view) else {
+    fail("consolidated view")
+  }
+  assert_true(
+    plain.put("zarr.json", b"{\"zarr_format\":3,\"node_type\":\"group\"}"),
+  )
+  guard view.open_group("") is Some(root) else { fail("v2 snapshot root") }
+  assert_true(root.format == @metadata.V2)
+  guard view.open_group("science") is Some(group) else {
+    fail("consolidated group")
+  }
+  assert_eq(group.attributes, @json.parse("{\"title\":\"consolidated\"}"))
+  guard view.open_u8("science/image") is Some(image) else {
+    fail("consolidated array")
+  }
+  assert_eq(image.read_region([0], [3]), Some(b"\x05\x05\x09"))
+  assert_true(!image.write([0], b'\x08'))
+  assert_true(!view.put("new-key", b"new"))
+  assert_true(plain.get("new-key") is None)
+  assert_true(!view.put_attributes(@metadata.V2, "science", "{\"x\":1}"))
+  @async_fs.rmdir(dir, recursive=true)
+}
+
+///|
 async test "native group tree creates root and parents without overwriting" {
   let dir = @async_fs.tmpdir(prefix="zarr-group-tree-test")
   guard @fs.FileStore::new(dir) is Some(store) else { fail("store") }

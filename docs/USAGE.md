@@ -48,10 +48,12 @@ let _ = pixels.write_region(
 
 The first argument to region operations is the zero-based origin, the second is the extent. Values are in C order regardless of a v2 array's on-disk C/F chunk order. A missing chunk reads as the declared fill value; writing creates a full-sized chunk, including at array edges.
 
+For a Zarr v2 hierarchy with `.zmetadata`, `FileStore::open_consolidated("data.zarr")` returns a read-only snapshot. This index is a zarr-python convention, not part of the v2 core storage specification. Its array and group metadata and attributes come exclusively from the consolidated index, while chunks still come from the filesystem. It can read hierarchies even when individual `.zarray`, `.zgroup`, and `.zattrs` files are absent. Writes through this view return `false`; reopen it after the index changes. Use `FileStore::new` for ordinary mutable stores.
+
 ## Supported format subset
 
 Both formats support regular chunk grids, safe logical paths, groups and attributes, boolean arrays and the six numeric types above. v2 supports `.`/`/` chunk separators and C/F chunk order; v3 supports default and v2-compatible chunk keys plus the bytes serializer. Raw, gzip and zstd chunks are supported in both formats; zlib is supported in v2. Unsupported filters, storage transformers and codec chains are rejected rather than silently decoded incorrectly.
 
 The API returns `None` or `false` for invalid metadata, unsupported encodings, out-of-bounds coordinates, corrupt chunks, and I/O failures. A region write spanning multiple chunks is **not atomic**: if a later chunk fails, earlier chunks may already be saved. Large reads and writes still buffer the requested region. A `FileStore` uses native async filesystem APIs and is not available on wasm-gc; `MemoryStore` works on the tested native and wasm-gc targets.
 
-Zstd decoding first checks the dependency's conservative frame-size bound against the declared uncompressed chunk length. Consequently, a valid frame without known content size may be rejected. v3 zstd `checksum=true`, Blosc, sharding, consolidated metadata, HTTP/cloud stores, additional dtypes, and general ndarray arithmetic are not implemented yet. See [ROADMAP.md](ROADMAP.md) and the [support table](../README.md#status).
+Zstd decoding first checks the dependency's conservative frame-size bound against the declared uncompressed chunk length. Consequently, a valid frame without known content size may be rejected. v3 zstd `checksum=true`, Blosc, sharding, v3 consolidated metadata, HTTP/cloud stores, additional dtypes, and general ndarray arithmetic are not implemented yet. See [ROADMAP.md](ROADMAP.md) and the [support table](../README.md#status).

@@ -3,6 +3,8 @@
 /// File-system operations are asynchronous and currently native-only.
 pub struct FileStore {
   root : String
+  consolidated : Map[String, Json]?
+  read_only : Bool
 }
 
 ///|
@@ -10,8 +12,36 @@ pub fn FileStore::new(root : String) -> FileStore? {
   if root == "" {
     None
   } else {
-    Some({ root, })
+    Some({ root, consolidated: None, read_only: false, })
   }
+}
+
+///|
+/// Open a read-only Zarr v2 consolidated metadata snapshot. Chunk bytes still
+/// come from the filesystem; metadata comes only from `.zmetadata`.
+pub async fn FileStore::open_consolidated(root : String) -> FileStore? {
+  guard FileStore::new(root) is Some(plain) else { return None }
+  guard plain.get(".zmetadata") is Some(bytes) else { return None }
+  let raw = @utf8.decode(bytes[:]) catch { _ => return None }
+  guard @json.parse(raw) is Object(document) else { return None }
+  guard document.get("zarr_consolidated_format") is Some(Number(version, ..)) else {
+    return None
+  }
+  if version != 1.0 {
+    return None
+  }
+  guard document.get("metadata") is Some(Object(entries)) else { return None }
+  Some({ root, consolidated: Some(entries), read_only: true, })
+}
+
+///|
+fn v2_metadata_key(key : String) -> Bool {
+  key == ".zarray" ||
+  key == ".zgroup" ||
+  key == ".zattrs" ||
+  key.has_suffix("/.zarray") ||
+  key.has_suffix("/.zgroup") ||
+  key.has_suffix("/.zattrs")
 }
 
 ///|
@@ -82,6 +112,15 @@ fn FileStore::path(self : FileStore, key : String) -> String? {
 /// propagate to the caller.
 pub async fn FileStore::get(self : FileStore, key : String) -> Bytes? {
   guard self.path(key) is Some(path) else { return None }
+  if self.consolidated is Some(entries) {
+    if v2_metadata_key(key) {
+      guard entries.get(key) is Some(Object(fields)) else { return None }
+      return Some(@utf8.encode(Json::object(fields).stringify()))
+    }
+    if key == "zarr.json" || key.has_suffix("/zarr.json") {
+      return None
+    }
+  }
   if !@async_fs.exists(path) {
     return None
   }
@@ -95,6 +134,9 @@ pub async fn FileStore::put(
   key : String,
   value : Bytes,
 ) -> Bool {
+  if self.read_only {
+    return false
+  }
   guard self.path(key) is Some(path) else { return false }
   let parent = match key.rev_split_once("/") {
     Some((head, _)) => {
