@@ -4,12 +4,10 @@
 async fn main {
   let dir = @async_fs.tmpdir(prefix="moonbit-zarr-demo")
   guard @fs.FileStore::new(dir) is Some(store) else {
-    println("invalid store path")
-    return
+    abort("invalid store path")
   }
   if !store.create_group_tree(@metadata.V3, "") {
-    println("root group creation failed")
-    return
+    abort("root group creation failed")
   }
   guard store.create_u16(
       @metadata.V3,
@@ -20,8 +18,7 @@ async fn main {
       compression=@codec.Zstd(3),
     )
     is Some(pixels) else {
-    println("array creation failed")
-    return
+    abort("array creation failed")
   }
   if !pixels.write_region([0, 1], [2, 2], [
       (1000 : UInt16),
@@ -29,20 +26,27 @@ async fn main {
       (3000 : UInt16),
       (4000 : UInt16),
     ]) {
-    println("slice write failed")
-    return
+    abort("slice write failed")
   }
   guard @fs.FileStore::new(dir) is Some(reopened) else {
-    println("reopen store failed")
-    return
+    abort("reopen store failed")
   }
   guard reopened.open_u16("pixels") is Some(saved) else {
-    println("reopen array failed")
-    return
+    abort("reopen array failed")
   }
   guard saved.read_region([0, 0], [2, 3]) is Some(values) else {
-    println("slice read failed")
-    return
+    abort("slice read failed")
+  }
+  if values !=
+    [
+      (60000 : UInt16),
+      (1000 : UInt16),
+      (2000 : UInt16),
+      (60000 : UInt16),
+      (3000 : UInt16),
+      (4000 : UInt16),
+    ] {
+    abort("unexpected values")
   }
   println(
     "Zarr v3 uint16 values: \{values[0]},\{values[1]},\{values[2]},\{values[3]},\{values[4]},\{values[5]}",

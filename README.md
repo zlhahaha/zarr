@@ -42,10 +42,11 @@ moon test --deny-warn
 moon run cmd/main
 moon test --target native --deny-warn
 moon run --target native cmd/native_demo
+moon run --target native cmd/v2_demo
 ```
 
 The example creates a v3 `uint8` array and writes a slice across chunks. It prints `Zarr v3 uint8 values: 0,7,9,11`.
-The native example creates and reopens a zstd-compressed `uint16` array in a temporary filesystem store. See [docs/USAGE.md](docs/USAGE.md) for the public API and format limits.
+The first native example creates and reopens a v3 zstd-compressed `uint16` array in a temporary filesystem store. The v2 example does the same with a gzip-compressed, big-endian `int16` array and verifies a rectangular read after reopening. All examples exit with an error if their checks fail. See [docs/USAGE.md](docs/USAGE.md) for the public API and format limits.
 
 ## Interoperability tests
 
@@ -66,7 +67,9 @@ store/http/      Native-only read-only HTTP regional hydration
 array/           Typed array creation, element and region I/O
 hierarchy/       Group and attribute operations
 integration/     Cross-package tests
-cmd/main/        Runnable example
+cmd/main/        Portable in-memory v3 example
+cmd/native_demo/ Native filesystem v3 example
+cmd/v2_demo/     Native filesystem v2 example
 ```
 
 The public array functions live in `zlhahaha/zarr/array`; `MemoryStore` lives in `zlhahaha/zarr/store`, and format constants in `zlhahaha/zarr/metadata`. For example, `@array.create_u8(store, @metadata.V3, "samples", [4], [2], b'\x00', compression=@codec.Zstd(3))` creates a compressed v3 array without hand-writing metadata JSON. On native, `FileStore::create_u8` accepts the same `compression` option. gzip/zlib output is bounded while decoding; zstd frames are preflight-checked against the declared chunk size using the dependency's frame-size bound. Thus, valid zstd frames without a known content size may be rejected if the conservative bound exceeds the chunk size. See [the roadmap](docs/ROADMAP.md) for the staged interoperability targets.

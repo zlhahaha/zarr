@@ -14,7 +14,7 @@ This library is still pre-release. Build it locally with MoonBit; the Mooncakes 
 | `zlhahaha/zarr/codec` | Compression choices (`Raw`, `Gzip`, `Zlib`, `Zstd`) |
 | `zlhahaha/zarr/hierarchy` | In-memory group and attribute operations |
 
-The repository contains two executable examples. Run `moon run --target wasm-gc cmd/main` for a portable in-memory array, or `moon run --target native cmd/native_demo` for a compressed array on disk. The latter creates a temporary store, reopens it, reads a slice, and removes the temporary store.
+The repository contains three executable examples. Run `moon run --target wasm-gc cmd/main` for a portable in-memory v3 array, `moon run --target native cmd/native_demo` for a zstd-compressed v3 array on disk, or `moon run --target native cmd/v2_demo` for a gzip-compressed, big-endian v2 array on disk. Both native examples create a temporary store, reopen it, verify a slice, and remove the temporary store. Each example exits unsuccessfully if a check fails.
 
 ## Native array example
 
