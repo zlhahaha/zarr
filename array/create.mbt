@@ -375,6 +375,57 @@ pub fn u32_metadata_json(
 }
 
 ///|
+/// Preserve the decimal representation so 64-bit fills never lose precision.
+pub fn i64_metadata_json(
+  format : @metadata.Format,
+  shape : Array[Int],
+  chunk_shape : Array[Int],
+  fill : Int64,
+  big_endian? : Bool = false,
+  compression? : @codec.Compression = @codec.Raw,
+) -> String? {
+  numeric_metadata_json(
+    format,
+    shape,
+    chunk_shape,
+    if big_endian {
+      ">i8"
+    } else {
+      "<i8"
+    },
+    "int64",
+    Json::number(fill.to_double(), repr=fill.to_string()),
+    big_endian,
+    compression,
+  )
+}
+
+///|
+pub fn u64_metadata_json(
+  format : @metadata.Format,
+  shape : Array[Int],
+  chunk_shape : Array[Int],
+  fill : UInt64,
+  big_endian? : Bool = false,
+  compression? : @codec.Compression = @codec.Raw,
+) -> String? {
+  numeric_metadata_json(
+    format,
+    shape,
+    chunk_shape,
+    if big_endian {
+      ">u8"
+    } else {
+      "<u8"
+    },
+    "uint64",
+    Json::number(fill.to_double(), repr=fill.to_string()),
+    big_endian,
+    compression,
+  )
+}
+
+///|
 pub fn create_u8(
   store : @store.MemoryStore,
   format : @metadata.Format,
@@ -604,6 +655,68 @@ pub fn create_u32(
     return None
   }
   open_u32(store, path)
+}
+
+///|
+pub fn create_i64(
+  store : @store.MemoryStore,
+  format : @metadata.Format,
+  path : String,
+  shape : Array[Int],
+  chunk_shape : Array[Int],
+  fill : Int64,
+  big_endian? : Bool = false,
+  compression? : @codec.Compression = @codec.Raw,
+) -> I64Array? {
+  if node_exists(store, path) {
+    return None
+  }
+  guard i64_metadata_json(
+      format,
+      shape,
+      chunk_shape,
+      fill,
+      big_endian~,
+      compression~,
+    )
+    is Some(raw) else {
+    return None
+  }
+  if !store.put_array_metadata(format, path, raw) {
+    return None
+  }
+  open_i64(store, path)
+}
+
+///|
+pub fn create_u64(
+  store : @store.MemoryStore,
+  format : @metadata.Format,
+  path : String,
+  shape : Array[Int],
+  chunk_shape : Array[Int],
+  fill : UInt64,
+  big_endian? : Bool = false,
+  compression? : @codec.Compression = @codec.Raw,
+) -> U64Array? {
+  if node_exists(store, path) {
+    return None
+  }
+  guard u64_metadata_json(
+      format,
+      shape,
+      chunk_shape,
+      fill,
+      big_endian~,
+      compression~,
+    )
+    is Some(raw) else {
+    return None
+  }
+  if !store.put_array_metadata(format, path, raw) {
+    return None
+  }
+  open_u64(store, path)
 }
 
 ///|

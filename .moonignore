@@ -5,6 +5,7 @@
 /scripts/
 /cmd/interop/
 /cmd/nonfinite_interop/
+/cmd/int64_interop/
 /fs/
 *_test.mbt
 *_wbtest.mbt

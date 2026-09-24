@@ -65,6 +65,8 @@ def main() -> None:
     check("v3_bool_zstd", mask)
     check("v2_f64_nan", np.array([np.nan, np.nan, 42.25], dtype=np.float64))
     check("v3_f32_neg_inf", np.array([-np.inf, -np.inf, 1.25], dtype=np.float32))
+    check("v2_i64_be", np.array([-9223372036854775807, -9223372036854775807, 9223372036854775807], dtype=np.int64))
+    check("v3_u64_le_zstd", np.array([18446744073709551615, 18446744073709551615, 18446744073709551614], dtype=np.uint64))
 
 
 if __name__ == "__main__":

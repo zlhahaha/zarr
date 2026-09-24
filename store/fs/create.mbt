@@ -250,3 +250,65 @@ pub async fn FileStore::create_u32(
   }
   self.open_u32(path)
 }
+
+///|
+pub async fn FileStore::create_i64(
+  self : FileStore,
+  format : @metadata.Format,
+  path : String,
+  shape : Array[Int],
+  chunk_shape : Array[Int],
+  fill : Int64,
+  big_endian? : Bool = false,
+  compression? : @codec.Compression = @codec.Raw,
+) -> FileI64Array? {
+  if self.node_exists(path) {
+    return None
+  }
+  guard @array.i64_metadata_json(
+      format,
+      shape,
+      chunk_shape,
+      fill,
+      big_endian~,
+      compression~,
+    )
+    is Some(raw) else {
+    return None
+  }
+  if !self.put_array_metadata(format, path, raw) {
+    return None
+  }
+  self.open_i64(path)
+}
+
+///|
+pub async fn FileStore::create_u64(
+  self : FileStore,
+  format : @metadata.Format,
+  path : String,
+  shape : Array[Int],
+  chunk_shape : Array[Int],
+  fill : UInt64,
+  big_endian? : Bool = false,
+  compression? : @codec.Compression = @codec.Raw,
+) -> FileU64Array? {
+  if self.node_exists(path) {
+    return None
+  }
+  guard @array.u64_metadata_json(
+      format,
+      shape,
+      chunk_shape,
+      fill,
+      big_endian~,
+      compression~,
+    )
+    is Some(raw) else {
+    return None
+  }
+  if !self.put_array_metadata(format, path, raw) {
+    return None
+  }
+  self.open_u64(path)
+}

@@ -475,6 +475,79 @@ test "floating fills use Zarr NaN and Infinity metadata encodings" {
 }
 
 ///|
+test "int64 preserves full-range fills and signed region values" {
+  let store = @store.MemoryStore::new()
+  guard @array.create_i64(
+      store,
+      @metadata.V2,
+      "signed64",
+      [3],
+      [2],
+      -9223372036854775807L,
+      big_endian=true,
+    )
+    is Some(array) else {
+    fail("create int64")
+  }
+  assert_eq(array.read([0]), Some(-9223372036854775807L))
+  assert_true(array.write_region([1], [2], [0L, 9223372036854775807L]))
+  assert_eq(
+    array.read_region([0], [3]),
+    Some([-9223372036854775807L, 0L, 9223372036854775807L]),
+  )
+  assert_true(@array.open_u64(store, "signed64") is None)
+}
+
+///|
+test "uint64 preserves full-range fills and compressed values" {
+  let store = @store.MemoryStore::new()
+  guard @array.create_u64(
+      store,
+      @metadata.V3,
+      "unsigned64",
+      [3],
+      [2],
+      18446744073709551615UL,
+      compression=@codec.Zstd(3),
+    )
+    is Some(array) else {
+    fail("create uint64")
+  }
+  assert_eq(array.read([0]), Some(18446744073709551615UL))
+  assert_true(array.write_region([1], [2], [0UL, 18446744073709551614UL]))
+  assert_eq(
+    array.read_region([0], [3]),
+    Some([18446744073709551615UL, 0UL, 18446744073709551614UL]),
+  )
+  assert_true(@array.open_i64(store, "unsigned64") is None)
+}
+
+///|
+test "64-bit fill parsing rejects overflow and fractional numbers" {
+  let store = @store.MemoryStore::new()
+  let signed_overflow =
+    #|{"zarr_format":2,"shape":[1],"chunks":[1],"dtype":"<i8","compressor":null,"fill_value":9223372036854775808,"order":"C","filters":null}
+  assert_true(
+    store.put_array_metadata(@metadata.V2, "signed_overflow", signed_overflow),
+  )
+  assert_true(@array.open_i64(store, "signed_overflow") is None)
+  let unsigned_overflow =
+    #|{"zarr_format":2,"shape":[1],"chunks":[1],"dtype":"<u8","compressor":null,"fill_value":18446744073709551616,"order":"C","filters":null}
+  assert_true(
+    store.put_array_metadata(
+      @metadata.V2,
+      "unsigned_overflow",
+      unsigned_overflow,
+    ),
+  )
+  assert_true(@array.open_u64(store, "unsigned_overflow") is None)
+  let fractional =
+    #|{"zarr_format":2,"shape":[1],"chunks":[1],"dtype":"<i8","compressor":null,"fill_value":1.5,"order":"C","filters":null}
+  assert_true(store.put_array_metadata(@metadata.V2, "fractional", fractional))
+  assert_true(@array.open_i64(store, "fractional") is None)
+}
+
+///|
 test "int32 v2 and v3 round-trip signed values and chunk edges" {
   let store = @store.MemoryStore::new()
   guard @array.create_i32(store, @metadata.V3, "labels", [3], [2], -1)

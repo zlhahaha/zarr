@@ -95,6 +95,54 @@ pub fn u32_fill(value : Json) -> UInt? {
 }
 
 ///|
+/// JSON numbers above 2^53 must use their preserved source representation.
+/// Parsing a rounded Double would silently corrupt a 64-bit fill value.
+pub fn i64_fill(value : Json) -> Int64? {
+  guard value is Number(n, repr~) else { return None }
+  match repr {
+    Some(text) => {
+      let parsed = @string.parse_int64(text, base=10) catch { _ => return None }
+      Some(parsed)
+    }
+    None => {
+      if n < -9007199254740992.0 || n > 9007199254740992.0 {
+        return None
+      }
+      let parsed = n.to_int64()
+      if parsed.to_double() == n {
+        Some(parsed)
+      } else {
+        None
+      }
+    }
+  }
+}
+
+///|
+pub fn u64_fill(value : Json) -> UInt64? {
+  guard value is Number(n, repr~) else { return None }
+  match repr {
+    Some(text) => {
+      let parsed = @string.parse_uint64(text, base=10) catch {
+        _ => return None
+      }
+      Some(parsed)
+    }
+    None => {
+      if n < 0.0 || n > 9007199254740992.0 {
+        return None
+      }
+      let parsed = n.to_uint64()
+      if parsed.to_double() == n {
+        Some(parsed)
+      } else {
+        None
+      }
+    }
+  }
+}
+
+///|
 pub fn is_u8(metadata : @metadata.ArrayMetadata) -> Bool {
   match metadata.format {
     @metadata.V2 => metadata.data_type == "|u1"
@@ -212,6 +260,42 @@ pub fn u32_endian(metadata : @metadata.ArrayMetadata) -> Bool? {
       }
     @metadata.V3 =>
       if metadata.data_type == "uint32" {
+        Some(false)
+      } else {
+        None
+      }
+  }
+}
+
+///|
+pub fn i64_endian(metadata : @metadata.ArrayMetadata) -> Bool? {
+  match metadata.format {
+    @metadata.V2 =>
+      match metadata.data_type {
+        "<i8" => Some(false)
+        ">i8" => Some(true)
+        _ => None
+      }
+    @metadata.V3 =>
+      if metadata.data_type == "int64" {
+        Some(false)
+      } else {
+        None
+      }
+  }
+}
+
+///|
+pub fn u64_endian(metadata : @metadata.ArrayMetadata) -> Bool? {
+  match metadata.format {
+    @metadata.V2 =>
+      match metadata.data_type {
+        "<u8" => Some(false)
+        ">u8" => Some(true)
+        _ => None
+      }
+    @metadata.V3 =>
+      if metadata.data_type == "uint64" {
         Some(false)
       } else {
         None

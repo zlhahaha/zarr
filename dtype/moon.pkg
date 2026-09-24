@@ -1,3 +1,4 @@
 import {
   "zlhahaha/zarr/metadata",
+  "moonbitlang/core/string",
 }
