@@ -4,6 +4,8 @@
 pub struct FileStore {
   root : String
   consolidated : Map[String, Json]?
+  v3_consolidated : Map[String, Json]?
+  v3_root : Json?
   read_only : Bool
 }
 
@@ -12,7 +14,13 @@ pub fn FileStore::new(root : String) -> FileStore? {
   if root == "" {
     None
   } else {
-    Some({ root, consolidated: None, read_only: false, })
+    Some({
+      root,
+      consolidated: None,
+      v3_consolidated: None,
+      v3_root: None,
+      read_only: false,
+    })
   }
 }
 
@@ -31,7 +39,59 @@ pub async fn FileStore::open_consolidated(root : String) -> FileStore? {
     return None
   }
   guard document.get("metadata") is Some(Object(entries)) else { return None }
-  Some({ root, consolidated: Some(entries), read_only: true, })
+  Some({
+    root,
+    consolidated: Some(entries),
+    v3_consolidated: None,
+    v3_root: None,
+    read_only: true,
+  })
+}
+
+///|
+/// Open a read-only snapshot of the v3 inline consolidated-metadata
+/// convention. Metadata comes only from the root index; chunks remain on disk.
+pub async fn FileStore::open_consolidated_v3(root : String) -> FileStore? {
+  guard FileStore::new(root) is Some(plain) else { return None }
+  guard plain.get("zarr.json") is Some(bytes) else { return None }
+  let raw = @utf8.decode(bytes[:]) catch { _ => return None }
+  guard @metadata.parse_group_metadata(raw) is Some(group) else { return None }
+  if group.format != @metadata.V3 {
+    return None
+  }
+  guard @json.parse(raw) is Object(document) else { return None }
+  guard document.get("consolidated_metadata") is Some(Object(index)) else {
+    return None
+  }
+  if index.get("kind") != Some(Json::string("inline")) ||
+    index.get("must_understand") != Some(Json::boolean(false)) {
+    return None
+  }
+  guard index.get("metadata") is Some(Object(entries)) else { return None }
+  for path, value in entries {
+    if path == "" || @chunk.array_metadata_key(@metadata.V3, path) is None {
+      return None
+    }
+    let entry = value.stringify()
+    if @metadata.parse_array_metadata(entry) is Some(array) {
+      if array.format != @metadata.V3 {
+        return None
+      }
+    } else if @metadata.parse_group_metadata(entry) is Some(child) {
+      if child.format != @metadata.V3 {
+        return None
+      }
+    } else {
+      return None
+    }
+  }
+  Some({
+    root,
+    consolidated: None,
+    v3_consolidated: Some(entries),
+    v3_root: Some(Json::object(document)),
+    read_only: true,
+  })
 }
 
 ///|
@@ -112,6 +172,20 @@ fn FileStore::path(self : FileStore, key : String) -> String? {
 /// propagate to the caller.
 pub async fn FileStore::get(self : FileStore, key : String) -> Bytes? {
   guard self.path(key) is Some(path) else { return None }
+  if self.v3_consolidated is Some(entries) {
+    if key == "zarr.json" {
+      guard self.v3_root is Some(root) else { return None }
+      return Some(@utf8.encode(root.stringify()))
+    }
+    if key.has_suffix("/zarr.json") {
+      guard key.rev_split_once("/") is Some((logical, _)) else { return None }
+      guard entries.get("\{logical}") is Some(entry) else { return None }
+      return Some(@utf8.encode(entry.stringify()))
+    }
+    if v2_metadata_key(key) || key == ".zmetadata" {
+      return None
+    }
+  }
   if self.consolidated is Some(entries) {
     if v2_metadata_key(key) {
       guard entries.get(key) is Some(Object(fields)) else { return None }

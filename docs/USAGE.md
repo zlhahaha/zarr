@@ -51,6 +51,8 @@ The first argument to region operations is the zero-based origin, the second is 
 
 For a Zarr v2 hierarchy with `.zmetadata`, `FileStore::open_consolidated("data.zarr")` returns a read-only snapshot. This index is a zarr-python convention, not part of the v2 core storage specification. Its array and group metadata and attributes come exclusively from the consolidated index, while chunks still come from the filesystem. It can read hierarchies even when individual `.zarray`, `.zgroup`, and `.zattrs` files are absent. Writes through this view return `false`; reopen it after the index changes. Use `FileStore::new` for ordinary mutable stores.
 
+For a Zarr v3 hierarchy with zarr-python's inline `consolidated_metadata` field in the root `zarr.json`, use `FileStore::open_consolidated_v3("data.zarr")`. This is likewise a native-only read-only snapshot: child `zarr.json` documents come from the root index, chunk bytes come from the filesystem, and changes to the index require reopening. It accepts the `kind="inline", must_understand=false` convention and does not write or update consolidated metadata. This v3 convention remains experimental in zarr-python.
+
 For a static HTTP-served v2 or v3 hierarchy, the native-only `store/http` package can fetch just the metadata and chunks touched by a rectangle:
 
 ```moonbit
@@ -68,6 +70,6 @@ Both formats support regular chunk grids, safe logical paths, groups and attribu
 
 The API returns `None` or `false` for invalid metadata, unsupported encodings, out-of-bounds coordinates, corrupt chunks, and I/O failures. A region write spanning multiple chunks is **not atomic**: if a later chunk fails, earlier chunks may already be saved. Large reads and writes still buffer the requested region. A `FileStore` uses native async filesystem APIs and is not available on wasm-gc; `MemoryStore` works on the tested native and wasm-gc targets.
 
-Zstd decoding first checks the dependency's conservative frame-size bound against the declared uncompressed chunk length. Consequently, a valid frame without known content size may be rejected. v3 zstd `checksum=true`, Blosc, sharding, v3 consolidated metadata, HTTP write access, cloud object-store adapters, additional dtypes, and general ndarray arithmetic are not implemented yet. See [ROADMAP.md](ROADMAP.md) and the [support table](../README.md#status).
+Zstd decoding first checks the dependency's conservative frame-size bound against the declared uncompressed chunk length. Consequently, a valid frame without known content size may be rejected. v3 zstd `checksum=true`, Blosc, sharding, consolidated-metadata writes, HTTP write access, cloud object-store adapters, additional dtypes, and general ndarray arithmetic are not implemented yet. See [ROADMAP.md](ROADMAP.md) and the [support table](../README.md#status).
 
 For floating-point arrays, `"NaN"`, `"Infinity"`, and `"-Infinity"` metadata fill values are accepted in both formats. Array creation serializes a NaN fill as the canonical `"NaN"` string. Hexadecimal NaN payload encodings from the v3 data-type specification are not yet supported.

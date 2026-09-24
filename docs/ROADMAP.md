@@ -13,7 +13,7 @@ Native/wasm-gc checks, builds, tests and example runs pass locally and in [GitHu
 
 ## Stage 1 — Useful uncompressed numeric arrays
 
-Current implementation: typed `bool`, signed/unsigned 8/16/32/64-bit integers, and `float32`/`float64` create/open/element and rectangular-slice I/O in memory and native filesystem, plus v2/v3 group/attribute operations and safe ancestor creation. The `int8` API uses range-checked `Int` values because MoonBit has no dedicated `Int8` type. Slices batch file I/O and codec work by touched chunk but still buffer the requested result. Twenty-seven independent zarr-python 3.4.0 fixtures are read by native tests, and zarr-python reads twenty-seven MoonBit-generated stores in CI, including a multi-chunk compressed slice, non-finite floating fills, boolean masks, signed bytes, full-range 64-bit integers and nested groups. Extended dtypes remain open.
+Current implementation: typed `bool`, signed/unsigned 8/16/32/64-bit integers, and `float32`/`float64` create/open/element and rectangular-slice I/O in memory and native filesystem, plus v2/v3 group/attribute operations and safe ancestor creation. The `int8` API uses range-checked `Int` values because MoonBit has no dedicated `Int8` type. Slices batch file I/O and codec work by touched chunk but still buffer the requested result. Twenty-eight independent zarr-python 3.4.0 fixtures are read by native tests, and zarr-python reads twenty-seven MoonBit-generated stores in CI, including a multi-chunk compressed slice, non-finite floating fills, boolean masks, signed bytes, full-range 64-bit integers and nested groups. Extended dtypes remain open.
 
 - Store abstraction and native filesystem backend; create/open arrays and groups, metadata/attributes, and chunks for v2/v3.
 - Core numeric dtypes (`bool`, signed/unsigned 8/16/32/64-bit, float32/64) with specified endian handling; C-order v2 and v3 bytes codec.
@@ -30,10 +30,10 @@ Implemented locally: gzip and zstd read/write for v2/v3, zlib read/write for v2,
 
 ## Stage 3 — Hierarchies, scale and deployment
 
-Partial implementation: `store/http` can hydrate only the v2/v3 metadata and chunks intersecting a requested rectangle from a static HTTP-served hierarchy. It distinguishes 404 missing chunks from transport/server failures and caps metadata bytes, chunk bytes and touched chunk count. It is native-only, read-only and does not yet cache across calls or stream typed values to the caller.
+Partial implementation: `store/http` can hydrate only the v2/v3 metadata and chunks intersecting a requested rectangle from a static HTTP-served hierarchy. It distinguishes 404 missing chunks from transport/server failures and caps metadata bytes, chunk bytes and touched chunk count. It is native-only, read-only and does not yet cache across calls or stream typed values to the caller. Native `FileStore::open_consolidated_v3` now reads the zarr-python inline root-index convention as a read-only snapshot; this convention is not a core v3 codec or writable index.
 
 - Group traversal and metadata mutation, filesystem and HTTP read-only stores; configurable chunk cache and bounded streaming.
-- v3 sharding-indexed codec and consolidated metadata; optional cloud/object-store adapter after the base Store API is stable.
+- v3 sharding-indexed codec and writable consolidated metadata; optional cloud/object-store adapter after the base Store API is stable.
 - Gate: read representative scientific datasets without loading the whole array; cross-language tests and performance/memory benchmarks.
 
 ## Stage 4 — Release and maintenance
