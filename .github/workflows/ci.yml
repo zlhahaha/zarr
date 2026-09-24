@@ -25,6 +25,8 @@ jobs:
         run: moon version --all
       - name: Update dependencies
         run: moon update
+      - name: Format
+        run: moon fmt --check
       - name: Check
         run: moon check --target ${{ matrix.target }} --deny-warn
       - name: Build
