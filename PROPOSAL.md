@@ -1,29 +1,28 @@
-# Zarr 项目申报书（草稿）
+# Zarr 项目申报书（供参赛者审阅、改写的草稿）
 
-- 项目名称：Zarr
-- 项目方向：MoonBit 科学数据与分块数组基础库
-- GitHub 仓库：https://github.com/zlhahaha/zarr
-- 项目性质：原创 MoonBit 实现，参考公开 Zarr v2/v3 存储规范；不是移植 zarr-python 代码
+- **项目名称**：Zarr
+- **项目方向**：MoonBit 科学数据与 AI 数据基础设施
+- **GitHub 仓库**：https://github.com/zlhahaha/zarr
+- **项目性质**：参考公开 Zarr v2/v3 存储规范的原创 MoonBit 实现；不移植 zarr-python 源码
 
-## 项目简介与价值
+## 为什么值得做
 
-MoonBit 缺少可与 Python 科学计算生态交换 Zarr 数据的通用读写库。Zarr 以可分块、可压缩的 N 维数组承载大规模科学数据。本项目让 MoonBit 程序能直接读取和生成符合 v2/v3 规范的数据，而不必先整体转换成 JSON/CSV。目标用户包括数据工具、浏览器/Wasm 可视化、图像与地理数据处理开发者。
+AI 应用不仅需要模型推理，也需要准备、浏览、筛选和交换大量结构化数值数据：图像与遥感影像、时空观测、实验结果、特征张量和嵌入向量都可能远大于一次请求所需的范围。Zarr 用分块、压缩的 N 维数组保存这些数据，使程序能按块或区域读取，而不必将整个数据集转成 JSON/CSV 或一次装入内存。MoonBit 若缺少兼容的 Zarr 读写层，开发者就难以直接复用 Python 科学计算与 AI 数据流程已有的数据资产，也难以把 MoonBit 生成的数据交还给这些流程。普通文件 API 不理解 Zarr 元数据、块网格和编解码；ndarray 解决数组计算，也不能替代存储格式互操作。因此需要一个可被多种上层应用复用的**数据交换与按需访问基础库**，而不是让每个项目各自实现格式解析器。
 
-## 预期使用场景
+## 谁会用、怎么用
 
-1. 读取 Python/Zarr 生成的多维数组，仅访问所需块或切片。
-2. 在 MoonBit 工具中创建或修改 Zarr 数据，再交给 Python 生态使用。
-3. 在浏览器或服务端按块预览大型图像、时空或模拟数据。
+1. **AI 数据集与评测工具**：按切片读取数值特征、嵌入向量或实验指标；在 MoonBit 中筛选、汇总后，写回可由 Python 读取的数组。
+2. **图像与遥感处理**：只取视窗涉及的影像块或栅格区域，供服务端预处理，避免传输整份数据。
+3. **科研与工业观测**：按时间和空间范围读取显微图像、传感器或模拟数据，用于局部分析与结果展示。
+4. **浏览器/Wasm 可视化**：对已加载到内存的数组做切片和解码，展示局部数据；浏览器远程获取不在当前版本承诺内。
+5. **跨语言数据管线**：读取 zarr-python 产出的 v2/v3 数据，在 MoonBit CLI/服务中处理，再生成 Python 可打开的数据集。
 
-## 核心功能与边界
+## 核心功能与实际进度
 
-- v2/v3 元数据、数组与组、属性、规则块网格、自动识别格式和安全路径处理。
-- 常用数值类型与大小端、填充值、边界块、N 维切片和读写；先覆盖无压缩及主流 gzip/zstd，随后扩展 Blosc 与 v3 sharding。
-- 可替换 Store 抽象，先提供内存和本地文件，后续增加 HTTP 只读及对象存储适配。
-- 不重复实现通用 ndarray 数值计算；首版不承诺所有扩展类型和第三方 codec。
+- **已实现的早期版本**：v2/v3 数组、组与属性；常用布尔/整数/浮点类型、大小端、填充值、边界块和 N 维矩形切片；内存与原生文件存储；gzip/zstd（v2 另有 zlib）读写、部分 Blosc 只读；原生端 HTTP 按需读取。Python 双向兼容样本、可运行示例及 Linux/macOS/Windows、Wasm CI 已覆盖主要路径。
+- **明确边界**：目前不支持全部 dtype/codec；Blosc 的 bitshuffle、BloscLZ 和写入尚未实现；HTTP 适配器仅原生端只读，尚无通用对象存储后端，也不提供模型训练、通用张量计算或完整 zarr-python API。
+- **后续计划**：补齐常见 Blosc 组合、v3 sharding、远程存储与性能/内存基准；持续以独立 Python 样本验证互操作，并按测试结果扩充支持矩阵。
 
-## 实现路线与验收产物
+## 交付与开源说明
 
-先完成规范元数据与块寻址，再做数值数组读写、编解码和切片，最后补充层级、远程存储、性能与边界测试。交付可安装 Mooncakes 包、README/API 文档、可运行示例、GitHub CI，以及由 zarr-python 双向生成/读取的 v2/v3 兼容性测试。
-
-参考：[Zarr v2 规范](https://zarr-specs.readthedocs.io/en/latest/v2/v2.0.html)、[Zarr v3 规范](https://zarr-specs.readthedocs.io/en/latest/v3/core/)；规范仓库为 CC BY 4.0，本项目代码采用 Apache-2.0，不复制上游实现代码。
+交付可复用 MoonBit 包、README/API 与使用边界、v2/v3 可运行示例、跨平台 CI、双向互操作测试和版本化更新记录；Mooncakes 发布是后续验收目标，须另行确认，当前仓库为未发布的源码预览版。项目采用 Apache-2.0；实现参考 [Zarr v2 规范](https://zarr-specs.readthedocs.io/en/latest/v2/v2.0.html)、[Zarr v3 规范](https://zarr-specs.readthedocs.io/en/latest/v3/core/)及公开的 [C-Blosc 块格式](https://github.com/Blosc/c-blosc/blob/main/README_CHUNK_FORMAT.rst)，第三方依赖与测试数据来源见仓库 README。
