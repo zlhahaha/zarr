@@ -14,7 +14,7 @@ pub async fn FileU8Array::read_region(
   let result = Bytes::make(length, b'\x00').to_array()
   for piece in pieces {
     let scratch = @store.MemoryStore::new()
-    guard @array.open_u8_from_metadata(scratch, self.metadata, self.path)
+    guard @array.open_u8_bits_from_metadata(scratch, self.metadata, self.path)
       is Some(array) else {
       return None
     }
@@ -67,7 +67,7 @@ pub async fn FileU8Array::write_region(
   }
   for piece in pieces {
     let scratch = @store.MemoryStore::new()
-    guard @array.open_u8_from_metadata(scratch, self.metadata, self.path)
+    guard @array.open_u8_bits_from_metadata(scratch, self.metadata, self.path)
       is Some(array) else {
       return false
     }

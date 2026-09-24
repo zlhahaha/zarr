@@ -37,6 +37,29 @@ pub async fn FileStore::create_u8(
 }
 
 ///|
+pub async fn FileStore::create_i8(
+  self : FileStore,
+  format : @metadata.Format,
+  path : String,
+  shape : Array[Int],
+  chunk_shape : Array[Int],
+  fill : Int,
+  compression? : @codec.Compression = @codec.Raw,
+) -> FileI8Array? {
+  if self.node_exists(path) {
+    return None
+  }
+  guard @array.i8_metadata_json(format, shape, chunk_shape, fill, compression~)
+    is Some(raw) else {
+    return None
+  }
+  if !self.put_array_metadata(format, path, raw) {
+    return None
+  }
+  self.open_i8(path)
+}
+
+///|
 pub async fn FileStore::create_bool(
   self : FileStore,
   format : @metadata.Format,

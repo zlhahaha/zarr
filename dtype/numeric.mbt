@@ -12,6 +12,20 @@ pub fn u8_fill(value : Json) -> Byte? {
 }
 
 ///|
+pub fn i8_fill(value : Json) -> Int? {
+  guard value is Number(n, ..) else { return None }
+  if n < -128.0 || n > 127.0 {
+    return None
+  }
+  let i = n.to_int()
+  if i.to_double() != n {
+    None
+  } else {
+    Some(i)
+  }
+}
+
+///|
 pub fn bool_fill(value : Json) -> Bool? {
   match value {
     True => Some(true)
@@ -147,6 +161,14 @@ pub fn is_u8(metadata : @metadata.ArrayMetadata) -> Bool {
   match metadata.format {
     @metadata.V2 => metadata.data_type == "|u1"
     @metadata.V3 => metadata.data_type == "uint8"
+  }
+}
+
+///|
+pub fn is_i8(metadata : @metadata.ArrayMetadata) -> Bool {
+  match metadata.format {
+    @metadata.V2 => metadata.data_type == "|i1"
+    @metadata.V3 => metadata.data_type == "int8"
   }
 }
 

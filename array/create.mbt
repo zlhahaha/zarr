@@ -105,7 +105,9 @@ fn numeric_metadata_json(
       ]),
     )
   } else {
-    let codec = if v3_dtype == "uint8" || v3_dtype == "bool" {
+    let codec = if v3_dtype == "uint8" ||
+      v3_dtype == "int8" ||
+      v3_dtype == "bool" {
       Json::object(Map([("name", Json::string("bytes"))]))
     } else {
       Json::object(
@@ -184,6 +186,29 @@ pub fn u8_metadata_json(
     "|u1",
     "uint8",
     Json::number(fill.to_int().to_double()),
+    false,
+    compression,
+  )
+}
+
+///|
+pub fn i8_metadata_json(
+  format : @metadata.Format,
+  shape : Array[Int],
+  chunk_shape : Array[Int],
+  fill : Int,
+  compression? : @codec.Compression = @codec.Raw,
+) -> String? {
+  if fill < -128 || fill > 127 {
+    return None
+  }
+  numeric_metadata_json(
+    format,
+    shape,
+    chunk_shape,
+    "|i1",
+    "int8",
+    Json::number(fill.to_double()),
     false,
     compression,
   )
@@ -446,6 +471,29 @@ pub fn create_u8(
     return None
   }
   open_u8(store, path)
+}
+
+///|
+pub fn create_i8(
+  store : @store.MemoryStore,
+  format : @metadata.Format,
+  path : String,
+  shape : Array[Int],
+  chunk_shape : Array[Int],
+  fill : Int,
+  compression? : @codec.Compression = @codec.Raw,
+) -> I8Array? {
+  if node_exists(store, path) {
+    return None
+  }
+  guard i8_metadata_json(format, shape, chunk_shape, fill, compression~)
+    is Some(raw) else {
+    return None
+  }
+  if !store.put_array_metadata(format, path, raw) {
+    return None
+  }
+  open_i8(store, path)
 }
 
 ///|

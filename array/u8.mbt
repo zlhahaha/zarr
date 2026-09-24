@@ -24,16 +24,36 @@ pub fn open_u8_from_metadata(
   metadata : @metadata.ArrayMetadata,
   path : String,
 ) -> U8Array? {
+  guard @dtype.is_u8(metadata) else { return None }
+  open_u8_bits_from_metadata(store, metadata, path)
+}
+
+///|
+/// Shared one-byte storage path; typed openers check signedness first.
+pub fn open_u8_bits_from_metadata(
+  store : @store.MemoryStore,
+  metadata : @metadata.ArrayMetadata,
+  path : String,
+) -> U8Array? {
   guard @chunk.array_metadata_key(metadata.format, path) is Some(_) else {
     return None
   }
   if metadata.shape.length() != metadata.chunk_shape.length() {
     return None
   }
-  guard @codec.u8_compression(metadata) is Some(compression) else {
+  let (compression, fill) = if @codec.u8_compression(metadata) is Some(plan) {
+    guard @dtype.u8_fill(metadata.fill_value) is Some(value) else {
+      return None
+    }
+    (plan, value)
+  } else if @codec.i8_compression(metadata) is Some(plan) {
+    guard @dtype.i8_fill(metadata.fill_value) is Some(value) else {
+      return None
+    }
+    (plan, (value & 255).to_byte())
+  } else {
     return None
   }
-  guard @dtype.u8_fill(metadata.fill_value) is Some(fill) else { return None }
   guard @chunk.chunk_element_count(metadata) is Some(chunk_len) else {
     return None
   }

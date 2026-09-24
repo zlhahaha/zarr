@@ -97,6 +97,17 @@ fn compression(metadata : @metadata.ArrayMetadata) -> Compression? {
 ///|
 pub fn u8_compression(metadata : @metadata.ArrayMetadata) -> Compression? {
   guard @dtype.is_u8(metadata) else { return None }
+  byte_compression(metadata)
+}
+
+///|
+pub fn i8_compression(metadata : @metadata.ArrayMetadata) -> Compression? {
+  guard @dtype.is_i8(metadata) else { return None }
+  byte_compression(metadata)
+}
+
+///|
+fn byte_compression(metadata : @metadata.ArrayMetadata) -> Compression? {
   guard compression(metadata) is Some(plan) else { return None }
   match metadata.format {
     @metadata.V2 => Some(plan)

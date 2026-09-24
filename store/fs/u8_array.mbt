@@ -47,7 +47,7 @@ pub async fn FileU8Array::read(
 ) -> Byte? {
   guard self.chunk_coords(indices) is Some(coordinates) else { return None }
   let scratch = @store.MemoryStore::new()
-  guard @array.open_u8_from_metadata(scratch, self.metadata, self.path)
+  guard @array.open_u8_bits_from_metadata(scratch, self.metadata, self.path)
     is Some(array) else {
     return None
   }
@@ -70,7 +70,7 @@ pub async fn FileU8Array::write(
 ) -> Bool {
   guard self.chunk_coords(indices) is Some(coordinates) else { return false }
   let scratch = @store.MemoryStore::new()
-  guard @array.open_u8_from_metadata(scratch, self.metadata, self.path)
+  guard @array.open_u8_bits_from_metadata(scratch, self.metadata, self.path)
     is Some(array) else {
     return false
   }

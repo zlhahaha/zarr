@@ -548,6 +548,39 @@ test "64-bit fill parsing rejects overflow and fractional numbers" {
 }
 
 ///|
+test "int8 handles signed bytes and validates write range" {
+  let store = @store.MemoryStore::new()
+  guard @array.create_i8(
+      store,
+      @metadata.V2,
+      "signed8",
+      [3],
+      [2],
+      -1,
+      compression=@codec.Gzip(1),
+    )
+    is Some(v2) else {
+    fail("create v2 int8")
+  }
+  assert_eq(v2.read([0]), Some(-1))
+  assert_true(v2.write_region([1], [2], [-128, 127]))
+  assert_eq(v2.read_region([0], [3]), Some([-1, -128, 127]))
+  assert_true(!v2.write([0], 128))
+  assert_true(!v2.write_region([0], [2], [0, -129]))
+  assert_true(@array.open_u8(store, "signed8") is None)
+
+  guard @array.create_i8(store, @metadata.V3, "signed8_v3", [3], [2], -5)
+    is Some(v3) else {
+    fail("create v3 int8")
+  }
+  assert_true(v3.write([2], -100))
+  assert_eq(v3.read_region([0], [3]), Some([-5, -5, -100]))
+  assert_true(
+    @array.create_i8(store, @metadata.V3, "bad", [1], [1], 128) is None,
+  )
+}
+
+///|
 test "int32 v2 and v3 round-trip signed values and chunk edges" {
   let store = @store.MemoryStore::new()
   guard @array.create_i32(store, @metadata.V3, "labels", [3], [2], -1)

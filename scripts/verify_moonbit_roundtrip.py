@@ -67,6 +67,8 @@ def main() -> None:
     check("v3_f32_neg_inf", np.array([-np.inf, -np.inf, 1.25], dtype=np.float32))
     check("v2_i64_be", np.array([-9223372036854775807, -9223372036854775807, 9223372036854775807], dtype=np.int64))
     check("v3_u64_le_zstd", np.array([18446744073709551615, 18446744073709551615, 18446744073709551614], dtype=np.uint64))
+    check("v2_i8", np.array([-5, -128, 127], dtype=np.int8))
+    check("v3_i8_zstd", np.array([-5, -128, 127], dtype=np.int8))
 
 
 if __name__ == "__main__":
