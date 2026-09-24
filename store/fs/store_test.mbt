@@ -432,3 +432,49 @@ async test "read independent zarr-python nested groups and arrays" {
   }
   assert_eq(image_v3.read_region([0], [3]), Some(b"\x05\x05\x09"))
 }
+
+///|
+async test "read independent zarr-python boolean fixtures" {
+  let base = "integration/fixtures/zarr-python"
+  for name in ["v2_bool", "v3_bool"] {
+    guard @fs.FileStore::new("\{base}/\{name}.zarr") is Some(store) else {
+      fail("boolean fixture store")
+    }
+    guard store.open_bool("") is Some(mask) else { fail("boolean fixture") }
+    assert_eq(mask.read([0, 0]), Some(true))
+    assert_eq(mask.read([1, 2]), Some(false))
+    assert_eq(mask.read([2, 3]), Some(false))
+    assert_eq(
+      mask.read_region([1, 1], [2, 3]),
+      Some([true, false, true, true, true, false]),
+    )
+  }
+}
+
+///|
+async test "native boolean compressed regions persist across chunks" {
+  let dir = @async_fs.tmpdir(prefix="zarr-bool-test")
+  guard @fs.FileStore::new(dir) is Some(store) else { fail("store") }
+  guard store.create_bool(
+      @metadata.V3,
+      "mask",
+      [3, 4],
+      [2, 2],
+      true,
+      compression=@codec.Zstd(3),
+    )
+    is Some(mask) else {
+    fail("create mask")
+  }
+  assert_true(
+    mask.write_region([1, 1], [2, 3], [false, true, false, true, false, true]),
+  )
+  guard @fs.FileStore::new(dir) is Some(reopened) else { fail("reopen store") }
+  guard reopened.open_bool("mask") is Some(saved) else { fail("reopen mask") }
+  assert_eq(
+    saved.read_region([1, 1], [2, 3]),
+    Some([false, true, false, true, false, true]),
+  )
+  assert_eq(saved.read([0, 0]), Some(true))
+  @async_fs.rmdir(dir, recursive=true)
+}

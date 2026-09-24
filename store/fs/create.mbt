@@ -37,6 +37,35 @@ pub async fn FileStore::create_u8(
 }
 
 ///|
+pub async fn FileStore::create_bool(
+  self : FileStore,
+  format : @metadata.Format,
+  path : String,
+  shape : Array[Int],
+  chunk_shape : Array[Int],
+  fill : Bool,
+  compression? : @codec.Compression = @codec.Raw,
+) -> FileBoolArray? {
+  if self.node_exists(path) {
+    return None
+  }
+  guard @array.bool_metadata_json(
+      format,
+      shape,
+      chunk_shape,
+      fill,
+      compression~,
+    )
+    is Some(raw) else {
+    return None
+  }
+  if !self.put_array_metadata(format, path, raw) {
+    return None
+  }
+  self.open_bool(path)
+}
+
+///|
 pub async fn FileStore::create_u16(
   self : FileStore,
   format : @metadata.Format,

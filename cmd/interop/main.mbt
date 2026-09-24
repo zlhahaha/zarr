@@ -299,5 +299,44 @@ async fn main {
     println("v3 nested array write failed")
     return
   }
+
+  guard @fs.FileStore::new("\{base}/v2_bool.zarr") is Some(v2_bool_store) else {
+    println("invalid v2 boolean output path")
+    return
+  }
+  guard v2_bool_store.create_bool(@metadata.V2, "", [3, 4], [2, 2], true)
+    is Some(v2_bool) else {
+    println("v2 boolean creation failed")
+    return
+  }
+  if !v2_bool.write_region([1, 1], [2, 3], [
+      false, true, false, true, false, true,
+    ]) {
+    println("v2 boolean slice write failed")
+    return
+  }
+
+  guard @fs.FileStore::new("\{base}/v3_bool_zstd.zarr") is Some(v3_bool_store) else {
+    println("invalid v3 boolean output path")
+    return
+  }
+  guard v3_bool_store.create_bool(
+      @metadata.V3,
+      "",
+      [3, 4],
+      [2, 2],
+      true,
+      compression=@codec.Zstd(3),
+    )
+    is Some(v3_bool) else {
+    println("v3 boolean creation failed")
+    return
+  }
+  if !v3_bool.write_region([1, 1], [2, 3], [
+      false, true, false, true, false, true,
+    ]) {
+    println("v3 boolean slice write failed")
+    return
+  }
   println("MoonBit interop stores created")
 }

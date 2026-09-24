@@ -765,3 +765,37 @@ test "group tree creates ancestors and preserves existing attributes" {
   assert_eq(values.read([0]), Some(b'\x03'))
   assert_true(legacy.open_array("__legacy/data/values") is Some(_))
 }
+
+///|
+test "boolean arrays support v2 and v3 fill, slices and compression" {
+  for format in [@metadata.V2, @metadata.V3] {
+    let store = @store.MemoryStore::new()
+    guard @array.create_bool(
+        store,
+        format,
+        "mask",
+        [3, 4],
+        [2, 2],
+        true,
+        compression=@codec.Gzip(1),
+      )
+      is Some(mask) else {
+      fail("create boolean array")
+    }
+    assert_eq(mask.read([0, 0]), Some(true))
+    assert_true(!mask.write([3, 0], false))
+    assert_true(
+      mask.write_region([1, 1], [2, 3], [false, true, false, true, false, true]),
+    )
+    assert_eq(
+      mask.read_region([1, 1], [2, 3]),
+      Some([false, true, false, true, false, true]),
+    )
+    assert_eq(mask.read([0, 0]), Some(true))
+    guard @array.open_bool(store, "mask") is Some(reopened) else {
+      fail("open boolean array")
+    }
+    assert_eq(reopened.read([1, 1]), Some(false))
+    assert_true(@array.open_u8(store, "mask") is None)
+  }
+}

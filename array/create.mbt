@@ -105,7 +105,7 @@ fn numeric_metadata_json(
       ]),
     )
   } else {
-    let codec = if v3_dtype == "uint8" {
+    let codec = if v3_dtype == "uint8" || v3_dtype == "bool" {
       Json::object(Map([("name", Json::string("bytes"))]))
     } else {
       Json::object(
@@ -184,6 +184,26 @@ pub fn u8_metadata_json(
     "|u1",
     "uint8",
     Json::number(fill.to_int().to_double()),
+    false,
+    compression,
+  )
+}
+
+///|
+pub fn bool_metadata_json(
+  format : @metadata.Format,
+  shape : Array[Int],
+  chunk_shape : Array[Int],
+  fill : Bool,
+  compression? : @codec.Compression = @codec.Raw,
+) -> String? {
+  numeric_metadata_json(
+    format,
+    shape,
+    chunk_shape,
+    "|b1",
+    "bool",
+    Json::boolean(fill),
     false,
     compression,
   )
@@ -318,6 +338,29 @@ pub fn create_u8(
     return None
   }
   open_u8(store, path)
+}
+
+///|
+pub fn create_bool(
+  store : @store.MemoryStore,
+  format : @metadata.Format,
+  path : String,
+  shape : Array[Int],
+  chunk_shape : Array[Int],
+  fill : Bool,
+  compression? : @codec.Compression = @codec.Raw,
+) -> BoolArray? {
+  if node_exists(store, path) {
+    return None
+  }
+  guard bool_metadata_json(format, shape, chunk_shape, fill, compression~)
+    is Some(raw) else {
+    return None
+  }
+  if !store.put_array_metadata(format, path, raw) {
+    return None
+  }
+  open_bool(store, path)
 }
 
 ///|

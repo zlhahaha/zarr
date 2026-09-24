@@ -53,6 +53,12 @@ def main() -> None:
     check("v3_u16_le_zstd", np.array([60000, 60000, 65530], dtype=np.uint16))
     check_group("v2_grouped_u8", "v2")
     check_group("v3_grouped_u8", "v3")
+    mask = np.ones((3, 4), dtype=np.bool_)
+    mask[1:3, 1:4] = np.array(
+        [[False, True, False], [True, False, True]], dtype=np.bool_
+    )
+    check("v2_bool", mask)
+    check("v3_bool_zstd", mask)
 
 
 if __name__ == "__main__":

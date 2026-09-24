@@ -111,6 +111,22 @@ pub fn u8_compression(metadata : @metadata.ArrayMetadata) -> Compression? {
 }
 
 ///|
+pub fn bool_compression(metadata : @metadata.ArrayMetadata) -> Compression? {
+  guard @dtype.is_bool(metadata) else { return None }
+  guard compression(metadata) is Some(plan) else { return None }
+  match metadata.format {
+    @metadata.V2 => Some(plan)
+    @metadata.V3 =>
+      match metadata.codecs[0] {
+        String("bytes") => Some(plan)
+        Object(map) if map.get("name") == Some(Json::string("bytes")) =>
+          Some(plan)
+        _ => None
+      }
+  }
+}
+
+///|
 pub fn f32_plan(metadata : @metadata.ArrayMetadata) -> (Bool, Compression)? {
   guard @dtype.f32_endian(metadata) is Some(v2_endian) else { return None }
   numeric_plan(metadata, v2_endian)
