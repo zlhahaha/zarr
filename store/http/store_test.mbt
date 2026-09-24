@@ -12,9 +12,12 @@ async test "HTTP hydration reads only a bounded remote region" {
   }
   let server = @client_http.Server(@socket.Addr::parse("127.0.0.1:0"))
   let fail_chunk = [false]
+  let requests = [0]
+  let found_requests = [0]
   @async.with_task_group() <| group => {
     group.spawn_bg(no_wait=true) <| () => {
       server.run_forever((request, _body, conn) => {
+        requests[0] += 1
         let route = request.path[1:].to_owned()
         let (files, key) = if route.has_prefix("v2/") {
           (v2_files, route[3:].to_owned())
@@ -30,6 +33,7 @@ async test "HTTP hydration reads only a bounded remote region" {
         } else {
           match files.get(key) {
             Some(bytes) => {
+              found_requests[0] += 1
               conn.send_response(200, "OK")
               conn.write(bytes as &@io.Data)
             }
@@ -48,6 +52,25 @@ async test "HTTP hydration reads only a bounded remote region" {
       fail("typed array")
     }
     assert_eq(image.read_region([1], [2]), Some(b"\x05\x09"))
+    let after_first_hydration = found_requests[0]
+    assert_true(remote.hydrate_region("science/image", [1], [2]) is Some(_))
+    assert_eq(found_requests[0], after_first_hydration)
+    guard @http.HttpStore::new(url, max_cache_bytes=1) is Some(tiny_cache) else {
+      fail("tiny cache")
+    }
+    assert_true(tiny_cache.hydrate_region("science/image", [1], [2]) is Some(_))
+    let after_tiny_cache = requests[0]
+    assert_true(tiny_cache.hydrate_region("science/image", [1], [2]) is Some(_))
+    assert_true(requests[0] > after_tiny_cache)
+    assert_true(@http.HttpStore::new(url, max_cache_bytes=-1) is None)
+    guard @http.HttpStore::new(url, max_cache_entries=1) is Some(one_entry) else {
+      fail("single-entry cache")
+    }
+    assert_true(one_entry.hydrate_region("science/image", [1], [2]) is Some(_))
+    let after_one_entry = found_requests[0]
+    assert_true(one_entry.hydrate_region("science/image", [1], [2]) is Some(_))
+    assert_true(found_requests[0] > after_one_entry)
+    assert_true(@http.HttpStore::new(url, max_cache_entries=0) is None)
     guard @http.HttpStore::new("\{root}/v2") is Some(v2_remote) else {
       fail("v2 HTTP store")
     }
@@ -81,6 +104,9 @@ async test "HTTP hydration reads only a bounded remote region" {
     }
     assert_true(tiny_chunk.hydrate_region("science/image", [1], [2]) is None)
     fail_chunk[0] = true
-    assert_true(remote.hydrate_region("science/image", [1], [2]) is None)
+    guard @http.HttpStore::new(url, max_cache_bytes=0) is Some(no_cache) else {
+      fail("disabled cache")
+    }
+    assert_true(no_cache.hydrate_region("science/image", [1], [2]) is None)
   }
 }

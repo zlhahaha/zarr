@@ -6,6 +6,18 @@ pub struct HttpStore {
   max_metadata_bytes : Int
   max_chunk_bytes : Int
   max_chunks : Int
+  max_cache_bytes : Int
+  max_cache_entries : Int
+  cache : Map[String, CacheEntry]
+  mut cache_bytes : Int
+  mut cache_entries : Int
+  mut tick : UInt64
+}
+
+///|
+pub struct CacheEntry {
+  bytes : Bytes
+  access : UInt64
 }
 
 ///|
@@ -14,16 +26,31 @@ pub fn HttpStore::new(
   max_metadata_bytes? : Int = 1048576,
   max_chunk_bytes? : Int = 67108864,
   max_chunks? : Int = 1024,
+  max_cache_bytes? : Int = 67108864,
+  max_cache_entries? : Int = 4096,
 ) -> HttpStore? {
   if !(base_url.has_prefix("http://") || base_url.has_prefix("https://")) ||
     base_url.contains("?") ||
     base_url.contains("#") ||
     max_metadata_bytes <= 0 ||
     max_chunk_bytes <= 0 ||
-    max_chunks <= 0 {
+    max_chunks <= 0 ||
+    max_cache_bytes < 0 ||
+    max_cache_entries <= 0 {
     return None
   }
-  Some({ base_url, max_metadata_bytes, max_chunk_bytes, max_chunks, })
+  Some({
+    base_url,
+    max_metadata_bytes,
+    max_chunk_bytes,
+    max_chunks,
+    max_cache_bytes,
+    max_cache_entries,
+    cache: Map([]),
+    cache_bytes: 0,
+    cache_entries: 0,
+    tick: 0UL,
+  })
 }
 
 ///|
@@ -31,6 +58,64 @@ priv enum FetchResult {
   Found(Bytes)
   Missing
   Failed
+}
+
+///|
+fn HttpStore::next_tick(self : HttpStore) -> UInt64 {
+  self.tick += 1UL
+  self.tick
+}
+
+///|
+fn HttpStore::cached(
+  self : HttpStore,
+  key : String,
+  limit : Int,
+) -> FetchResult? {
+  guard self.cache.get(key) is Some(entry) else { return None }
+  if entry.bytes.length() > limit {
+    return Some(Failed)
+  }
+  self.cache.set(key, { bytes: entry.bytes, access: self.next_tick(), })
+  Some(Found(entry.bytes))
+}
+
+///|
+fn HttpStore::cache_found(
+  self : HttpStore,
+  key : String,
+  bytes : Bytes,
+) -> Unit {
+  if self.max_cache_bytes == 0 ||
+    bytes.length() == 0 ||
+    bytes.length() > self.max_cache_bytes {
+    return
+  }
+  if self.cache.get(key) is Some(previous) {
+    self.cache_bytes -= previous.bytes.length()
+    self.cache_entries -= 1
+    self.cache.remove(key)
+  }
+  let available = self.max_cache_bytes - bytes.length()
+  while self.cache_bytes > available ||
+        self.cache_entries >= self.max_cache_entries {
+    let mut oldest : String? = None
+    let mut oldest_access = 18446744073709551615UL
+    for candidate, entry in self.cache {
+      if entry.access <= oldest_access {
+        oldest = Some(candidate)
+        oldest_access = entry.access
+      }
+    }
+    guard oldest is Some(victim) else { return }
+    guard self.cache.get(victim) is Some(entry) else { return }
+    self.cache_bytes -= entry.bytes.length()
+    self.cache_entries -= 1
+    self.cache.remove(victim)
+  }
+  self.cache.set(key, { bytes, access: self.next_tick(), })
+  self.cache_bytes += bytes.length()
+  self.cache_entries += 1
 }
 
 ///|
@@ -74,6 +159,9 @@ async fn HttpStore::fetch(
   key : String,
   limit : Int,
 ) -> FetchResult {
+  if self.cached(key, limit) is Some(result) {
+    return result
+  }
   guard encode_key(key) is Some(encoded) else { return Failed }
   let url = if self.base_url.has_suffix("/") {
     "\{self.base_url}\{encoded}"
@@ -91,7 +179,11 @@ async fn HttpStore::fetch(
       for ;; {
         let next = client.read_some(max_len=32768) catch { _ => return Failed }
         match next {
-          None => return Found(Bytes::from_array(output))
+          None => {
+            let found = Bytes::from_array(output)
+            self.cache_found(key, found)
+            return Found(found)
+          }
           Some(bytes) => {
             if bytes.length() > limit - output.length() {
               return Failed

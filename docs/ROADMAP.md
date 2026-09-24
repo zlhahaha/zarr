@@ -30,9 +30,9 @@ Implemented locally: gzip and zstd read/write for v2/v3, zlib read/write for v2,
 
 ## Stage 3 — Hierarchies, scale and deployment
 
-Partial implementation: `store/http` can hydrate only the v2/v3 metadata and chunks intersecting a requested rectangle from a static HTTP-served hierarchy. It distinguishes 404 missing chunks from transport/server failures and caps metadata bytes, chunk bytes and touched chunk count. It is native-only, read-only and does not yet cache across calls or stream typed values to the caller. Native `FileStore::open_consolidated_v3` now reads the zarr-python inline root-index convention as a read-only snapshot; this convention is not a core v3 codec or writable index.
+Partial implementation: `store/http` can hydrate only the v2/v3 metadata and chunks intersecting a requested rectangle from a static HTTP-served hierarchy. It distinguishes 404 missing chunks from transport/server failures and caps metadata bytes, chunk bytes and touched chunk count. It is native-only and read-only; successful responses now use a bounded per-instance in-memory LRU cache, but values are not streamed as typed arrays. Native `FileStore::open_consolidated_v3` reads the zarr-python inline root-index convention as a read-only snapshot; this convention is not a core v3 codec or writable index.
 
-- Group traversal and metadata mutation, filesystem and HTTP read-only stores; configurable chunk cache and bounded streaming.
+- Group traversal and metadata mutation, filesystem and HTTP read-only stores; configurable chunk cache (implemented in `HttpStore`) and bounded streaming (open).
 - v3 sharding-indexed codec and writable consolidated metadata; optional cloud/object-store adapter after the base Store API is stable.
 - Gate: read representative scientific datasets without loading the whole array; cross-language tests and performance/memory benchmarks.
 

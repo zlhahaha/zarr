@@ -62,7 +62,7 @@ guard @array.open_u8(cache, "science/image") is Some(image) else { return }
 let values = image.read_region([10, 20], [1, 3])
 ```
 
-Import `zlhahaha/zarr/store/http` as `@http` and `zlhahaha/zarr/array` as `@array`. Hydration is read-only and returns a `MemoryStore`; changing it does not update the remote store. A 404 chunk is treated as the declared fill value, while non-200 responses and transport errors fail. The default caps are 1 MiB per metadata document, 64 MiB per encoded chunk and 1024 chunks per call; `HttpStore::new` accepts `max_metadata_bytes`, `max_chunk_bytes`, and `max_chunks` overrides. This is not yet an HTTP-backed typed array or persistent chunk cache.
+Import `zlhahaha/zarr/store/http` as `@http` and `zlhahaha/zarr/array` as `@array`. Hydration is read-only and returns a `MemoryStore`; changing it does not update the remote store. A 404 chunk is treated as the declared fill value, while non-200 responses and transport errors fail. The default caps are 1 MiB per metadata document, 64 MiB per encoded chunk and 1024 chunks per call; `HttpStore::new` accepts `max_metadata_bytes`, `max_chunk_bytes`, and `max_chunks` overrides. Successful metadata and chunk responses are cached on the `HttpStore` instance with 64 MiB and 4096-entry in-memory LRU limits by default; set `max_cache_bytes=0` to disable it, or tune `max_cache_bytes` and `max_cache_entries`. Missing and empty responses are not cached. Recreate the `HttpStore` to see remote changes. This is not yet an HTTP-backed typed array or a disk-persistent cache.
 
 ## Supported format subset
 
