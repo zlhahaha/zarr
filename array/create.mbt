@@ -51,6 +51,7 @@ fn numeric_metadata_json(
           ("level", Json::number(level.to_double())),
         ]),
       )
+    @codec.BloscReadOnly(_) => return None
   }
   let v3_compressor_json = match compression {
     @codec.Raw => None
@@ -87,6 +88,7 @@ fn numeric_metadata_json(
         ),
       )
     @codec.Zlib(_) => if format == @metadata.V2 { None } else { return None }
+    @codec.BloscReadOnly(_) => return None
   }
   match compression {
     @codec.Gzip(level) | @codec.Zlib(level) if level < 0 || level > 9 =>

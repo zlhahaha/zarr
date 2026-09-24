@@ -9,6 +9,7 @@ Initial interoperable subset of Zarr storage formats 2 and 3 for MoonBit.
 - Read and write v2 and v3 groups and attributes; read v2 consolidated metadata as a read-only native snapshot.
 - Read zarr-python's v3 inline consolidated metadata from a read-only native snapshot.
 - Support raw, gzip, and zstd chunks in both formats, plus v2 zlib; v3 Zstd frame checksums can be read and written. Unsupported codecs and filters fail explicitly.
+- Read a bounded Blosc1 subset (LZ4/LZ4HC, Zlib, Zstd; no or byte shuffle) from v2/v3 stores, including multi-block and incompressible frames. Bitshuffle and Blosc writes remain unsupported.
 - Hydrate a bounded region of a static HTTP-served array into a `MemoryStore` on native targets. The read-only adapter has a configurable bounded in-memory LRU cache; it has no disk cache.
 - Verify interoperability in both directions with zarr-python 3.4.0, and run native CI on Linux, macOS, and Windows plus wasm-gc CI on Linux.
 

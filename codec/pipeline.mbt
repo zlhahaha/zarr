@@ -7,6 +7,7 @@ pub(all) enum Compression {
   Zlib(Int)
   Zstd(Int)
   ZstdChecksum(Int)
+  BloscReadOnly(String)
 } derive(Debug)
 
 ///|
@@ -70,6 +71,34 @@ fn compressor(codec : Json, v3 : Bool) -> Compression? {
           Some(if checksum { ZstdChecksum(value) } else { Zstd(value) })
         None => None
       }
+    }
+    Some(String("blosc")) => {
+      let config = if v3 {
+        guard map.get("configuration") is Some(Object(config)) else {
+          return None
+        }
+        config
+      } else {
+        map
+      }
+      guard config.get("cname") is Some(String(cname)) else { return None }
+      if cname != "lz4" &&
+        cname != "lz4hc" &&
+        cname != "zlib" &&
+        cname != "zstd" {
+        return None
+      }
+      let shuffle = config.get("shuffle")
+      let shuffle_ok = if v3 {
+        shuffle == Some(Json::string("noshuffle")) ||
+        shuffle == Some(Json::string("shuffle"))
+      } else {
+        shuffle == Some(Json::number(0.0)) || shuffle == Some(Json::number(1.0))
+      }
+      if !shuffle_ok || level(config.get("clevel"), 5, 0, 9) is None {
+        return None
+      }
+      Some(BloscReadOnly(cname))
     }
     _ => None
   }
@@ -235,6 +264,7 @@ pub fn decode_chunk(
       } else {
         decode_zstd(encoded, expected_len)
       }
+    BloscReadOnly(cname) => decode_blosc(encoded, expected_len, cname)
   }
 }
 
@@ -331,5 +361,6 @@ pub fn encode_chunk(plan : Compression, raw : Bytes) -> Bytes? {
       Some(@zstd.compress(raw, level~, checksum=true)) catch {
         _ => None
       }
+    BloscReadOnly(_) => None
   }
 }

@@ -317,6 +317,55 @@ async test "read independent zarr-python zstd fixtures" {
 }
 
 ///|
+async test "read independent zarr-python Blosc LZ4 and Zstd fixtures" {
+  let base = "integration/fixtures/zarr-python"
+  for name in ["v2_blosc_lz4_u16", "v3_blosc_lz4_u16", "v2_blosc_zstd_u16"] {
+    guard @fs.FileStore::new("\{base}/\{name}.zarr") is Some(store) else {
+      fail("Blosc fixture store")
+    }
+    guard store.open_u16("") is Some(array) else { fail("Blosc fixture array") }
+    assert_eq(array.read([0]), Some((0 : UInt16)))
+    assert_eq(array.read([63]), Some((63 : UInt16)))
+    assert_eq(array.read([4095]), Some((63 : UInt16)))
+    assert_eq(
+      array.read_region([61], [4]),
+      Some([(61 : UInt16), (62 : UInt16), (63 : UInt16), (0 : UInt16)]),
+    )
+    assert_true(!array.write([0], (1 : UInt16)))
+  }
+  guard @fs.FileStore::new("\{base}/v2_blosc_memcpy_u16.zarr") is Some(store) else {
+    fail("Blosc memcpy fixture store")
+  }
+  guard store.open_u16("") is Some(array) else {
+    fail("Blosc memcpy fixture array")
+  }
+  assert_eq(array.read([0]), Some((9864 : UInt16)))
+  assert_eq(array.read([4095]), Some((34826 : UInt16)))
+
+  guard @fs.FileStore::new("\{base}/v2_blosc_lz4_multiblock_u16.zarr")
+    is Some(many_store) else {
+    fail("Blosc multiblock fixture store")
+  }
+  guard many_store.open_u16("") is Some(many) else {
+    fail("Blosc multiblock fixture array")
+  }
+  assert_eq(many.read([8199]), Some((7 : UInt16)))
+  assert_eq(
+    many.read_region([511], [4]),
+    Some([(63 : UInt16), (0 : UInt16), (1 : UInt16), (2 : UInt16)]),
+  )
+
+  guard @fs.FileStore::new("\{base}/v3_blosc_lz4_f32.zarr") is Some(float_store) else {
+    fail("Blosc float fixture store")
+  }
+  guard float_store.open_f32("") is Some(float_array) else {
+    fail("Blosc float fixture array")
+  }
+  assert_eq(float_array.read([0]), Some(1.5))
+  assert_eq(float_array.read([1023]), Some(42.25))
+}
+
+///|
 async test "native compressed regions span chunks and persist" {
   let dir = @async_fs.tmpdir(prefix="zarr-compressed-region-test")
   guard @fs.FileStore::new(dir) is Some(store) else { fail("store") }

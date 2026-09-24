@@ -7,3 +7,5 @@ target
 pkg.generated.mbti
 .interop-deps/
 integration/.roundtrip/
+__pycache__/
+*.pyc

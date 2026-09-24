@@ -96,3 +96,22 @@ test "attribute helpers reject malformed documents and v2 metadata" {
     @metadata.replace_v3_attributes(v3_group, "{\"unit\":\"m\"}") is Some(_),
   )
 }
+
+///|
+test "Blosc variants outside the supported read subset fail at open" {
+  let store = @store.MemoryStore::new()
+  let bitshuffle_v2 =
+    #|{"zarr_format":2,"shape":[8],"chunks":[8],"dtype":"<u2","compressor":{"id":"blosc","cname":"lz4","clevel":5,"shuffle":2,"blocksize":0},"fill_value":0,"order":"C","filters":null}
+  let blosclz_v2 =
+    #|{"zarr_format":2,"shape":[8],"chunks":[8],"dtype":"<u2","compressor":{"id":"blosc","cname":"blosclz","clevel":5,"shuffle":1,"blocksize":0},"fill_value":0,"order":"C","filters":null}
+  let bitshuffle_v3 =
+    #|{"zarr_format":3,"node_type":"array","shape":[8],"data_type":"uint16","chunk_grid":{"name":"regular","configuration":{"chunk_shape":[8]}},"chunk_key_encoding":{"name":"default"},"fill_value":0,"codecs":[{"name":"bytes","configuration":{"endian":"little"}},{"name":"blosc","configuration":{"typesize":2,"cname":"lz4","clevel":5,"shuffle":"bitshuffle","blocksize":0}}]}
+  assert_true(
+    store.put_array_metadata(@metadata.V2, "bitshuffle", bitshuffle_v2),
+  )
+  assert_true(store.put_array_metadata(@metadata.V2, "blosclz", blosclz_v2))
+  assert_true(store.put_array_metadata(@metadata.V3, "v3", bitshuffle_v3))
+  assert_true(@array.open_u16(store, "bitshuffle") is None)
+  assert_true(@array.open_u16(store, "blosclz") is None)
+  assert_true(@array.open_u16(store, "v3") is None)
+}
