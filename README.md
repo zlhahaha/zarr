@@ -33,7 +33,7 @@ Early development. The library can read and write `bool`, `uint8`, `uint16`, `in
 
 ## Build and run
 
-Requires the MoonBit toolchain. CI and release packaging are tested with the September 2026 toolchain; the library also passes local checks with the July 2026 toolchain. From this directory:
+Requires the MoonBit toolchain. CI checks native builds and tests on Linux, macOS and Windows, plus wasm-gc on Linux; release packaging and Python interoperability run on Linux. The library also passes local checks with the July 2026 toolchain. From this directory:
 
 ```sh
 moon check --deny-warn

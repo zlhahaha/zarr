@@ -38,6 +38,8 @@ Partial implementation: `store/http` can hydrate only the v2/v3 metadata and chu
 
 ## Stage 4 — Release and maintenance
 
+Current CI passes native check/build/test and examples on Linux, macOS and Windows, plus wasm-gc check/build/test and the in-memory example on Linux. Release packaging and Python bidirectional interoperability run on Linux. Mooncakes publication, versioned release notes and fuzz/property tests remain open.
+
 - Public Mooncakes release with versioned API docs, installation snippet, examples, changelog and support matrix.
 - Linux/macOS/Windows and supported MoonBit backends in CI; fuzz/property tests for metadata and chunk boundaries.
 - Gate: external user can follow README to open, slice, modify and save at least one v2 and one v3 dataset; all claims are backed by tests.
