@@ -6,6 +6,7 @@ pub(all) enum Compression {
   Gzip(Int)
   Zlib(Int)
   Zstd(Int)
+  ZstdChecksum(Int)
 } derive(Debug)
 
 ///|
@@ -52,17 +53,21 @@ fn compressor(codec : Json, v3 : Bool) -> Compression? {
         None => None
       }
     Some(String("zstd")) => {
-      if v3 {
+      let checksum = if v3 {
         guard map.get("configuration") is Some(Object(config)) else {
           return None
         }
         match config.get("checksum") {
-          None | Some(False) => ()
+          None | Some(False) => false
+          Some(True) => true
           _ => return None
         }
+      } else {
+        false
       }
       match level(configured_level, 3, 0, 22) {
-        Some(value) => Some(Zstd(value))
+        Some(value) =>
+          Some(if checksum { ZstdChecksum(value) } else { Zstd(value) })
         None => None
       }
     }
@@ -224,6 +229,12 @@ pub fn decode_chunk(
     Gzip(_) => decode_gzip(encoded, expected_len)
     Zlib(_) => decode_zlib(encoded, expected_len)
     Zstd(_) => decode_zstd(encoded, expected_len)
+    ZstdChecksum(_) =>
+      if encoded.length() < 5 || (encoded[4].to_int() & 4) == 0 {
+        None
+      } else {
+        decode_zstd(encoded, expected_len)
+      }
   }
 }
 
@@ -316,5 +327,9 @@ pub fn encode_chunk(plan : Compression, raw : Bytes) -> Bytes? {
     Gzip(level) => Some(@gzip.gzip_compress(raw, level~))
     Zlib(level) => Some(@zlib.zlib_compress(raw, level~))
     Zstd(level) => Some(@zstd.compress(raw, level~)) catch { _ => None }
+    ZstdChecksum(level) =>
+      Some(@zstd.compress(raw, level~, checksum=true)) catch {
+        _ => None
+      }
   }
 }

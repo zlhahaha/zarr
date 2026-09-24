@@ -304,6 +304,16 @@ async test "read independent zarr-python zstd fixtures" {
   guard v3_store.open_f32("") is Some(v3) else { fail("v3 zstd array") }
   assert_eq(v3.read([0]), Some(1.5))
   assert_eq(v3.read([2]), Some(42.25))
+
+  guard @fs.FileStore::new("\{base}/v3_zstd_checksum_u8.zarr")
+    is Some(checksum_store) else {
+    fail("v3 checksummed zstd store")
+  }
+  guard checksum_store.open_u8("") is Some(checksum_array) else {
+    fail("v3 checksummed zstd array")
+  }
+  assert_eq(checksum_array.read([0]), Some(b'\x05'))
+  assert_eq(checksum_array.read([2]), Some(b'\x09'))
 }
 
 ///|

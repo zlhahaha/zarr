@@ -1,6 +1,7 @@
 """Verify MoonBit-written v2/v3 arrays with zarr-python 3.4.0."""
 
 from pathlib import Path
+import json
 import sys
 
 PROJECT = Path(__file__).resolve().parents[1]
@@ -46,6 +47,11 @@ def main() -> None:
     check("v3_gzip_i32", np.array([-1, -1, -200], dtype=np.int32))
     check("v2_zstd_u8", np.array([5, 5, 9], dtype=np.uint8))
     check("v3_zstd_f32", np.array([1.5, 1.5, 42.25], dtype=np.float32))
+    check("v3_zstd_checksum_u8", np.array([5, 5, 9], dtype=np.uint8))
+    checksum_metadata = json.loads(
+        (PROJECT / "integration" / ".roundtrip" / "v3_zstd_checksum_u8.zarr" / "zarr.json").read_text()
+    )
+    assert checksum_metadata["codecs"][-1]["configuration"]["checksum"] is True
     image = np.full((3, 4), 5, dtype=np.uint8)
     image[1:3, 1:4] = np.array([[1, 2, 3], [4, 5, 6]], dtype=np.uint8)
     check("v3_zstd_image", image)

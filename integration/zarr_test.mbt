@@ -753,7 +753,57 @@ test "zstd chunks round-trip with declared chunk bound" {
   assert_true(
     store.put_array_metadata(@metadata.V3, "checksummed", checksummed),
   )
-  assert_true(@array.open_u8(store, "checksummed") is None)
+  guard @array.open_u8(store, "checksummed") is Some(checksum_array) else {
+    fail("open checksummed array")
+  }
+  assert_true(checksum_array.write([1], b'\x07'))
+  assert_eq(checksum_array.read([1]), Some(b'\x07'))
+  guard store.get("checksummed/c/0") is Some(frame) else {
+    fail("missing checksummed frame")
+  }
+  assert_eq(frame[4].to_int() & 4, 4)
+  let damaged = frame.to_array()
+  let last = damaged.length() - 1
+  damaged[last] = (damaged[last].to_int() ^ 1).to_byte()
+  store.put("checksummed/c/0", Bytes::from_array(damaged))
+  assert_eq(checksum_array.read([1]), None)
+  guard @codec.encode_chunk(@codec.Zstd(3), b"\x00\x07") is Some(unchecked) else {
+    fail("encode unchecked zstd frame")
+  }
+  store.put("checksummed/c/0", unchecked)
+  assert_eq(checksum_array.read([1]), None)
+
+  assert_true(
+    @array.create_u8(
+      store,
+      @metadata.V3,
+      "checksummed_from_api",
+      [2],
+      [2],
+      b'\x00',
+      compression=@codec.ZstdChecksum(3),
+    )
+    is Some(_),
+  )
+  assert_true(
+    @array.create_u8(
+      store,
+      @metadata.V2,
+      "invalid_v2_checksum",
+      [2],
+      [2],
+      b'\x00',
+      compression=@codec.ZstdChecksum(3),
+    )
+    is None,
+  )
+
+  let invalid_checksum =
+    #|{"zarr_format":3,"node_type":"array","shape":[2],"data_type":"uint8","chunk_grid":{"name":"regular","configuration":{"chunk_shape":[2]}},"chunk_key_encoding":{"name":"default"},"fill_value":0,"codecs":[{"name":"bytes"},{"name":"zstd","configuration":{"level":3,"checksum":1}}]}
+  assert_true(
+    store.put_array_metadata(@metadata.V3, "invalid_checksum", invalid_checksum),
+  )
+  assert_true(@array.open_u8(store, "invalid_checksum") is None)
 }
 
 ///|

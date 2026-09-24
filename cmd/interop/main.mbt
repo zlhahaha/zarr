@@ -179,6 +179,28 @@ async fn main {
     return
   }
 
+  guard @fs.FileStore::new("\{base}/v3_zstd_checksum_u8.zarr")
+    is Some(checksum_store) else {
+    println("invalid checksummed zstd output path")
+    return
+  }
+  guard checksum_store.create_u8(
+      @metadata.V3,
+      "",
+      [3],
+      [2],
+      b'\x05',
+      compression=@codec.ZstdChecksum(3),
+    )
+    is Some(checksum_array) else {
+    println("v3 checksummed zstd creation failed")
+    return
+  }
+  if !checksum_array.write([2], b'\x09') {
+    println("v3 checksummed zstd write failed")
+    return
+  }
+
   guard @fs.FileStore::new("\{base}/v3_zstd_image.zarr") is Some(image_store) else {
     println("invalid compressed image output path")
     return
