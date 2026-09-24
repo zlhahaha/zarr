@@ -118,14 +118,43 @@ fn blosc_split(
 }
 
 ///|
-/// Decode the common Blosc1 chunk format (format byte 2) used by Zarr. Unsupported
-/// compressors and bitshuffle are rejected before bytes reach the dtype layer.
+/// Undo Blosc's bit-plane transpose for groups of eight elements. C-Blosc
+/// leaves an entire internal block unchanged when its element count is not
+/// divisible by eight (rather than transforming only a prefix).
+fn blosc_bitunshuffle(input : Array[Byte], typesize : Int) -> Bytes? {
+  if typesize <= 0 || input.length() % typesize != 0 {
+    return None
+  }
+  let elements = input.length() / typesize
+  if elements % 8 != 0 {
+    return Some(Bytes::from_array(input[:]))
+  }
+  let row_bytes = elements / 8
+  let output = Bytes::make(input.length(), b'\x00').to_array()
+  for element in 0..<elements {
+    let group = element / 8
+    let bit_in_group = element % 8
+    for lane in 0..<typesize {
+      let mut value = 0
+      for bit in 0..<8 {
+        let bit_plane = input[(lane * 8 + bit) * row_bytes + group].to_int()
+        value = value | (((bit_plane >> bit_in_group) & 1) << bit)
+      }
+      output[element * typesize + lane] = value.to_byte()
+    }
+  }
+  Some(Bytes::from_array(output[:]))
+}
+
+///|
+/// Decode the common Blosc1 chunk format (format byte 2) used by Zarr.
+/// Unsupported compressors are rejected before bytes reach the dtype layer.
 fn decode_blosc(encoded : Bytes, expected : Int, cname : String) -> Bytes? {
   if expected <= 0 || encoded.length() < 16 || encoded[0] != b'\x02' {
     return None
   }
   let flags = encoded[2].to_int()
-  if (flags & 8) != 0 || (flags & 4) != 0 {
+  if (flags & 8) != 0 || (flags & 5) == 5 {
     return None
   }
   let compressor_id = flags >> 5
@@ -208,7 +237,14 @@ fn decode_blosc(encoded : Bytes, expected : Int, cname : String) -> Bytes? {
     if cursor != end {
       return None
     }
-    if (flags & 1) != 0 {
+    if (flags & 4) != 0 {
+      guard blosc_bitunshuffle(shuffled, typesize) is Some(raw) else {
+        return None
+      }
+      for i in 0..<block_len {
+        output[block_at + i] = raw[i]
+      }
+    } else if (flags & 1) != 0 {
       if block_len % typesize != 0 {
         return None
       }

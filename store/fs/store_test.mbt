@@ -319,7 +319,11 @@ async test "read independent zarr-python zstd fixtures" {
 ///|
 async test "read independent zarr-python Blosc LZ4 and Zstd fixtures" {
   let base = "integration/fixtures/zarr-python"
-  for name in ["v2_blosc_lz4_u16", "v3_blosc_lz4_u16", "v2_blosc_zstd_u16"] {
+  for
+    name in [
+      "v2_blosc_lz4_u16", "v3_blosc_lz4_u16", "v2_blosc_bitshuffle_u16", "v3_blosc_bitshuffle_u16",
+      "v2_blosc_zstd_u16",
+    ] {
     guard @fs.FileStore::new("\{base}/\{name}.zarr") is Some(store) else {
       fail("Blosc fixture store")
     }
@@ -354,6 +358,18 @@ async test "read independent zarr-python Blosc LZ4 and Zstd fixtures" {
     many.read_region([511], [4]),
     Some([(63 : UInt16), (0 : UInt16), (1 : UInt16), (2 : UInt16)]),
   )
+  guard @fs.FileStore::new("\{base}/v2_blosc_bitshuffle_multiblock_u16.zarr")
+    is Some(bitshuffle_store) else {
+    fail("Blosc bitshuffle multiblock store")
+  }
+  guard bitshuffle_store.open_u16("") is Some(bitshuffle_many) else {
+    fail("Blosc bitshuffle multiblock array")
+  }
+  assert_eq(bitshuffle_many.read([8199]), Some((7 : UInt16)))
+  assert_eq(
+    bitshuffle_many.read_region([511], [4]),
+    Some([(63 : UInt16), (0 : UInt16), (1 : UInt16), (2 : UInt16)]),
+  )
 
   guard @fs.FileStore::new("\{base}/v3_blosc_lz4_f32.zarr") is Some(float_store) else {
     fail("Blosc float fixture store")
@@ -363,6 +379,15 @@ async test "read independent zarr-python Blosc LZ4 and Zstd fixtures" {
   }
   assert_eq(float_array.read([0]), Some(1.5))
   assert_eq(float_array.read([1023]), Some(42.25))
+  guard @fs.FileStore::new("\{base}/v3_blosc_bitshuffle_f32.zarr")
+    is Some(bit_float_store) else {
+    fail("Blosc bitshuffle float store")
+  }
+  guard bit_float_store.open_f32("") is Some(bit_float_array) else {
+    fail("Blosc bitshuffle float array")
+  }
+  assert_eq(bit_float_array.read([0]), Some(1.5))
+  assert_eq(bit_float_array.read([1023]), Some(42.25))
 }
 
 ///|

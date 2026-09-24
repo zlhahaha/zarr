@@ -91,9 +91,12 @@ fn compressor(codec : Json, v3 : Bool) -> Compression? {
       let shuffle = config.get("shuffle")
       let shuffle_ok = if v3 {
         shuffle == Some(Json::string("noshuffle")) ||
-        shuffle == Some(Json::string("shuffle"))
+        shuffle == Some(Json::string("shuffle")) ||
+        shuffle == Some(Json::string("bitshuffle"))
       } else {
-        shuffle == Some(Json::number(0.0)) || shuffle == Some(Json::number(1.0))
+        shuffle == Some(Json::number(0.0)) ||
+        shuffle == Some(Json::number(1.0)) ||
+        shuffle == Some(Json::number(2.0))
       }
       if !shuffle_ok || level(config.get("clevel"), 5, 0, 9) is None {
         return None
