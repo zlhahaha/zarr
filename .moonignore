@@ -4,6 +4,7 @@
 /integration/
 /scripts/
 /cmd/interop/
+/cmd/nonfinite_interop/
 /fs/
 *_test.mbt
 *_wbtest.mbt

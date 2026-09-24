@@ -260,8 +260,7 @@ pub fn i16_metadata_json(
 }
 
 ///|
-/// Build validated float64 metadata. Non-finite fill values
-/// need format-specific string encoding and are not supported yet.
+/// Build validated float64 metadata, including Zarr's canonical non-finite fills.
 pub fn f64_metadata_json(
   format : @metadata.Format,
   shape : Array[Int],
@@ -270,8 +269,12 @@ pub fn f64_metadata_json(
   big_endian? : Bool = false,
   compression? : @codec.Compression = @codec.Raw,
 ) -> String? {
-  if fill.is_nan() || fill.is_inf() {
-    return None
+  let fill_json = if fill.is_nan() {
+    Json::string("NaN")
+  } else if fill.is_inf() {
+    Json::string(if fill < 0.0 { "-Infinity" } else { "Infinity" })
+  } else {
+    Json::number(fill)
   }
   numeric_metadata_json(
     format,
@@ -283,7 +286,7 @@ pub fn f64_metadata_json(
       "<f8"
     },
     "float64",
-    Json::number(fill),
+    fill_json,
     big_endian,
     compression,
   )
@@ -298,8 +301,12 @@ pub fn f32_metadata_json(
   big_endian? : Bool = false,
   compression? : @codec.Compression = @codec.Raw,
 ) -> String? {
-  if fill.is_nan() || fill.is_inf() {
-    return None
+  let fill_json = if fill.is_nan() {
+    Json::string("NaN")
+  } else if fill.is_inf() {
+    Json::string(if fill < 0.0F { "-Infinity" } else { "Infinity" })
+  } else {
+    Json::number(fill.to_double())
   }
   numeric_metadata_json(
     format,
@@ -311,7 +318,7 @@ pub fn f32_metadata_json(
       "<f4"
     },
     "float32",
-    Json::number(fill.to_double()),
+    fill_json,
     big_endian,
     compression,
   )

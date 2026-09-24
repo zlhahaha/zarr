@@ -72,4 +72,5 @@ jobs:
         if: matrix.os == 'ubuntu-latest' && matrix.target == 'native'
         run: |
           moon run --target native cmd/interop
+          moon run --target native cmd/nonfinite_interop
           python scripts/verify_moonbit_roundtrip.py

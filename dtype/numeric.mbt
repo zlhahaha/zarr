@@ -50,6 +50,9 @@ pub fn i16_fill(value : Json) -> Int16? {
 pub fn f64_fill(value : Json) -> Double? {
   match value {
     Number(n, ..) => Some(n)
+    String("NaN") => Some(0x7FF8000000000000UL.reinterpret_as_double())
+    String("Infinity") => Some(0x7FF0000000000000UL.reinterpret_as_double())
+    String("-Infinity") => Some(0xFFF0000000000000UL.reinterpret_as_double())
     _ => None
   }
 }
@@ -58,6 +61,9 @@ pub fn f64_fill(value : Json) -> Double? {
 pub fn f32_fill(value : Json) -> Float? {
   match value {
     Number(n, ..) => Some(Float::from_double(n))
+    String("NaN") => Some(Float::reinterpret_from_uint(0x7FC00000U))
+    String("Infinity") => Some(Float::reinterpret_from_uint(0x7F800000U))
+    String("-Infinity") => Some(Float::reinterpret_from_uint(0xFF800000U))
     _ => None
   }
 }

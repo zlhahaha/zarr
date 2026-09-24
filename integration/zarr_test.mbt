@@ -424,6 +424,57 @@ test "float32 v2 and v3 round-trip with endian and slices" {
 }
 
 ///|
+test "floating fills use Zarr NaN and Infinity metadata encodings" {
+  let store = @store.MemoryStore::new()
+  let nan64 = 0x7FF8000000000000UL.reinterpret_as_double()
+  guard @array.create_f64(store, @metadata.V2, "nan64", [3], [2], nan64)
+    is Some(v2_nan) else {
+    fail("v2 NaN fill")
+  }
+  guard store.open_array("nan64") is Some(nan_meta) else {
+    fail("v2 NaN metadata")
+  }
+  assert_eq(nan_meta.fill_value, Json::string("NaN"))
+  guard v2_nan.read([2]) is Some(missing_nan) else { fail("missing NaN") }
+  assert_eq(missing_nan.reinterpret_as_uint64(), 0x7FF8000000000000UL)
+  assert_true(v2_nan.write([0], 2.5))
+  guard v2_nan.read([1]) is Some(chunk_nan) else { fail("chunk NaN") }
+  assert_eq(chunk_nan.reinterpret_as_uint64(), 0x7FF8000000000000UL)
+
+  let neg_inf64 = 0xFFF0000000000000UL.reinterpret_as_double()
+  guard @array.create_f64(store, @metadata.V3, "neg_inf64", [1], [1], neg_inf64)
+    is Some(v3_neg_inf) else {
+    fail("v3 negative infinity fill")
+  }
+  guard store.open_array("neg_inf64") is Some(neg_meta) else {
+    fail("v3 negative infinity metadata")
+  }
+  assert_eq(neg_meta.fill_value, Json::string("-Infinity"))
+  assert_eq(v3_neg_inf.read([0]), Some(neg_inf64))
+
+  let nan32 = Float::reinterpret_from_uint(0x7FC00000U)
+  guard @array.create_f32(store, @metadata.V3, "nan32", [1], [1], nan32)
+    is Some(v3_nan) else {
+    fail("v3 float32 NaN fill")
+  }
+  guard v3_nan.read([0]) is Some(missing_nan32) else {
+    fail("missing float32 NaN")
+  }
+  assert_eq(missing_nan32.reinterpret_as_uint(), 0x7FC00000U)
+
+  let inf32 = Float::reinterpret_from_uint(0x7F800000U)
+  guard @array.create_f32(store, @metadata.V2, "inf32", [1], [1], inf32)
+    is Some(v2_inf) else {
+    fail("v2 float32 infinity fill")
+  }
+  guard store.open_array("inf32") is Some(inf_meta) else {
+    fail("v2 infinity metadata")
+  }
+  assert_eq(inf_meta.fill_value, Json::string("Infinity"))
+  assert_eq(v2_inf.read([0]), Some(inf32))
+}
+
+///|
 test "int32 v2 and v3 round-trip signed values and chunk edges" {
   let store = @store.MemoryStore::new()
   guard @array.create_i32(store, @metadata.V3, "labels", [3], [2], -1)
