@@ -13,7 +13,7 @@ Native/wasm-gc checks, builds, tests and example runs pass locally and in [GitHu
 
 ## Stage 1 — Useful uncompressed numeric arrays
 
-Current implementation: typed `bool`, `uint8`, `uint16`, `int16`, `int32`, `float32`, and `float64` create/open/element and rectangular-slice I/O in memory and native filesystem, plus v2/v3 group/attribute operations and safe ancestor creation. Slices batch file I/O and codec work by touched chunk but still buffer the requested result. Nineteen independent zarr-python 3.4.0 fixtures are read by native tests, and zarr-python reads nineteen MoonBit-generated stores in CI, including a multi-chunk compressed slice, boolean masks, signed 16-bit values and nested groups. The remaining dtype breadth is open.
+Current implementation: typed `bool`, `uint8`, `uint16`, `int16`, `uint32`, `int32`, `float32`, and `float64` create/open/element and rectangular-slice I/O in memory and native filesystem, plus v2/v3 group/attribute operations and safe ancestor creation. Slices batch file I/O and codec work by touched chunk but still buffer the requested result. Twenty-one independent zarr-python 3.4.0 fixtures are read by native tests, and zarr-python reads twenty-one MoonBit-generated stores in CI, including a multi-chunk compressed slice, boolean masks, full-range uint32 and nested groups. The remaining dtype breadth is open.
 
 - Store abstraction and native filesystem backend; create/open arrays and groups, metadata/attributes, and chunks for v2/v3.
 - Core numeric dtypes (`bool`, signed/unsigned 8/16/32/64-bit, float32/64) with specified endian handling; C-order v2 and v3 bytes codec.

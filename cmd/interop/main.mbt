@@ -284,6 +284,48 @@ async fn main {
     return
   }
 
+  guard @fs.FileStore::new("\{base}/v2_u32_be.zarr") is Some(v2_u32_store) else {
+    println("invalid v2 uint32 output path")
+    return
+  }
+  guard v2_u32_store.create_u32(
+      @metadata.V2,
+      "",
+      [3],
+      [2],
+      4000000000U,
+      big_endian=true,
+    )
+    is Some(v2_u32) else {
+    println("v2 uint32 creation failed")
+    return
+  }
+  if !v2_u32.write([2], 4294967295U) {
+    println("v2 uint32 write failed")
+    return
+  }
+
+  guard @fs.FileStore::new("\{base}/v3_u32_le_zstd.zarr") is Some(v3_u32_store) else {
+    println("invalid v3 uint32 output path")
+    return
+  }
+  guard v3_u32_store.create_u32(
+      @metadata.V3,
+      "",
+      [3],
+      [2],
+      4000000000U,
+      compression=@codec.Zstd(3),
+    )
+    is Some(v3_u32) else {
+    println("v3 uint32 creation failed")
+    return
+  }
+  if !v3_u32.write([2], 4294967294U) {
+    println("v3 uint32 write failed")
+    return
+  }
+
   guard @fs.FileStore::new("\{base}/v2_grouped_u8.zarr") is Some(v2_group_store) else {
     println("invalid v2 group output path")
     return

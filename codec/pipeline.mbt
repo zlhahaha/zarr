@@ -157,6 +157,12 @@ pub fn i32_plan(metadata : @metadata.ArrayMetadata) -> (Bool, Compression)? {
 }
 
 ///|
+pub fn u32_plan(metadata : @metadata.ArrayMetadata) -> (Bool, Compression)? {
+  guard @dtype.u32_endian(metadata) is Some(v2_endian) else { return None }
+  numeric_plan(metadata, v2_endian)
+}
+
+///|
 fn numeric_plan(
   metadata : @metadata.ArrayMetadata,
   v2_endian : Bool,

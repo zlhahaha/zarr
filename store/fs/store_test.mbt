@@ -394,6 +394,26 @@ async test "read independent zarr-python int16 fixtures" {
 }
 
 ///|
+async test "read independent zarr-python uint32 fixtures" {
+  let base = "integration/fixtures/zarr-python"
+  guard @fs.FileStore::new("\{base}/v2_u32_be.zarr") is Some(v2_store) else {
+    fail("v2 uint32 store")
+  }
+  guard v2_store.open_u32("") is Some(v2) else { fail("v2 uint32 array") }
+  assert_eq(v2.read([0]), Some(4000000000U))
+  assert_eq(v2.read([2]), Some(4294967295U))
+  assert_true(v2_store.open_i32("") is None)
+  guard @fs.FileStore::new("\{base}/v3_u32_le_zstd.zarr") is Some(v3_store) else {
+    fail("v3 uint32 store")
+  }
+  guard v3_store.open_u32("") is Some(v3) else { fail("v3 uint32 array") }
+  assert_eq(
+    v3.read_region([0], [3]),
+    Some([4000000000U, 4000000000U, 4294967294U]),
+  )
+}
+
+///|
 async test "v2 consolidated snapshot reads without per-node files and refuses writes" {
   let base = "integration/fixtures/zarr-python/v2_consolidated_grouped_u8.zarr"
   guard @fs.FileStore::new(base) is Some(source) else { fail("source") }

@@ -366,7 +366,7 @@ pub async fn FileI32Array::read_region(
   let result : Array[Int] = Array::make(length, 0)
   for piece in pieces {
     let scratch = @store.MemoryStore::new()
-    guard @array.open_i32_from_metadata(scratch, self.metadata, self.path)
+    guard @array.open_i32_bits_from_metadata(scratch, self.metadata, self.path)
       is Some(array) else {
       return None
     }
@@ -419,7 +419,7 @@ pub async fn FileI32Array::write_region(
   }
   for piece in pieces {
     let scratch = @store.MemoryStore::new()
-    guard @array.open_i32_from_metadata(scratch, self.metadata, self.path)
+    guard @array.open_i32_bits_from_metadata(scratch, self.metadata, self.path)
       is Some(array) else {
       return false
     }

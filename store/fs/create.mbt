@@ -219,3 +219,34 @@ pub async fn FileStore::create_i32(
   }
   self.open_i32(path)
 }
+
+///|
+pub async fn FileStore::create_u32(
+  self : FileStore,
+  format : @metadata.Format,
+  path : String,
+  shape : Array[Int],
+  chunk_shape : Array[Int],
+  fill : UInt,
+  big_endian? : Bool = false,
+  compression? : @codec.Compression = @codec.Raw,
+) -> FileU32Array? {
+  if self.node_exists(path) {
+    return None
+  }
+  guard @array.u32_metadata_json(
+      format,
+      shape,
+      chunk_shape,
+      fill,
+      big_endian~,
+      compression~,
+    )
+    is Some(raw) else {
+    return None
+  }
+  if !self.put_array_metadata(format, path, raw) {
+    return None
+  }
+  self.open_u32(path)
+}

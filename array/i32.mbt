@@ -23,13 +23,34 @@ pub fn open_i32_from_metadata(
   metadata : @metadata.ArrayMetadata,
   path : String,
 ) -> I32Array? {
+  guard @dtype.i32_endian(metadata) is Some(_) else { return None }
+  open_i32_bits_from_metadata(store, metadata, path)
+}
+
+///|
+/// Shared four-byte storage path; typed openers check signedness first.
+pub fn open_i32_bits_from_metadata(
+  store : @store.MemoryStore,
+  metadata : @metadata.ArrayMetadata,
+  path : String,
+) -> I32Array? {
   guard @chunk.array_metadata_key(metadata.format, path) is Some(_) else {
     return None
   }
-  guard @codec.i32_plan(metadata) is Some((big_endian, compression)) else {
+  let (big_endian, compression, fill) = if @codec.i32_plan(metadata)
+    is Some((endian, plan)) {
+    guard @dtype.i32_fill(metadata.fill_value) is Some(value) else {
+      return None
+    }
+    (endian, plan, value)
+  } else if @codec.u32_plan(metadata) is Some((endian, plan)) {
+    guard @dtype.u32_fill(metadata.fill_value) is Some(value) else {
+      return None
+    }
+    (endian, plan, value.reinterpret_as_int())
+  } else {
     return None
   }
-  guard @dtype.i32_fill(metadata.fill_value) is Some(fill) else { return None }
   guard @chunk.chunk_element_count(metadata) is Some(count) else { return None }
   if count > 2147483647 / 4 {
     return None

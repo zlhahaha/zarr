@@ -45,7 +45,7 @@ pub async fn FileI32Array::read(
 ) -> Int? {
   guard self.chunk_coords(indices) is Some(coordinates) else { return None }
   let scratch = @store.MemoryStore::new()
-  guard @array.open_i32_from_metadata(scratch, self.metadata, self.path)
+  guard @array.open_i32_bits_from_metadata(scratch, self.metadata, self.path)
     is Some(array) else {
     return None
   }
@@ -67,7 +67,7 @@ pub async fn FileI32Array::write(
 ) -> Bool {
   guard self.chunk_coords(indices) is Some(coordinates) else { return false }
   let scratch = @store.MemoryStore::new()
-  guard @array.open_i32_from_metadata(scratch, self.metadata, self.path)
+  guard @array.open_i32_bits_from_metadata(scratch, self.metadata, self.path)
     is Some(array) else {
     return false
   }

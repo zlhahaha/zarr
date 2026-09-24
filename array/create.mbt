@@ -343,6 +343,31 @@ pub fn i32_metadata_json(
 }
 
 ///|
+pub fn u32_metadata_json(
+  format : @metadata.Format,
+  shape : Array[Int],
+  chunk_shape : Array[Int],
+  fill : UInt,
+  big_endian? : Bool = false,
+  compression? : @codec.Compression = @codec.Raw,
+) -> String? {
+  numeric_metadata_json(
+    format,
+    shape,
+    chunk_shape,
+    if big_endian {
+      ">u4"
+    } else {
+      "<u4"
+    },
+    "uint32",
+    Json::number(fill.to_double()),
+    big_endian,
+    compression,
+  )
+}
+
+///|
 pub fn create_u8(
   store : @store.MemoryStore,
   format : @metadata.Format,
@@ -541,6 +566,37 @@ pub fn create_i32(
     return None
   }
   open_i32(store, path)
+}
+
+///|
+pub fn create_u32(
+  store : @store.MemoryStore,
+  format : @metadata.Format,
+  path : String,
+  shape : Array[Int],
+  chunk_shape : Array[Int],
+  fill : UInt,
+  big_endian? : Bool = false,
+  compression? : @codec.Compression = @codec.Raw,
+) -> U32Array? {
+  if node_exists(store, path) {
+    return None
+  }
+  guard u32_metadata_json(
+      format,
+      shape,
+      chunk_shape,
+      fill,
+      big_endian~,
+      compression~,
+    )
+    is Some(raw) else {
+    return None
+  }
+  if !store.put_array_metadata(format, path, raw) {
+    return None
+  }
+  open_u32(store, path)
 }
 
 ///|
