@@ -60,6 +60,14 @@ jobs:
       - name: Validate release archive
         if: matrix.os == 'ubuntu-latest' && matrix.target == 'native'
         run: moon package --list
+      - name: Upload source package for evaluation
+        if: matrix.os == 'ubuntu-latest' && matrix.target == 'native'
+        uses: actions/upload-artifact@v4
+        with:
+          name: zarr-0.1.0-source-package
+          path: _build/publish/zlhahaha-zarr-0.1.0.zip
+          if-no-files-found: error
+          retention-days: 30
       - name: Set up Python for interoperability
         if: matrix.os == 'ubuntu-latest' && matrix.target == 'native'
         uses: actions/setup-python@v5

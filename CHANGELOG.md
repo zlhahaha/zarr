@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.0 — Unreleased
+## 0.1.0 — Source preview, not published to Mooncakes
 
 Initial interoperable subset of Zarr storage formats 2 and 3 for MoonBit.
 

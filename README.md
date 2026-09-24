@@ -6,7 +6,7 @@ A MoonBit implementation of the Zarr v2 and v3 storage formats for chunked N-dim
 
 ## Status
 
-Early development. The library can read and write `bool`, signed/unsigned 8/16/32/64-bit integers, and `float32`/`float64` arrays in memory and on native filesystems, including element access, rectangular slices, missing-chunk fill values and edge chunks. It supports raw chunks and gzip/zstd in both formats, plus zlib in v2. Groups and attributes can be read and written for both formats. A native-only HTTP adapter can download the metadata and encoded chunks touched by a bounded rectangle into a `MemoryStore`; it is read-only, with a bounded in-memory cache per `HttpStore` but no disk cache. Rectangular slices batch file I/O and codec work by touched chunk, but still buffer the requested result and are not a streaming typed-array interface. Other dtypes/codecs and cloud object-store adapters are not implemented yet. Do not use it as a general Zarr reader/writer yet.
+Early source-deliverable preview (version `0.1.0`, not yet published to Mooncakes). The library can read and write `bool`, signed/unsigned 8/16/32/64-bit integers, and `float32`/`float64` arrays in memory and on native filesystems, including element access, rectangular slices, missing-chunk fill values and edge chunks. It supports raw chunks and gzip/zstd in both formats, plus zlib in v2. Groups and attributes can be read and written for both formats. A native-only HTTP adapter can download the metadata and encoded chunks touched by a bounded rectangle into a `MemoryStore`; it is read-only, with a bounded in-memory cache per `HttpStore` but no disk cache. Rectangular slices batch file I/O and codec work by touched chunk, but still buffer the requested result and are not a streaming typed-array interface. Use it for the documented subset only; other dtypes/codecs and cloud object-store adapters are not implemented yet.
 
 Float32/float64 fill values also support the standard JSON strings `"NaN"`, `"Infinity"`, and `"-Infinity"`. Creating an array with any NaN writes the canonical `"NaN"` fill value; v3 payload-specific hexadecimal NaN fills are not supported.
 
@@ -16,7 +16,7 @@ Float32/float64 fill values also support the standard JSON strings `"NaN"`, `"In
 | Metadata and chunk keys | `.` and `/` separators | default and v2-compatible encodings |
 | Raw encoded chunk storage | Memory and native filesystem | Memory and native filesystem |
 | `bool` element and slice I/O | Memory and native filesystem | Memory and native filesystem; bytes codec |
-| `uint8` element I/O | Memory and native filesystem; C/F order | Memory and native filesystem; bytes codec |
+| `uint8` element and slice I/O | Memory and native filesystem; C/F order | Memory and native filesystem; bytes codec |
 | `int8` element and slice I/O (`Int` API, range-checked) | Memory and native filesystem; C/F order | Memory and native filesystem; bytes codec |
 | `uint16` element and slice I/O | Memory and native filesystem; little/big endian, C/F order | Memory and native filesystem; little/big endian bytes codec |
 | `int16` element and slice I/O | Memory and native filesystem; little/big endian, C/F order | Memory and native filesystem; little/big endian bytes codec |
@@ -35,6 +35,21 @@ Float32/float64 fill values also support the standard JSON strings `"NaN"`, `"In
 | Consolidated metadata | Read-only native `.zmetadata` snapshot | Read-only native inline root `zarr.json` snapshot (zarr-python convention) |
 | HTTP read-only regional hydration | Native, bounded metadata/chunk downloads | Native, bounded metadata/chunk downloads |
 | Cloud object-store adapters | Planned | Planned |
+
+## Try the source preview
+
+Mooncakes installation is intentionally not available yet. Clone the [public repository](https://github.com/zlhahaha/zarr), then run the examples from its root:
+
+```sh
+git clone https://github.com/zlhahaha/zarr.git
+cd zarr
+moon update
+moon run --target wasm-gc cmd/main
+moon run --target native cmd/native_demo
+moon run --target native cmd/v2_demo
+```
+
+The native examples create temporary v3 and v2 stores, reopen them, verify slice values, and clean up. They require a MoonBit installation with native support. For a self-contained copy of the source package, the successful [CI run](https://github.com/zlhahaha/zarr/actions/workflows/ci.yml) includes a `zarr-0.1.0-source-package` artifact; it is not a Mooncakes release. See [docs/USAGE.md](docs/USAGE.md) for typed API examples and limits.
 
 ## Build and run
 

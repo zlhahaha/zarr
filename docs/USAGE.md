@@ -1,6 +1,6 @@
 # Using Zarr from MoonBit
 
-This library is still pre-release. Build it locally with MoonBit; the Mooncakes installation command will be added after publication. The module name is `zlhahaha/zarr`.
+This library is an early source preview. Clone `https://github.com/zlhahaha/zarr`, run `moon update`, and use the examples below; the Mooncakes installation command will be added only after publication. The module name is `zlhahaha/zarr`.
 
 ## Packages
 

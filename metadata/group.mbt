@@ -50,7 +50,15 @@ pub fn parse_attributes(raw : String) -> Json? {
 ///|
 /// Extract v3 attributes from a validated array or group document.
 pub fn v3_attributes(raw : String) -> Json? {
-  if parse_array_metadata(raw) is None && parse_group_metadata(raw) is None {
+  let is_v3 = match parse_array_metadata(raw) {
+    Some(metadata) => metadata.format == V3
+    None =>
+      match parse_group_metadata(raw) {
+        Some(metadata) => metadata.format == V3
+        None => false
+      }
+  }
+  if !is_v3 {
     return None
   }
   let value = @json.parse(raw) catch { _ => return None }
