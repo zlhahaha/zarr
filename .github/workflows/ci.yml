@@ -10,17 +10,33 @@ permissions:
 
 jobs:
   moonbit:
-    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        target: [wasm-gc, native]
+        include:
+          - os: ubuntu-latest
+            target: wasm-gc
+          - os: ubuntu-latest
+            target: native
+          - os: macos-15
+            target: native
+          - os: windows-latest
+            target: native
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - name: Install MoonBit
+      - name: Install MoonBit (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
         run: |
           curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
           echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+      - name: Install MoonBit (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          irm https://cli.moonbitlang.com/install/powershell.ps1 | iex
+          "$env:USERPROFILE\.moon\bin" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
       - name: Toolchain
         run: moon version --all
       - name: Update dependencies
@@ -39,18 +55,18 @@ jobs:
         if: matrix.target == 'native'
         run: moon run --target native cmd/native_demo
       - name: Validate release archive
-        if: matrix.target == 'native'
+        if: matrix.os == 'ubuntu-latest' && matrix.target == 'native'
         run: moon package --list
       - name: Set up Python for interoperability
-        if: matrix.target == 'native'
+        if: matrix.os == 'ubuntu-latest' && matrix.target == 'native'
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
       - name: Install zarr-python test oracle
-        if: matrix.target == 'native'
+        if: matrix.os == 'ubuntu-latest' && matrix.target == 'native'
         run: python -m pip install zarr==3.4.0 numpy==2.5.3
       - name: Verify MoonBit writes with zarr-python
-        if: matrix.target == 'native'
+        if: matrix.os == 'ubuntu-latest' && matrix.target == 'native'
         run: |
           moon run --target native cmd/interop
           python scripts/verify_moonbit_roundtrip.py
