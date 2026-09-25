@@ -1,12 +1,15 @@
 ///|
 /// Compression is applied after the bytes serializer. Zarr v2 names the
-/// compressor separately; v3 lists it after the bytes codec.
+/// compressor separately; v3 lists it after the bytes codec. BloscLz4 holds
+/// (clevel, shuffle mode 0/1/2, dtype byte width). Levels 1–9 currently use
+/// one fast LZ4 strategy; level 0 writes a Blosc memcpy frame.
 pub(all) enum Compression {
   Raw
   Gzip(Int)
   Zlib(Int)
   Zstd(Int)
   ZstdChecksum(Int)
+  BloscLz4(Int, Int, Int)
   BloscReadOnly(String)
 } derive(Debug)
 
@@ -30,7 +33,35 @@ fn level(value : Json?, default : Int, minimum : Int, maximum : Int) -> Int? {
 }
 
 ///|
-fn compressor(codec : Json, v3 : Bool) -> Compression? {
+fn blosc_typesize(dtype : String) -> Int? {
+  match dtype {
+    "|u1" | "|i1" | "|b1" | "uint8" | "int8" | "bool" => Some(1)
+    "<u2" | ">u2" | "<i2" | ">i2" | "uint16" | "int16" => Some(2)
+    "<u4"
+    | ">u4"
+    | "<i4"
+    | ">i4"
+    | "<f4"
+    | ">f4"
+    | "uint32"
+    | "int32"
+    | "float32" => Some(4)
+    "<u8"
+    | ">u8"
+    | "<i8"
+    | ">i8"
+    | "<f8"
+    | ">f8"
+    | "uint64"
+    | "int64"
+    | "float64" => Some(8)
+    _ => None
+  }
+}
+
+///|
+fn compressor(codec : Json, metadata : @metadata.ArrayMetadata) -> Compression? {
+  let v3 = metadata.format == @metadata.V3
   guard codec is Object(map) else { return None }
   let name = map.get(if v3 { "name" } else { "id" })
   let configured_level = if v3 {
@@ -98,10 +129,42 @@ fn compressor(codec : Json, v3 : Bool) -> Compression? {
         shuffle == Some(Json::number(1.0)) ||
         shuffle == Some(Json::number(2.0))
       }
-      if !shuffle_ok || level(config.get("clevel"), 5, 0, 9) is None {
+      guard level(config.get("clevel"), 5, 0, 9) is Some(clevel) else {
         return None
       }
-      Some(BloscReadOnly(cname))
+      if !shuffle_ok {
+        return None
+      }
+      if cname != "lz4" {
+        return Some(BloscReadOnly(cname))
+      }
+      guard blosc_typesize(metadata.data_type) is Some(typesize) else {
+        return Some(BloscReadOnly(cname))
+      }
+      if v3 &&
+        config.get("typesize") != Some(Json::number(typesize.to_double())) {
+        return Some(BloscReadOnly(cname))
+      }
+      if config.get("blocksize") != None &&
+        config.get("blocksize") != Some(Json::number(0.0)) {
+        return Some(BloscReadOnly(cname))
+      }
+      let shuffle_mode = if v3 {
+        if shuffle == Some(Json::string("shuffle")) {
+          1
+        } else if shuffle == Some(Json::string("bitshuffle")) {
+          2
+        } else {
+          0
+        }
+      } else if shuffle == Some(Json::number(1.0)) {
+        1
+      } else if shuffle == Some(Json::number(2.0)) {
+        2
+      } else {
+        0
+      }
+      Some(BloscLz4(clevel, shuffle_mode, typesize))
     }
     _ => None
   }
@@ -119,13 +182,13 @@ fn compression(metadata : @metadata.ArrayMetadata) -> Compression? {
     @metadata.V2 =>
       match metadata.codecs.length() {
         0 => Some(Raw)
-        1 => compressor(metadata.codecs[0], false)
+        1 => compressor(metadata.codecs[0], metadata)
         _ => None // v2 filters are not supported.
       }
     @metadata.V3 =>
       match metadata.codecs.length() {
         1 => Some(Raw)
-        2 => compressor(metadata.codecs[1], true)
+        2 => compressor(metadata.codecs[1], metadata)
         _ => None
       }
   }
@@ -268,6 +331,7 @@ pub fn decode_chunk(
         decode_zstd(encoded, expected_len)
       }
     BloscReadOnly(cname) => decode_blosc(encoded, expected_len, cname)
+    BloscLz4(_, _, _) => decode_blosc(encoded, expected_len, "lz4")
   }
 }
 
@@ -365,5 +429,7 @@ pub fn encode_chunk(plan : Compression, raw : Bytes) -> Bytes? {
         _ => None
       }
     BloscReadOnly(_) => None
+    BloscLz4(level, shuffle, typesize) =>
+      encode_blosc_lz4(raw, level, typesize, shuffle)
   }
 }

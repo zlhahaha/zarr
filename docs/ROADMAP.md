@@ -13,7 +13,7 @@ Native/wasm-gc checks, builds, tests and example runs pass locally and in [GitHu
 
 ## Stage 1 — Useful uncompressed numeric arrays
 
-Current implementation: typed `bool`, signed/unsigned 8/16/32/64-bit integers, and `float32`/`float64` create/open/element and rectangular-slice I/O in memory and native filesystem, plus v2/v3 group/attribute operations and safe ancestor creation. The `int8` API uses range-checked `Int` values because MoonBit has no dedicated `Int8` type. Slices batch file I/O and codec work by touched chunk but still buffer the requested result. Thirty-nine independent zarr-python 3.4.0 fixtures are read by native tests, and zarr-python reads twenty-eight MoonBit-generated stores in CI, including a multi-chunk compressed slice, non-finite floating fills, boolean masks, signed bytes, full-range 64-bit integers and nested groups. Extended dtypes remain open.
+Current implementation: typed `bool`, signed/unsigned 8/16/32/64-bit integers, and `float32`/`float64` create/open/element and rectangular-slice I/O in memory and native filesystem, plus v2/v3 group/attribute operations and safe ancestor creation. The `int8` API uses range-checked `Int` values because MoonBit has no dedicated `Int8` type. Slices batch file I/O and codec work by touched chunk but still buffer the requested result. Thirty-nine independent zarr-python 3.4.0 fixtures are read by native tests, and zarr-python reads thirty-two MoonBit-generated stores in CI, including Blosc LZ4 writes, a multi-chunk compressed slice, non-finite floating fills, boolean masks, signed bytes, full-range 64-bit integers and nested groups. Extended dtypes remain open.
 
 - Store abstraction and native filesystem backend; create/open arrays and groups, metadata/attributes, and chunks for v2/v3.
 - Core numeric dtypes (`bool`, signed/unsigned 8/16/32/64-bit, float32/64) with specified endian handling; C-order v2 and v3 bytes codec.
@@ -22,9 +22,9 @@ Current implementation: typed `bool`, signed/unsigned 8/16/32/64-bit integers, a
 
 ## Stage 2 — Common real-world codecs and v2 compatibility (partial)
 
-Implemented locally: gzip and zstd read/write for v2/v3, including optional v3 Zstd frame checksums, zlib read/write for v2, a read-only Blosc1 subset with byte and bit shuffle, bounded or preflight-checked decompression, rejection of unsupported v2 filters, v2 consolidated metadata read-only snapshots, and sixteen independent compressed Python read fixtures. Zstd frames without content size may be conservatively rejected.
+Implemented locally: gzip and zstd read/write for v2/v3, including optional v3 Zstd frame checksums, zlib read/write for v2, Blosc1 LZ4 read/write with no, byte or bit shuffle (other Blosc compressors read-only), bounded or preflight-checked decompression, rejection of unsupported v2 filters, v2 consolidated metadata read-only snapshots, and sixteen independent compressed Python read fixtures. Zstd frames without content size may be conservatively rejected.
 
-- v3 codec pipeline: bytes plus zstd and gzip; v2 compressor/filter adapter for raw, gzip/zlib, zstd and Blosc. BloscLZ/Snappy and Blosc writes, as well as v2 filters, remain open.
+- v3 codec pipeline: bytes plus zstd and gzip; v2 compressor/filter adapter for raw, gzip/zlib, zstd and Blosc. Non-LZ4 Blosc writes, BloscLZ/Snappy and v2 filters remain open.
 - v2 `.` and `/` chunk separators, F-order, `.zattrs`, `.zgroup`, and consolidated `.zmetadata` reads (implemented as read-only snapshots).
 - Gate: compare against zarr-python fixtures across dtypes, endianness, fill values, partial chunks and codec combinations; document unsupported codecs.
 

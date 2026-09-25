@@ -335,7 +335,6 @@ async test "read independent zarr-python Blosc LZ4 and Zstd fixtures" {
       array.read_region([61], [4]),
       Some([(61 : UInt16), (62 : UInt16), (63 : UInt16), (0 : UInt16)]),
     )
-    assert_true(!array.write([0], (1 : UInt16)))
   }
   guard @fs.FileStore::new("\{base}/v2_blosc_memcpy_u16.zarr") is Some(store) else {
     fail("Blosc memcpy fixture store")

@@ -84,3 +84,5 @@ jobs:
           moon run --target native cmd/int64_interop
           moon run --target native cmd/int8_interop
           python scripts/verify_moonbit_roundtrip.py
+          moon run --target native cmd/blosc_interop
+          python scripts/verify_blosc_roundtrip.py

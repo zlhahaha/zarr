@@ -28,6 +28,25 @@ fn numeric_metadata_json(
   guard dimensions_json(chunk_shape, true) is Some(chunks_json) else {
     return None
   }
+  match compression {
+    @codec.BloscLz4(level, shuffle, typesize) => {
+      let expected = match v3_dtype {
+        "uint8" | "int8" | "bool" => 1
+        "uint16" | "int16" => 2
+        "uint32" | "int32" | "float32" => 4
+        "uint64" | "int64" | "float64" => 8
+        _ => return None
+      }
+      if level < 0 ||
+        level > 9 ||
+        shuffle < 0 ||
+        shuffle > 2 ||
+        typesize != expected {
+        return None
+      }
+    }
+    _ => ()
+  }
   let compressor_json = match compression {
     @codec.Raw => Json::null()
     @codec.Gzip(level) =>
@@ -49,6 +68,16 @@ fn numeric_metadata_json(
         Map([
           ("id", Json::string("zstd")),
           ("level", Json::number(level.to_double())),
+        ]),
+      )
+    @codec.BloscLz4(level, shuffle, _) =>
+      Json::object(
+        Map([
+          ("id", Json::string("blosc")),
+          ("cname", Json::string("lz4")),
+          ("clevel", Json::number(level.to_double())),
+          ("shuffle", Json::number(shuffle.to_double())),
+          ("blocksize", Json::number(0.0)),
         ]),
       )
     @codec.BloscReadOnly(_) => return None
@@ -88,6 +117,37 @@ fn numeric_metadata_json(
         ),
       )
     @codec.Zlib(_) => if format == @metadata.V2 { None } else { return None }
+    @codec.BloscLz4(level, shuffle, typesize) =>
+      Some(
+        Json::object(
+          Map([
+            ("name", Json::string("blosc")),
+            (
+              "configuration",
+              Json::object(
+                Map([
+                  ("typesize", Json::number(typesize.to_double())),
+                  ("cname", Json::string("lz4")),
+                  ("clevel", Json::number(level.to_double())),
+                  (
+                    "shuffle",
+                    Json::string(
+                      if shuffle == 0 {
+                        "noshuffle"
+                      } else if shuffle == 1 {
+                        "shuffle"
+                      } else {
+                        "bitshuffle"
+                      },
+                    ),
+                  ),
+                  ("blocksize", Json::number(0.0)),
+                ]),
+              ),
+            ),
+          ]),
+        ),
+      )
     @codec.BloscReadOnly(_) => return None
   }
   match compression {
