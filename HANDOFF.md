@@ -16,7 +16,7 @@ This file records verified progress and the next implementation priorities. Upda
 - Implemented v3 sharding-indexed layout parsing and native filesystem range reads. An element/region read fetches only the shard index (capped at 16 MiB) and selected encoded inner chunk (capped at 64 MiB), not the entire shard. Supports start/end indexes, little/big-endian index bytes, optional CRC32C, edge shards and absent inner chunks, then reuses the typed bytes/compression decoder. Sharded writes return `false`.
 - Added four independent zarr-python 3.4.0 fixtures: 2D gzip with edge/absent chunks; start index with boundary shard; big-endian index/inner bytes without CRC; Blosc LZ4 inner chunks. Added CRC32C check-vector and malformed-index tests.
 - Final local validation: native 85/85 and wasm-gc 49/49; native/wasm-gc checks and builds, `moon info`, `moon fmt --check`, `moon package --list`, and `git diff --check` passed. `moon publish` returned `200 OK`, and the registry version list confirms `0.2.0`.
-- GitHub was synchronized through the connected GitHub API because this machine could not reach `github.com:443` for ordinary `git push`. Every uploaded blob SHA and remote tree SHA was checked against the local Git object; remote refs were updated without force. The local and remote `main` trees match, but their commit SHAs differ because the API created new commits. Do **not** force-push the local branch. Once ordinary Git HTTPS works, fetch and reconcile history before the next source push.
+- GitHub was initially synchronized through the connected GitHub API because this machine temporarily could not reach `github.com:443` for ordinary `git push`. Every uploaded blob SHA and remote tree SHA matched the local Git objects; refs were updated without force. Normal Git connectivity returned, so `git fetch` and a no-content merge (`ef00522`) reconciled the local and API-created histories; ordinary `git push` succeeded. Local `main` and `origin/main` are aligned again.
 - README, usage guide, roadmap, changelog, and fixture inventory are published with the release. The off-repository contest proposal was updated locally but has not been submitted or added to GitHub.
 
 ## Priority queue
@@ -25,7 +25,7 @@ The P0 Blosc LZ4 write milestone and the first P1 sharding-indexed read mileston
 
 1. **P1 — Storage scale (await user instruction):** benchmark representative multi-chunk slices and peak memory. Improve chunk streaming/cache behavior where measurements show a bottleneck; avoid claiming bounded-memory whole-array reads until proved.
 2. **P2 — Ecosystem fit (await user instruction):** evaluate an object-store adapter and ndarray interop without duplicating existing numeric-computation libraries; add only after store and typed-array boundaries are stable.
-3. **P2 — Release maintenance (await user instruction):** maintain docs, metadata fuzz/property tests and future codec/format compatibility. Before new source pushes, resolve the local/remote commit-history divergence described above.
+3. **P2 — Release maintenance (await user instruction):** maintain docs, metadata fuzz/property tests and future codec/format compatibility.
 
 ## Working rules
 
