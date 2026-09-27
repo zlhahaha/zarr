@@ -80,8 +80,29 @@ pub fn chunk_key(
   coordinates : Array[Int],
   path : String,
 ) -> String? {
+  chunk_key_with_shape(metadata, metadata.chunk_shape, coordinates, path)
+}
+
+///|
+/// Physical object key for an outer shard of a prepared sharded array.
+pub fn shard_key(
+  metadata : @metadata.ArrayMetadata,
+  coordinates : Array[Int],
+  path : String,
+) -> String? {
+  guard metadata.sharding is Some(layout) else { return None }
+  chunk_key_with_shape(metadata, layout.shard_shape, coordinates, path)
+}
+
+///|
+fn chunk_key_with_shape(
+  metadata : @metadata.ArrayMetadata,
+  grid_shape : Array[Int],
+  coordinates : Array[Int],
+  path : String,
+) -> String? {
   if coordinates.length() != metadata.shape.length() ||
-    coordinates.length() != metadata.chunk_shape.length() {
+    coordinates.length() != grid_shape.length() {
     return None
   }
   guard normalized_path(path, metadata.format) is Some(prefix) else {
@@ -96,7 +117,7 @@ pub fn chunk_key(
   for i in 0..<coordinates.length() {
     let coord = coordinates[i]
     let dim = metadata.shape[i]
-    let chunk = metadata.chunk_shape[i]
+    let chunk = grid_shape[i]
     if chunk <= 0 || dim == 0 || coord < 0 || coord > (dim - 1) / chunk {
       return None
     }

@@ -21,6 +21,7 @@ fn test_metadata(
     storage_transformers: [],
     fill_value: Json::number(0.0),
     order: "C",
+    sharding: None,
   }
 }
 

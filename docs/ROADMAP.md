@@ -9,11 +9,11 @@ The name “Zarr” means the library targets both Zarr storage format 2 and 3. 
 - In-memory byte store for metadata and already-encoded chunks.
 - Gate: `moon check --deny-warn`, `moon build`, `moon test --deny-warn`, and `moon run cmd/main` pass locally and in GitHub Actions.
 
-Native/wasm-gc checks, builds, tests and example runs pass locally and in [GitHub Actions](https://github.com/zlhahaha/zarr/actions/workflows/ci.yml). The release archive is validated in CI; Mooncakes publication is still pending.
+Native/wasm-gc checks, builds, tests and example runs pass locally and in [GitHub Actions](https://github.com/zlhahaha/zarr/actions/workflows/ci.yml). The release archive is validated in CI; Mooncakes `0.1.0` was published on 2026-09-25.
 
 ## Stage 1 — Useful uncompressed numeric arrays
 
-Current implementation: typed `bool`, signed/unsigned 8/16/32/64-bit integers, and `float32`/`float64` create/open/element and rectangular-slice I/O in memory and native filesystem, plus v2/v3 group/attribute operations and safe ancestor creation. The `int8` API uses range-checked `Int` values because MoonBit has no dedicated `Int8` type. Slices batch file I/O and codec work by touched chunk but still buffer the requested result. Thirty-nine independent zarr-python 3.4.0 fixtures are read by native tests, and zarr-python reads thirty-two MoonBit-generated stores in CI, including Blosc LZ4 writes, a multi-chunk compressed slice, non-finite floating fills, boolean masks, signed bytes, full-range 64-bit integers and nested groups. Extended dtypes remain open.
+Current implementation: typed `bool`, signed/unsigned 8/16/32/64-bit integers, and `float32`/`float64` create/open/element and rectangular-slice I/O in memory and native filesystem, plus v2/v3 group/attribute operations and safe ancestor creation. The `int8` API uses range-checked `Int` values because MoonBit has no dedicated `Int8` type. Slices batch file I/O and codec work by touched chunk but still buffer the requested result. Forty-three independent zarr-python 3.4.0 fixtures are read by native tests, and zarr-python reads thirty-two MoonBit-generated stores in CI, including Blosc LZ4 writes, a multi-chunk compressed slice, non-finite floating fills, boolean masks, signed bytes, full-range 64-bit integers and nested groups. Extended dtypes remain open.
 
 - Store abstraction and native filesystem backend; create/open arrays and groups, metadata/attributes, and chunks for v2/v3.
 - Core numeric dtypes (`bool`, signed/unsigned 8/16/32/64-bit, float32/64) with specified endian handling; C-order v2 and v3 bytes codec.
@@ -30,15 +30,15 @@ Implemented locally: gzip and zstd read/write for v2/v3, including optional v3 Z
 
 ## Stage 3 — Hierarchies, scale and deployment
 
-Partial implementation: `store/http` can hydrate only the v2/v3 metadata and chunks intersecting a requested rectangle from a static HTTP-served hierarchy. It distinguishes 404 missing chunks from transport/server failures and caps metadata bytes, chunk bytes and touched chunk count. It is native-only and read-only; successful responses now use a bounded per-instance in-memory LRU cache, but values are not streamed as typed arrays. Native `FileStore::open_consolidated_v3` reads the zarr-python inline root-index convention as a read-only snapshot; this convention is not a core v3 codec or writable index.
+Partial implementation: `store/http` can hydrate only ordinary v2/v3 metadata and chunks intersecting a requested rectangle from a static HTTP-served hierarchy, not sharded arrays. It distinguishes 404 missing chunks from transport/server failures and caps metadata bytes, chunk bytes and touched chunk count. It is native-only and read-only; successful responses use a bounded per-instance in-memory LRU cache, but values are not streamed as typed arrays. Native `FileStore::open_consolidated_v3` reads the zarr-python inline root-index convention as a read-only snapshot; this convention is not a core v3 codec or writable index. Native `FileStore` now reads v3 sharding-indexed arrays by bounded index and inner-chunk file ranges; four Python fixtures cover index variants, missing chunks and edges. Sharded writes and HTTP hydration remain open.
 
 - Group traversal and metadata mutation, filesystem and HTTP read-only stores; configurable chunk cache (implemented in `HttpStore`) and bounded streaming (open).
-- v3 sharding-indexed codec and writable consolidated metadata; optional cloud/object-store adapter after the base Store API is stable.
+- v3 sharding-indexed reads (implemented on native filesystem); sharded writes, HTTP hydration and writable consolidated metadata remain open. Optional cloud/object-store adapter after the base Store API is stable.
 - Gate: read representative scientific datasets without loading the whole array; cross-language tests and performance/memory benchmarks.
 
 ## Stage 4 — Release and maintenance
 
-Current CI passes native check/build/test and examples on Linux, macOS and Windows, plus wasm-gc check/build/test and the in-memory example on Linux. Release packaging and Python bidirectional interoperability run on Linux. A deterministic property test checks 120 N-dimensional chunk/region partitions on native and wasm-gc. A draft [0.1.0 changelog](../CHANGELOG.md) exists, while Mooncakes publication and metadata fuzz tests remain open.
+Current CI passes native check/build/test and examples on Linux, macOS and Windows, plus wasm-gc check/build/test and the in-memory example on Linux. Release packaging and Python bidirectional interoperability run on Linux. A deterministic property test checks 120 N-dimensional chunk/region partitions on native and wasm-gc. Mooncakes `0.1.0` is published; `0.2.0` adds sharded reads. Metadata fuzz tests remain open.
 
 - Public Mooncakes release with versioned API docs, installation snippet, examples, changelog and support matrix.
 - Linux/macOS/Windows and supported MoonBit backends in CI; fuzz/property tests for metadata and chunk boundaries.

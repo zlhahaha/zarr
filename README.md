@@ -6,7 +6,7 @@ A MoonBit implementation of the Zarr v2 and v3 storage formats for chunked N-dim
 
 ## Status
 
-Early source-deliverable preview (version `0.1.0`, not yet published to Mooncakes). The library can read and write `bool`, signed/unsigned 8/16/32/64-bit integers, and `float32`/`float64` arrays in memory and on native filesystems, including element access, rectangular slices, missing-chunk fill values and edge chunks. It supports raw chunks and gzip/zstd in both formats, plus zlib in v2, and can read a documented Blosc subset. Groups and attributes can be read and written for both formats. A native-only HTTP adapter can download the metadata and encoded chunks touched by a bounded rectangle into a `MemoryStore`; it is read-only, with a bounded in-memory cache per `HttpStore` but no disk cache. Rectangular slices batch file I/O and codec work by touched chunk, but still buffer the requested result and are not a streaming typed-array interface. Use it for the documented subset only; other dtypes/codecs and cloud object-store adapters are not implemented yet.
+Early Mooncakes release (version `0.2.0`). The library can read and write `bool`, signed/unsigned 8/16/32/64-bit integers, and `float32`/`float64` arrays in memory and on native filesystems, including element access, rectangular slices, missing-chunk fill values and edge chunks. It supports raw chunks and gzip/zstd in both formats, plus zlib in v2, and a documented Blosc subset. Groups and attributes can be read and written for both formats. Native filesystem arrays can also **read** v3 sharding-indexed stores through the same typed API; sharded writes are not supported. A native-only HTTP adapter can download ordinary metadata and encoded chunks touched by a bounded rectangle into a `MemoryStore`; it does not hydrate shards. Rectangular slices batch file I/O and codec work by touched chunk, but still buffer the requested result and are not a streaming typed-array interface. Use it for the documented subset only; other dtypes/codecs and cloud object-store adapters are not implemented yet.
 
 Float32/float64 fill values also support the standard JSON strings `"NaN"`, `"Infinity"`, and `"-Infinity"`. Creating an array with any NaN writes the canonical `"NaN"` fill value; v3 payload-specific hexadecimal NaN fills are not supported.
 
@@ -35,11 +35,18 @@ Float32/float64 fill values also support the standard JSON strings `"NaN"`, `"In
 | Groups, ancestors and attributes | Memory and native filesystem (`.zgroup`/`.zattrs`) | Memory and native filesystem (`zarr.json`) |
 | Consolidated metadata | Read-only native `.zmetadata` snapshot | Read-only native inline root `zarr.json` snapshot (zarr-python convention) |
 | HTTP read-only regional hydration | Native, bounded metadata/chunk downloads | Native, bounded metadata/chunk downloads |
+| Sharding-indexed codec | Not a v2 codec | Native filesystem reads only: start/end index, little/big-endian index, optional CRC32C, supported inner bytes/compression codecs; no writes or HTTP/memory hydration |
 | Cloud object-store adapters | Planned | Planned |
 
-## Try the source preview
+## Install and try
 
-Mooncakes installation is intentionally not available yet. Clone the [public repository](https://github.com/zlhahaha/zarr), then run the examples from its root:
+Add the published module to a MoonBit project:
+
+```sh
+moon add zlhahaha/zarr@0.2.0
+```
+
+To run the repository's examples, clone the [public repository](https://github.com/zlhahaha/zarr):
 
 ```sh
 git clone https://github.com/zlhahaha/zarr.git
@@ -50,11 +57,11 @@ moon run --target native cmd/native_demo
 moon run --target native cmd/v2_demo
 ```
 
-The native examples create temporary v3 and v2 stores, reopen them, verify slice values, and clean up. They require a MoonBit installation with native support. For a self-contained copy of the source package, the successful [CI run](https://github.com/zlhahaha/zarr/actions/workflows/ci.yml) includes a `zarr-0.1.0-source-package` artifact; it is not a Mooncakes release. See [docs/USAGE.md](docs/USAGE.md) for typed API examples and limits.
+The native examples create temporary v3 and v2 stores, reopen them, verify slice values, and clean up. They require a MoonBit installation with native support. See [docs/USAGE.md](docs/USAGE.md) for typed API examples and limits.
 
 ## Build and run
 
-Requires the MoonBit toolchain. CI checks native builds and tests on Linux, macOS and Windows, plus wasm-gc on Linux; release packaging and Python interoperability run on Linux. The library also passes local checks with the July 2026 toolchain. From this directory:
+Requires the MoonBit toolchain. CI checks native builds and tests on Linux, macOS and Windows, plus wasm-gc on Linux; release packaging and Python interoperability run on Linux. From this directory:
 
 ```sh
 moon check --deny-warn
@@ -71,7 +78,7 @@ The first native example creates and reopens a v3 zstd-compressed `uint16` array
 
 ## Interoperability tests
 
-Native tests read thirty-nine committed v2/v3 sample stores generated by zarr-python 3.4.0, covering numeric and boolean types, signed bytes, full-range 64-bit integers, non-finite floating fills, gzip/zlib/zstd including checked frames, Blosc LZ4/Zstd with byte and bit shuffle, nested groups and both consolidated-metadata conventions. The generators include [scripts/generate_blosc_fixtures.py](scripts/generate_blosc_fixtures.py), [scripts/generate_blosc_bitshuffle_fixtures.py](scripts/generate_blosc_bitshuffle_fixtures.py), [scripts/generate_zstd_checksum_fixture.py](scripts/generate_zstd_checksum_fixture.py), and [scripts/generate_v3_consolidated_fixture.py](scripts/generate_v3_consolidated_fixture.py) alongside the other scripts listed in [the fixture inventory](integration/fixtures/zarr-python/README.md). In the reverse direction, the `cmd/interop`, `cmd/nonfinite_interop`, `cmd/int64_interop`, `cmd/int8_interop`, and `cmd/blosc_interop` generators write thirty-two stores—including v2/v3 Blosc LZ4 frames, a multi-chunk compressed slice, boolean masks, non-finite fills, full-range 64-bit integers, signed bytes and v2/v3 nested groups—to the ignored `integration/.roundtrip/` directory. [The main verifier](scripts/verify_moonbit_roundtrip.py) and [Blosc verifier](scripts/verify_blosc_roundtrip.py) open them with zarr-python. CI installs the pinned Python test oracle and runs both directions. The generators refuse to overwrite existing stores; remove only their generated directories before re-running locally.
+Native tests read forty-three committed v2/v3 sample stores generated by zarr-python 3.4.0, covering numeric and boolean types, signed bytes, full-range 64-bit integers, non-finite floating fills, gzip/zlib/zstd including checked frames, Blosc LZ4/Zstd with byte and bit shuffle, nested groups, both consolidated-metadata conventions, and four v3 sharding-indexed layouts. The generators include [scripts/generate_sharding_fixtures.py](scripts/generate_sharding_fixtures.py), [scripts/generate_blosc_fixtures.py](scripts/generate_blosc_fixtures.py), [scripts/generate_blosc_bitshuffle_fixtures.py](scripts/generate_blosc_bitshuffle_fixtures.py), [scripts/generate_zstd_checksum_fixture.py](scripts/generate_zstd_checksum_fixture.py), and [scripts/generate_v3_consolidated_fixture.py](scripts/generate_v3_consolidated_fixture.py) alongside the other scripts listed in [the fixture inventory](integration/fixtures/zarr-python/README.md). In the reverse direction, the `cmd/interop`, `cmd/nonfinite_interop`, `cmd/int64_interop`, `cmd/int8_interop`, and `cmd/blosc_interop` generators write thirty-two stores—including v2/v3 Blosc LZ4 frames, a multi-chunk compressed slice, boolean masks, non-finite fills, full-range 64-bit integers, signed bytes and v2/v3 nested groups—to the ignored `integration/.roundtrip/` directory. [The main verifier](scripts/verify_moonbit_roundtrip.py) and [Blosc verifier](scripts/verify_blosc_roundtrip.py) open them with zarr-python. CI installs the pinned Python test oracle and runs both directions. The generators refuse to overwrite existing stores; remove only their generated directories before re-running locally.
 
 ## Design
 
@@ -80,6 +87,7 @@ Both formats share a storage-neutral array API, but retain their distinct metada
 ```text
 metadata/        Parse and validate v2/v3 array and group documents
 chunk/           Regular-grid indexing and metadata/chunk keys
+shard/           V3 sharding layout and bounded index validation
 dtype/           Numeric dtype and fill-value checks
 codec/           Codec-chain validation and bounded gzip/zlib/zstd decode
 store/           In-memory encoded-byte store
@@ -97,6 +105,6 @@ The public array functions live in `zlhahaha/zarr/array`; `MemoryStore` lives in
 
 ## Specification and attribution
 
-This project implements the publicly documented [Zarr v2 storage specification](https://zarr-specs.readthedocs.io/en/latest/v2/v2.0.html) and [Zarr v3 core specification](https://zarr-specs.readthedocs.io/en/latest/v3/core/). The [Zarr specifications repository](https://github.com/zarr-developers/zarr-specs) is CC BY 4.0. The Blosc codec follows the public [C-Blosc chunk-format description](https://github.com/Blosc/c-blosc/blob/main/README_CHUNK_FORMAT.rst) and [LZ4 block format](https://github.com/lz4/lz4/blob/dev/doc/lz4_Block_format.md) (the reference projects have BSD-style licenses); no upstream implementation code was copied. The committed interoperability stores were generated by this repository's original scripts using [zarr-python 3.4.0](https://github.com/zarr-developers/zarr-python), which is MIT-licensed; see [integration/fixtures/zarr-python/README.md](integration/fixtures/zarr-python/README.md). Compression uses the Apache-2.0 MoonBit dependencies [moonbit-community/flate](https://mooncakes.io/docs/moonbit-community/flate) and [Milky2018/zstd](https://mooncakes.io/docs/Milky2018/zstd).
+This project implements the publicly documented [Zarr v2 storage specification](https://zarr-specs.readthedocs.io/en/latest/v2/v2.0.html), [Zarr v3 core specification](https://zarr-specs.readthedocs.io/en/latest/v3/core/), and [sharding-indexed codec specification](https://zarr-specs.readthedocs.io/en/latest/v3/codecs/sharding-indexed/index.html). The [Zarr specifications repository](https://github.com/zarr-developers/zarr-specs) is CC BY 4.0. The Blosc codec follows the public [C-Blosc chunk-format description](https://github.com/Blosc/c-blosc/blob/main/README_CHUNK_FORMAT.rst) and [LZ4 block format](https://github.com/lz4/lz4/blob/dev/doc/lz4_Block_format.md) (the reference projects have BSD-style licenses); no upstream implementation code was copied. The committed interoperability stores were generated by this repository's original scripts using [zarr-python 3.4.0](https://github.com/zarr-developers/zarr-python), which is MIT-licensed; see [integration/fixtures/zarr-python/README.md](integration/fixtures/zarr-python/README.md). Compression uses the Apache-2.0 MoonBit dependencies [moonbit-community/flate](https://mooncakes.io/docs/moonbit-community/flate) and [Milky2018/zstd](https://mooncakes.io/docs/Milky2018/zstd).
 
 This project is licensed under Apache-2.0; see [LICENSE](LICENSE).
