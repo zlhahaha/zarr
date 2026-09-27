@@ -17,7 +17,7 @@ This file records verified progress and the next implementation priorities. Upda
 - Added four independent zarr-python 3.4.0 fixtures: 2D gzip with edge/absent chunks; start index with boundary shard; big-endian index/inner bytes without CRC; Blosc LZ4 inner chunks. Added CRC32C check-vector and malformed-index tests.
 - Final local validation: native 85/85 and wasm-gc 49/49; native/wasm-gc checks and builds, `moon info`, `moon fmt --check`, `moon package --list`, and `git diff --check` passed. `moon publish` returned `200 OK`, and the registry version list confirms `0.2.0`.
 - GitHub was synchronized through the connected GitHub API because this machine could not reach `github.com:443` for ordinary `git push`. Every uploaded blob SHA and remote tree SHA was checked against the local Git object; remote refs were updated without force. The local and remote `main` trees match, but their commit SHAs differ because the API created new commits. Do **not** force-push the local branch. Once ordinary Git HTTPS works, fetch and reconcile history before the next source push.
-- README, usage guide, roadmap, changelog, fixture inventory, and off-repository contest proposal are updated and published.
+- README, usage guide, roadmap, changelog, and fixture inventory are published with the release. The off-repository contest proposal was updated locally but has not been submitted or added to GitHub.
 
 ## Priority queue
 
