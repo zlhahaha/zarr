@@ -303,7 +303,7 @@ pub async fn FileStore::open_array(
     return None
   }
   if metadata.format == format {
-    Some(metadata)
+    @shard.prepare(metadata)
   } else {
     None
   }
@@ -316,6 +316,9 @@ pub async fn FileStore::get_chunk(
   coordinates : Array[Int],
   path : String,
 ) -> Bytes? {
+  if metadata.sharding is Some(_) {
+    return self.get_sharded_chunk(metadata, coordinates, path)
+  }
   guard @chunk.chunk_key(metadata, coordinates, path) is Some(key) else {
     return None
   }
@@ -330,6 +333,9 @@ pub async fn FileStore::put_chunk(
   path : String,
   encoded : Bytes,
 ) -> Bool {
+  if metadata.sharding is Some(_) {
+    return false
+  }
   guard @chunk.chunk_key(metadata, coordinates, path) is Some(key) else {
     return false
   }

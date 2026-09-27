@@ -4,6 +4,7 @@ import {
   "zlhahaha/zarr/store",
   "zlhahaha/zarr/array",
   "zlhahaha/zarr/codec",
+  "zlhahaha/zarr/shard",
   "zlhahaha/zarr/hierarchy",
   "moonbitlang/async/fs" @async_fs,
   "moonbitlang/async/io",

@@ -1,6 +1,6 @@
 # Using Zarr from MoonBit
 
-This library is an early source preview. Clone `https://github.com/zlhahaha/zarr`, run `moon update`, and use the examples below; the Mooncakes installation command will be added only after publication. The module name is `zlhahaha/zarr`.
+This library is an early Mooncakes release. Add `zlhahaha/zarr@0.2.0` with `moon add zlhahaha/zarr@0.2.0`, or clone `https://github.com/zlhahaha/zarr` and run `moon update` to use the examples below.
 
 ## Packages
 
@@ -12,6 +12,7 @@ This library is an early source preview. Clone `https://github.com/zlhahaha/zarr
 | `zlhahaha/zarr/store/http` | Native-only HTTP read-only regional hydration |
 | `zlhahaha/zarr/array` | In-memory typed arrays and creation helpers |
 | `zlhahaha/zarr/codec` | Compression choices (`Raw`, `Gzip`, `Zlib`, `Zstd`, `BloscLz4`) |
+| `zlhahaha/zarr/shard` | Internal v3 sharding layout and index validation used by the native filesystem adapter |
 | `zlhahaha/zarr/hierarchy` | In-memory group and attribute operations |
 
 The repository contains three executable examples. Run `moon run --target wasm-gc cmd/main` for a portable in-memory v3 array, `moon run --target native cmd/native_demo` for a zstd-compressed v3 array on disk, or `moon run --target native cmd/v2_demo` for a gzip-compressed, big-endian v2 array on disk. Both native examples create a temporary store, reopen it, verify a slice, and remove the temporary store. Each example exits unsuccessfully if a check fails.
@@ -53,6 +54,8 @@ For a Zarr v2 hierarchy with `.zmetadata`, `FileStore::open_consolidated("data.z
 
 For a Zarr v3 hierarchy with zarr-python's inline `consolidated_metadata` field in the root `zarr.json`, use `FileStore::open_consolidated_v3("data.zarr")`. This is likewise a native-only read-only snapshot: child `zarr.json` documents come from the root index, chunk bytes come from the filesystem, and changes to the index require reopening. It accepts the `kind="inline", must_understand=false` convention and does not write or update consolidated metadata. This v3 convention remains experimental in zarr-python.
 
+For an existing v3 sharding-indexed array, use the same native typed opener, e.g. `store.open_u16("pixels")`, then `read` or `read_region`. The filesystem adapter locates the outer shard, reads at most 16 MiB of index data, validates its offsets and optional CRC32C, and reads only each selected encoded inner chunk (at most 64 MiB); it does not load a whole shard for a small selection. Indexes at the beginning or end of a shard, little- or big-endian index bytes, and supported inner bytes plus gzip/zstd/Blosc codecs are accepted. Missing shards and valid absent inner chunks return the declared fill value. Sharded arrays are **read-only**: `write` and `write_region` return `false`. `MemoryStore`, `HttpStore` hydration, and sharded array creation/writes are not implemented. This feature is tested against four zarr-python 3.4.0 fixtures, including edge shards and absent chunks.
+
 For a static HTTP-served v2 or v3 hierarchy, the native-only `store/http` package can fetch just the metadata and chunks touched by a rectangle:
 
 ```moonbit
@@ -66,10 +69,10 @@ Import `zlhahaha/zarr/store/http` as `@http` and `zlhahaha/zarr/array` as `@arra
 
 ## Supported format subset
 
-Both formats support regular chunk grids, safe logical paths, groups and attributes, boolean arrays and the ten numeric types above. v2 supports `.`/`/` chunk separators and C/F chunk order; v3 supports default and v2-compatible chunk keys plus the bytes serializer. Raw, gzip and zstd chunks are supported in both formats; zlib is supported in v2. A Blosc1 subset handles LZ4/LZ4HC, Zlib and Zstd frames with no shuffle, byte shuffle or bit shuffle, including incompressible memcpy frames and multiple internal blocks. LZ4 arrays can be created, opened and written with one-block Blosc1 frames; LZ4HC, Zlib and Zstd remain read-only. BloscLZ and Snappy are unsupported. Unsupported filters, storage transformers and codec chains are rejected rather than silently decoded incorrectly. Full-range `int64`/`uint64` fill values are preserved as exact JSON integers rather than rounded through floating point.
+Both formats support regular chunk grids, safe logical paths, groups and attributes, boolean arrays and the ten numeric types above. v2 supports `.`/`/` chunk separators and C/F chunk order; v3 supports default and v2-compatible chunk keys plus the bytes serializer. Raw, gzip and zstd chunks are supported in both formats; zlib is supported in v2. A Blosc1 subset handles LZ4/LZ4HC, Zlib and Zstd frames with no shuffle, byte shuffle or bit shuffle, including incompressible memcpy frames and multiple internal blocks. LZ4 arrays can be created, opened and written with one-block Blosc1 frames; LZ4HC, Zlib and Zstd remain read-only. BloscLZ and Snappy are unsupported. Native filesystem reads also support the documented subset of v3 sharding-indexed; writes do not. Unsupported filters, storage transformers and codec chains are rejected rather than silently decoded incorrectly. Full-range `int64`/`uint64` fill values are preserved as exact JSON integers rather than rounded through floating point.
 
 The API returns `None` or `false` for invalid metadata, unsupported encodings, out-of-bounds coordinates, corrupt chunks, and I/O failures. A region write spanning multiple chunks is **not atomic**: if a later chunk fails, earlier chunks may already be saved. Large reads and writes still buffer the requested region. A `FileStore` uses native async filesystem APIs and is not available on wasm-gc; `MemoryStore` works on the tested native and wasm-gc targets.
 
-Zstd decoding first checks the dependency's conservative frame-size bound against the declared uncompressed chunk length. Consequently, a valid frame without known content size may be rejected. Full Blosc support, sharding, consolidated-metadata writes, HTTP write access, cloud object-store adapters, additional dtypes, and general ndarray arithmetic are not implemented yet. See [ROADMAP.md](ROADMAP.md) and the [support table](../README.md#status).
+Zstd decoding first checks the dependency's conservative frame-size bound against the declared uncompressed chunk length. Consequently, a valid frame without known content size may be rejected. Full Blosc support, sharded writes/HTTP hydration, consolidated-metadata writes, HTTP write access, cloud object-store adapters, additional dtypes, and general ndarray arithmetic are not implemented yet. See [ROADMAP.md](ROADMAP.md) and the [support table](../README.md#status).
 
 For floating-point arrays, `"NaN"`, `"Infinity"`, and `"-Infinity"` metadata fill values are accepted in both formats. Array creation serializes a NaN fill as the canonical `"NaN"` string. Hexadecimal NaN payload encodings from the v3 data-type specification are not yet supported.

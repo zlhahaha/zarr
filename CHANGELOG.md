@@ -1,6 +1,12 @@
 # Changelog
 
-## 0.1.0 — Source preview, not published to Mooncakes
+## 0.2.0 — Zarr v3 sharding-indexed reads
+
+- Read Zarr v3 sharding-indexed arrays through the native filesystem typed-array API, including element and rectangular-region reads, missing inner-chunk fill values, and edge shards. Sharded arrays are read-only; writes and the in-memory/HTTP adapters do not yet support shard updates or hydration.
+- Read a bounded shard index and only the selected encoded inner chunk, rather than loading the entire shard. Support start/end indexes, little/big-endian index bytes, optional CRC32C verification, and the documented inner bytes/compression codecs. Reject malformed indexes and unsupported codec chains.
+- Add four independent zarr-python 3.4.0 sharding fixtures and index-validation tests. The fixture inventory now contains 43 stores.
+
+## 0.1.0 — First Mooncakes release
 
 Initial interoperable subset of Zarr storage formats 2 and 3 for MoonBit.
 
@@ -13,4 +19,4 @@ Initial interoperable subset of Zarr storage formats 2 and 3 for MoonBit.
 - Hydrate a bounded region of a static HTTP-served array into a `MemoryStore` on native targets. The read-only adapter has a configurable bounded in-memory LRU cache; it has no disk cache.
 - Verify interoperability in both directions with zarr-python 3.4.0, and run native CI on Linux, macOS, and Windows plus wasm-gc CI on Linux.
 
-See the [support table](README.md#status) and [known limits](docs/USAGE.md#supported-format-subset) before using this pre-release version.
+See the [support table](README.md#status) and [known limits](docs/USAGE.md#supported-format-subset) before using this early version.

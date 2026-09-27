@@ -12,6 +12,21 @@ pub extend Format with Eq::{not_equal, equal}
 pub extend Format with Debug::{to_repr}
 
 ///|
+/// Validated read-only sharding layout for a filesystem-backed v3 array.
+/// `ArrayMetadata.chunk_shape` is the inner chunk shape when this is present.
+pub(all) struct Sharding {
+  shard_shape : Array[Int]
+  chunks_per_shard : Array[Int]
+  index_size : Int
+  index_at_start : Bool
+  index_big_endian : Bool
+  index_crc32c : Bool
+} derive(Debug)
+
+///|
+pub extend Sharding with Debug::{to_repr}
+
+///|
 /// Validated metadata needed to locate chunks in a regular grid.
 /// Codecs are retained verbatim; decoding them is a separate capability.
 pub(all) struct ArrayMetadata {
@@ -26,6 +41,7 @@ pub(all) struct ArrayMetadata {
   storage_transformers : Array[Json]
   fill_value : Json
   order : String
+  sharding : Sharding?
 } derive(Debug)
 
 ///|
@@ -134,6 +150,7 @@ fn parse_v2(value : Json) -> ArrayMetadata? {
     storage_transformers: [],
     fill_value,
     order,
+    sharding: None,
   })
 }
 
@@ -197,6 +214,7 @@ fn parse_v3(value : Json) -> ArrayMetadata? {
     storage_transformers,
     fill_value,
     order: "C",
+    sharding: None,
   })
 }
 
