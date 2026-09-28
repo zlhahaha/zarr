@@ -1,6 +1,18 @@
 # Using Zarr from MoonBit
 
-This library is an early Mooncakes release. Add `zlhahaha/zarr@0.2.0` with `moon add zlhahaha/zarr@0.2.0`, or clone `https://github.com/zlhahaha/zarr` and run `moon update` to use the examples below.
+This library is an early Mooncakes release. Requires a MoonBit toolchain with **`moonc >= 0.10.14`**; inspect it with `moon version --all`. Filesystem and HTTP packages require the native backend. Add the published module to an existing MoonBit project:
+
+```sh
+moon add zlhahaha/zarr@0.2.0
+```
+
+For native examples importing `moonbitlang/async` or `moonbitlang/async/fs`, add a direct dependency as well:
+
+```sh
+moon add moonbitlang/async@0.20.3
+```
+
+A transitive dependency is not enough for your own package imports. Pure in-memory examples without `async` imports need only `zarr`. Alternatively, clone `https://github.com/zlhahaha/zarr` and run `moon update`; the repository already declares both dependencies.
 
 ## Packages
 
@@ -19,32 +31,89 @@ The repository contains three executable examples. Run `moon run --target wasm-g
 
 ## Native array example
 
-Add these imports to a native package's `moon.pkg`:
+To reproduce this example independently of the repository, create a new project and install the published dependencies:
+
+```sh
+moon new --user example zarr-quickstart
+cd zarr-quickstart
+moon add zlhahaha/zarr@0.2.0
+moon add moonbitlang/async@0.20.3
+```
+
+On Windows, `moon new` may warn that it could not create the generated README symlink when Developer Mode is disabled. The project is still created; this example does not depend on that symlink.
+
+Create a `native_demo` directory in that project and save the following as `native_demo/moon.pkg`:
 
 ```text
 import {
   "zlhahaha/zarr/metadata",
   "zlhahaha/zarr/codec",
   "zlhahaha/zarr/store/fs",
+  "moonbitlang/async/fs" @async_fs,
   "moonbitlang/async",
 }
+
+pkgtype(kind: "executable")
+
 supported_targets = "native"
 ```
 
-Then use the typed API inside an `async` function:
+Save this complete program as `native_demo/main.mbt`. It creates a temporary v3 zstd-compressed array, writes a rectangle, reopens the store, checks the values and cleans up after a successful run:
 
 ```moonbit
-guard @fs.FileStore::new("data.zarr") is Some(store) else { return }
-if !store.create_group_tree(@metadata.V3, "") { return }
-guard store.create_u16(
-    @metadata.V3, "pixels", [100, 200], [32, 32], (0 : UInt16),
-    compression=@codec.Zstd(3),
-  ) is Some(pixels) else { return }
-let _ = pixels.write_region(
-  [10, 20], [1, 3],
-  [(100 : UInt16), (200 : UInt16), (300 : UInt16)],
-)
+///|
+async fn main {
+  let dir = @async_fs.tmpdir(prefix="zarr-quickstart")
+  guard @fs.FileStore::new(dir) is Some(store) else {
+    abort("invalid store path")
+  }
+  if !store.create_group_tree(@metadata.V3, "") {
+    abort("root group creation failed")
+  }
+  guard store.create_u16(
+      @metadata.V3, "pixels", [2, 3], [2, 2], (0 : UInt16),
+      compression=@codec.Zstd(3),
+    ) is Some(pixels) else {
+    abort("array creation failed")
+  }
+  if !pixels.write_region(
+      [0, 0], [1, 3],
+      [(100 : UInt16), (200 : UInt16), (300 : UInt16)],
+    ) {
+    abort("region write failed")
+  }
+  guard @fs.FileStore::new(dir) is Some(reopened) else {
+    abort("invalid store path")
+  }
+  guard reopened.open_u16("pixels") is Some(saved) else {
+    abort("reopen failed")
+  }
+  guard saved.read_region([0, 0], [1, 3]) is Some(values) else {
+    abort("region read failed")
+  }
+  if values != [(100 : UInt16), (200 : UInt16), (300 : UInt16)] {
+    abort("unexpected values")
+  }
+  println("Zarr quickstart: \{values[0]},\{values[1]},\{values[2]}")
+  @async_fs.rmdir(dir, recursive=true)
+}
 ```
+
+Run the commands below from the new project's root (the first two should succeed without warnings):
+
+```sh
+moon check --target native --deny-warn
+moon build --target native
+moon run --target native native_demo
+```
+
+Expected program output:
+
+```text
+Zarr quickstart: 100,200,300
+```
+
+This example intentionally lets unexpected filesystem exceptions fail the program, so it cannot silently report success after an I/O failure. For application-level recovery, see [Error handling](#error-handling).
 
 `create_bool`, `create_u8`, `create_i8`, `create_u16`, `create_i16`, `create_u32`, `create_i32`, `create_u64`, `create_i64`, `create_f32`, and `create_f64` exist on `FileStore`; matching functions accept a `MemoryStore` in the `array` package. `int8` values use `Int` parameters/results and reject writes outside `-128..127`. Create a root group before adding named arrays so other Zarr readers can traverse the hierarchy. For deeper paths, `store.create_group_tree(@metadata.V3, "science/run")` creates missing ancestors without overwriting existing groups; use `@hierarchy.create_group_tree` with a `MemoryStore`. Omit `compression` for raw chunks. `Gzip(level)` works with v2/v3, `Zlib(level)` with v2 only, and `Zstd(level)` with v2/v3. For Blosc1 LZ4, use `BloscLz4(clevel, shuffle, typesize)`, e.g. `BloscLz4(5, 2, 2)` for `uint16` with bitshuffle. `shuffle` is 0 (none), 1 (byte) or 2 (bit); `typesize` must match the dtype's byte width. Level 0 writes a memcpy frame. Levels 1–9 currently use the same fast LZ4 encoder, so the requested level is retained in metadata but does not tune compression ratio. For v3 Zstd frames with a checksum, use `ZstdChecksum(level)`; it is rejected for v2. When metadata requires a checksum, reads also require the frame's checksum flag and reject corrupted payloads. `big_endian=true` is available for multi-byte types. The same typed API opens existing arrays with `store.open_u16("pixels")` and supports `read`, `write`, `read_region`, and `write_region`.
 
@@ -71,8 +140,36 @@ Import `zlhahaha/zarr/store/http` as `@http` and `zlhahaha/zarr/array` as `@arra
 
 Both formats support regular chunk grids, safe logical paths, groups and attributes, boolean arrays and the ten numeric types above. v2 supports `.`/`/` chunk separators and C/F chunk order; v3 supports default and v2-compatible chunk keys plus the bytes serializer. Raw, gzip and zstd chunks are supported in both formats; zlib is supported in v2. A Blosc1 subset handles LZ4/LZ4HC, Zlib and Zstd frames with no shuffle, byte shuffle or bit shuffle, including incompressible memcpy frames and multiple internal blocks. LZ4 arrays can be created, opened and written with one-block Blosc1 frames; LZ4HC, Zlib and Zstd remain read-only. BloscLZ and Snappy are unsupported. Native filesystem reads also support the documented subset of v3 sharding-indexed; writes do not. Unsupported filters, storage transformers and codec chains are rejected rather than silently decoded incorrectly. Full-range `int64`/`uint64` fill values are preserved as exact JSON integers rather than rounded through floating point.
 
-The API returns `None` or `false` for invalid metadata, unsupported encodings, out-of-bounds coordinates, corrupt chunks, and I/O failures. A region write spanning multiple chunks is **not atomic**: if a later chunk fails, earlier chunks may already be saved. Large reads and writes still buffer the requested region. A `FileStore` uses native async filesystem APIs and is not available on wasm-gc; `MemoryStore` works on the tested native and wasm-gc targets.
+Large reads and writes still buffer the requested region. A `FileStore` uses native async filesystem APIs and is not available on wasm-gc; `MemoryStore` works on the tested native and wasm-gc targets. See [Error handling](#error-handling) for return values, exceptions and non-atomic writes.
 
 Zstd decoding first checks the dependency's conservative frame-size bound against the declared uncompressed chunk length. Consequently, a valid frame without known content size may be rejected. Full Blosc support, sharded writes/HTTP hydration, consolidated-metadata writes, HTTP write access, cloud object-store adapters, additional dtypes, and general ndarray arithmetic are not implemented yet. See [ROADMAP.md](ROADMAP.md) and the [support table](../README.md#status).
 
 For floating-point arrays, `"NaN"`, `"Infinity"`, and `"-Infinity"` metadata fill values are accepted in both formats. Array creation serializes a NaN fill as the canonical `"NaN"` string. Hexadecimal NaN payload encodings from the v3 data-type specification are not yet supported.
+
+## Error handling
+
+Typed creation, opening, reading and writing operations return `None` or `false` when their validation or decoding rejects invalid metadata, unsupported encodings, out-of-bounds coordinates, or corrupt chunk data. Read-only views reject writes with `false`. Missing chunks (including valid absent inner chunks in a shard) are normal: typed reads return the declared fill value.
+
+This is **not** a blanket I/O-error convention. `FileStore::get` returns `None` for an absent or invalid key, but other filesystem errors can propagate as exceptions. Native creation, opening, reading, writing and cleanup can also propagate filesystem exceptions, for example permission errors, reading a directory as a file, or an interrupted/truncated file read. Handle these separately from `None`/`false`; an uncaught exception fails the program. `HttpStore::hydrate_region`, in contrast, converts failed HTTP responses and transport errors to `None` (a 404 chunk still means a fill value).
+
+For example, this complete helper uses the native package imports above and distinguishes a returned `None` from an exception. Add it to `native_demo/main.mbt` and call `print_metadata(reopened)` before cleanup to inspect the created metadata:
+
+```moonbit
+///|
+async fn print_metadata(store : @fs.FileStore) -> Unit {
+  let document = store.get("pixels/zarr.json") catch {
+    error => {
+      println("Filesystem I/O error: \{error}")
+      return
+    }
+  }
+  match document {
+    Some(bytes) => println("Metadata bytes: \{bytes.length()}")
+    None => println("Metadata key absent or invalid")
+  }
+}
+```
+
+The helper logs and handles an exception locally; it does not change the library's error contract. Wrap typed calls in `catch` similarly when your application needs recovery, or leave exceptions to propagate when the operation must fail.
+
+A region write spanning multiple chunks is **not atomic**: if a later chunk returns `false` or raises an exception, earlier chunks may already be saved. Catching an exception does not roll back those writes. Temporary-store cleanup can itself fail and is another filesystem operation to handle when needed.

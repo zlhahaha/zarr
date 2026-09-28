@@ -40,11 +40,21 @@ Float32/float64 fill values also support the standard JSON strings `"NaN"`, `"In
 
 ## Install and try
 
+Requires a MoonBit toolchain with **`moonc >= 0.10.14`**. Check the compiler version with `moon version --all`; native filesystem/HTTP examples also require native-backend support.
+
 Add the published module to a MoonBit project:
 
 ```sh
 moon add zlhahaha/zarr@0.2.0
 ```
+
+For native filesystem/HTTP examples that import `moonbitlang/async` or its subpackages, also add it as a **direct module dependency**:
+
+```sh
+moon add moonbitlang/async@0.20.3
+```
+
+Installing `zarr` alone does not allow your package to import its transitive `async` dependency. In-memory consumers that do not import `async` need only `zarr`. See the [standalone native quickstart](docs/USAGE.md#native-array-example) for complete package configuration, source and expected output.
 
 To run the repository's examples, clone the [public repository](https://github.com/zlhahaha/zarr):
 
@@ -57,24 +67,28 @@ moon run --target native cmd/native_demo
 moon run --target native cmd/v2_demo
 ```
 
-The native examples create temporary v3 and v2 stores, reopen them, verify slice values, and clean up. They require a MoonBit installation with native support. See [docs/USAGE.md](docs/USAGE.md) for typed API examples and limits.
+The native examples create temporary v3 and v2 stores, reopen them, verify slice values, and clean up after a successful run. The repository already declares the direct `async` dependency, so `moon update` is sufficient after cloning. See [docs/USAGE.md](docs/USAGE.md) for typed API examples and limits.
 
 ## Build and run
 
-Requires the MoonBit toolchain. CI checks native builds and tests on Linux, macOS and Windows, plus wasm-gc on Linux; release packaging and Python interoperability run on Linux. From this directory:
+Requires `moonc >= 0.10.14` (inspect `moon version --all`), with native support for filesystem and HTTP packages. CI checks native builds and tests on Linux, macOS and Windows, plus wasm-gc on Linux; release packaging and Python interoperability run on Linux. From this directory:
 
 ```sh
-moon check --deny-warn
-moon build
-moon test --deny-warn
-moon run cmd/main
+moon check --target native --deny-warn
+moon build --target native
 moon test --target native --deny-warn
+moon check --target wasm-gc --deny-warn
+moon build --target wasm-gc
+moon test --target wasm-gc --deny-warn
+moon run --target wasm-gc cmd/main
 moon run --target native cmd/native_demo
 moon run --target native cmd/v2_demo
 ```
 
 The example creates a v3 `uint8` array and writes a slice across chunks. It prints `Zarr v3 uint8 values: 0,7,9,11`.
 The first native example creates and reopens a v3 zstd-compressed `uint16` array in a temporary filesystem store. The v2 example does the same with a gzip-compressed, big-endian `int16` array and verifies a rectangular read after reopening. All examples exit with an error if their checks fail. See [docs/USAGE.md](docs/USAGE.md) for the public API and format limits.
+
+Typed operations return `None`/`false` for validation or decoding failures, but native filesystem operations can propagate I/O exceptions. Missing chunks read as fill values, not errors. See [error handling](docs/USAGE.md#error-handling) for the distinction and a `catch` example; multi-chunk writes are not atomic.
 
 ## Interoperability tests
 
