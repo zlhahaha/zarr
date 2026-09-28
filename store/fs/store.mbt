@@ -7,11 +7,20 @@ pub struct FileStore {
   v3_consolidated : Map[String, Json]?
   v3_root : Json?
   read_only : Bool
+  shard_index_cache_bytes : Int
+  shard_index_cache_entries : Int
+  shard_metrics : Ref[ShardReadStats]
 }
 
 ///|
-pub fn FileStore::new(root : String) -> FileStore? {
-  if root == "" {
+/// Index caches are local to each typed region read, defaulting to 16 MiB and
+/// 64 entries. Set either cap to zero to disable; negative caps are invalid.
+pub fn FileStore::new(
+  root : String,
+  shard_index_cache_bytes? : Int = 16777216,
+  shard_index_cache_entries? : Int = 64,
+) -> FileStore? {
+  if root == "" || shard_index_cache_bytes < 0 || shard_index_cache_entries < 0 {
     None
   } else {
     Some({
@@ -20,6 +29,9 @@ pub fn FileStore::new(root : String) -> FileStore? {
       v3_consolidated: None,
       v3_root: None,
       read_only: false,
+      shard_index_cache_bytes,
+      shard_index_cache_entries,
+      shard_metrics: Ref(empty_shard_stats()),
     })
   }
 }
@@ -40,7 +52,7 @@ pub async fn FileStore::open_consolidated(root : String) -> FileStore? {
   }
   guard document.get("metadata") is Some(Object(entries)) else { return None }
   Some({
-    root,
+    ..plain,
     consolidated: Some(entries),
     v3_consolidated: None,
     v3_root: None,
@@ -86,7 +98,7 @@ pub async fn FileStore::open_consolidated_v3(root : String) -> FileStore? {
     }
   }
   Some({
-    root,
+    ..plain,
     consolidated: None,
     v3_consolidated: Some(entries),
     v3_root: Some(Json::object(document)),
@@ -317,7 +329,7 @@ pub async fn FileStore::get_chunk(
   path : String,
 ) -> Bytes? {
   if metadata.sharding is Some(_) {
-    return self.get_sharded_chunk(metadata, coordinates, path)
+    return self.shard_session().get_sharded_chunk(metadata, coordinates, path)
   }
   guard @chunk.chunk_key(metadata, coordinates, path) is Some(key) else {
     return None

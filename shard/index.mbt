@@ -45,25 +45,57 @@ fn index_u32(bytes : Bytes, at : Int) -> UInt? {
 }
 
 ///|
-/// Validate the fixed-size index and identify one inner chunk without
-/// reading its payload. Invalid data is distinct from an absent inner chunk.
-pub fn entry(
+/// An index whose length and optional CRC32C have been checked once.
+/// Entry bounds are still checked for each selected inner chunk.
+pub struct ValidatedIndex {
+  layout : @metadata.Sharding
+  bytes : Bytes
+  shard_size : Int64
+}
+
+///|
+pub fn validate_index(
   layout : @metadata.Sharding,
   index : Bytes,
-  within : Array[Int],
   shard_size : Int64,
-) -> Entry {
+) -> ValidatedIndex? {
   if index.length() != layout.index_size ||
-    shard_size < layout.index_size.to_int64() ||
-    within.length() != layout.chunks_per_shard.length() {
-    return Invalid
+    shard_size < layout.index_size.to_int64() {
+    return None
   }
   let data_size = index.length() - (if layout.index_crc32c { 4 } else { 0 })
   if layout.index_crc32c {
-    guard index_u32(index, data_size) is Some(stored) else { return Invalid }
+    guard index_u32(index, data_size) is Some(stored) else { return None }
     if crc32c(index[:data_size]) != stored {
-      return Invalid
+      return None
     }
+  }
+  Some({ layout, bytes: index, shard_size, })
+}
+
+///|
+pub fn ValidatedIndex::size_bytes(self : ValidatedIndex) -> Int {
+  self.bytes.length()
+}
+
+///|
+pub fn ValidatedIndex::matches_size(
+  self : ValidatedIndex,
+  size : Int64,
+) -> Bool {
+  self.shard_size == size
+}
+
+///|
+pub fn ValidatedIndex::entry(
+  self : ValidatedIndex,
+  within : Array[Int],
+) -> Entry {
+  let layout = self.layout
+  let index = self.bytes
+  let shard_size = self.shard_size
+  if within.length() != layout.chunks_per_shard.length() {
+    return Invalid
   }
   let mut linear = 0
   for i in 0..<within.length() {
@@ -102,4 +134,19 @@ pub fn entry(
     return Invalid
   }
   Data(offset.reinterpret_as_int64(), length.to_int())
+}
+
+///|
+/// Validate an index and identify one inner chunk without reading its payload.
+/// For multiple entries use validate_index once, then ValidatedIndex::entry.
+pub fn entry(
+  layout : @metadata.Sharding,
+  index : Bytes,
+  within : Array[Int],
+  shard_size : Int64,
+) -> Entry {
+  match validate_index(layout, index, shard_size) {
+    Some(validated) => validated.entry(within)
+    None => Invalid
+  }
 }

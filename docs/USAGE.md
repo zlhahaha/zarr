@@ -3,7 +3,7 @@
 This library is an early Mooncakes release. Requires a MoonBit toolchain with **`moonc >= 0.10.14`**; inspect it with `moon version --all`. Filesystem and HTTP packages require the native backend. Add the published module to an existing MoonBit project:
 
 ```sh
-moon add zlhahaha/zarr@0.2.0
+moon add zlhahaha/zarr@0.3.0
 ```
 
 For native examples importing `moonbitlang/async` or `moonbitlang/async/fs`, add a direct dependency as well:
@@ -36,7 +36,7 @@ To reproduce this example independently of the repository, create a new project 
 ```sh
 moon new --user example zarr-quickstart
 cd zarr-quickstart
-moon add zlhahaha/zarr@0.2.0
+moon add zlhahaha/zarr@0.3.0
 moon add moonbitlang/async@0.20.3
 ```
 
@@ -124,6 +124,10 @@ For a Zarr v2 hierarchy with `.zmetadata`, `FileStore::open_consolidated("data.z
 For a Zarr v3 hierarchy with zarr-python's inline `consolidated_metadata` field in the root `zarr.json`, use `FileStore::open_consolidated_v3("data.zarr")`. This is likewise a native-only read-only snapshot: child `zarr.json` documents come from the root index, chunk bytes come from the filesystem, and changes to the index require reopening. It accepts the `kind="inline", must_understand=false` convention and does not write or update consolidated metadata. This v3 convention remains experimental in zarr-python.
 
 For an existing v3 sharding-indexed array, use the same native typed opener, e.g. `store.open_u16("pixels")`, then `read` or `read_region`. The filesystem adapter locates the outer shard, reads at most 16 MiB of index data, validates its offsets and optional CRC32C, and reads only each selected encoded inner chunk (at most 64 MiB); it does not load a whole shard for a small selection. Indexes at the beginning or end of a shard, little- or big-endian index bytes, and supported inner bytes plus gzip/zstd/Blosc codecs are accepted. Missing shards and valid absent inner chunks return the declared fill value. Sharded arrays are **read-only**: `write` and `write_region` return `false`. `MemoryStore`, `HttpStore` hydration, and sharded array creation/writes are not implemented. This feature is tested against four zarr-python 3.4.0 fixtures, including edge shards and absent chunks.
+
+Since `0.3.0`, each native typed `read_region` has its own bounded FIFO shard-index cache (16 MiB of index payload / 64 entries by default). Retained indexes have their length and optional CRC32C checked once; every selected entry still has bounds validated. No index or file handle persists across calls. Configure `FileStore::new("data.zarr", shard_index_cache_bytes=1048576, shard_index_cache_entries=16)`, or set either cap to zero to disable it; negative caps return `None`. An index larger than the cap is not retained, and eviction can cause re-reads. Consolidated snapshot openers use the defaults. Files must remain stable during a region read: this is not a concurrent-writer snapshot, and unchanged-size edits during that call are not detected.
+
+`store.shard_read_stats()` reports cumulative successful index/payload range reads and bytes, cache hits, and peak retained index bytes; `store.reset_shard_read_stats()` resets the counters. They measure library calls, not physical disk traffic or total memory. Independent concurrent reads have independent cache caps. See [BENCHMARKS.md](BENCHMARKS.md) for executable comparisons, OS peak-memory measurements and performance limits.
 
 For a static HTTP-served v2 or v3 hierarchy, the native-only `store/http` package can fetch just the metadata and chunks touched by a rectangle:
 

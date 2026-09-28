@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0 — Measured native reads and operation-local shard indexes
+
+- Add reproducible synthetic benchmarks for v2 gzip, v3 raw/gzip, gzip shards, and an index-heavy raw shard layout. Measure multi-chunk slice wall time and native reader-process OS peak resident memory in fresh processes; verify every returned value. Keep raw samples, cache comparisons and measurement limits documented.
+- Reuse length/CRC32C-validated indexes within a native typed region read using a bounded FIFO cache, defaulting to 16 MiB of index payload and 64 entries. Support configurable caps and disabling. Check entry offsets/lengths on every use; retain no indexes across operations or handles/payloads in the cache.
+- Expose per-store shard range-read/cache counters. Add regression tests for cache caps/eviction, cache-off equivalence, index variants, same-store file changes, corrupted checksums and truncated shards.
+- Add a Linux CI benchmark smoke run and artifact, without machine-dependent speed/RSS thresholds. Document that buffered regions and synthetic benchmarks do not establish large-scale/streaming performance guarantees.
+- Clarify native direct async dependencies, minimum `moonc >= 0.10.14`, complete standalone quickstart and filesystem exception handling.
+
 ## 0.2.0 — Zarr v3 sharding-indexed reads
 
 - Read Zarr v3 sharding-indexed arrays through the native filesystem typed-array API, including element and rectangular-region reads, missing inner-chunk fill values, and edge shards. Sharded arrays are read-only; writes and the in-memory/HTTP adapters do not yet support shard updates or hydration.

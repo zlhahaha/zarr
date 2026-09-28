@@ -12,13 +12,14 @@ pub async fn FileI64Array::read_region(
     return None
   }
   let result : Array[Int64] = Array::make(length, 0L)
+  let reader = self.store.shard_session()
   for piece in pieces {
     let scratch = @store.MemoryStore::new()
     guard @array.open_i64_bits_from_metadata(scratch, self.metadata, self.path)
       is Some(array) else {
       return None
     }
-    match self.store.get_chunk(self.metadata, piece.coordinates, self.path) {
+    match reader.get_chunk(self.metadata, piece.coordinates, self.path) {
       Some(bytes) =>
         if !scratch.put_chunk(
             self.metadata,

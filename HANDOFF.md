@@ -30,9 +30,9 @@ This file records verified progress and the next implementation priorities. Upda
 
 ## Priority queue
 
-The P0 Blosc LZ4 write milestone and the first P1 sharding-indexed read milestone are complete and verified. Do not start the next priority until the user asks.
+The P0 Blosc LZ4 write milestone and P1 sharding-indexed read milestone are complete. The user has now authorized P1 benchmark/cache work and a new Mooncakes release; publication of `0.3.0` is pending final validation. Do not start unrelated priorities.
 
-1. **P1 — Storage scale (await user instruction):** benchmark representative multi-chunk slices and peak memory. Improve chunk streaming/cache behavior where measurements show a bottleneck; avoid claiming bounded-memory whole-array reads until proved.
+1. **P1 — Storage scale (implemented; finalize evidence/release):** native fresh-process benchmarks cover v2 gzip, v3 raw/gzip, gzip shards and a raw index-stress layout. Typed regions now use bounded operation-local validated-index FIFO caches and per-store read counters. Native 89/89 and wasm-gc 49/49 tests pass; first full five-trial run measured 32 MiB logical arrays, up to 1089 touched chunks, and showed strong benefits only for the index-heavy layout. Complete stable-source measurements, public CI and `0.3.0` publication before closing this milestone. Buffered reads and broad real-dataset/whole-array performance validation remain open.
 2. **P2 — Ecosystem fit (await user instruction):** evaluate an object-store adapter and ndarray interop without duplicating existing numeric-computation libraries; add only after store and typed-array boundaries are stable.
 3. **P2 — Release maintenance (await user instruction):** maintain docs, metadata fuzz/property tests and future codec/format compatibility.
 
