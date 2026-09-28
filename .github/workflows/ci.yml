@@ -69,21 +69,21 @@ jobs:
           if-no-files-found: error
           retention-days: 30
       - name: Set up Python for interoperability
-        if: matrix.os == 'ubuntu-latest' && matrix.target == 'native'
+        if: matrix.target == 'native'
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
       - name: Install zarr-python test oracle
-        if: matrix.os == 'ubuntu-latest' && matrix.target == 'native'
+        if: matrix.target == 'native'
         run: python -m pip install zarr==3.4.0 numpy==2.5.3
       - name: Reproduce native read benchmarks (smoke, no speed threshold)
-        if: matrix.os == 'ubuntu-latest' && matrix.target == 'native'
+        if: matrix.target == 'native'
         run: python scripts/benchmark_reads.py --quick --trials 2 --work-dir _build/bench-ci --output _build/bench-ci.json
       - name: Upload benchmark measurements
-        if: matrix.os == 'ubuntu-latest' && matrix.target == 'native'
+        if: matrix.target == 'native'
         uses: actions/upload-artifact@v4
         with:
-          name: native-read-benchmark
+          name: native-read-benchmark-${{ matrix.os }}
           path: _build/bench-ci.json
           if-no-files-found: error
           retention-days: 30

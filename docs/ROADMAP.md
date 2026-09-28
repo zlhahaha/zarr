@@ -34,12 +34,12 @@ Partial implementation: `store/http` can hydrate only ordinary v2/v3 metadata an
 
 - Group traversal and metadata mutation, filesystem and HTTP read-only stores; configurable chunk cache (implemented in `HttpStore`) and bounded streaming (open).
 - v3 sharding-indexed reads (implemented on native filesystem); sharded writes, HTTP hydration and writable consolidated metadata remain open. Optional cloud/object-store adapter after the base Store API is stable.
-- Native multi-chunk/shard latency and OS peak-memory benchmark harness implemented with independent synthetic stores, fresh-process trials, cache-on/off comparisons and Linux CI smoke reproduction. Typed region reads reuse validated indexes in bounded operation-local FIFO caches. See [BENCHMARKS.md](BENCHMARKS.md); this only measures the documented workloads, not general large-scale dataset performance or streaming whole-array memory bounds.
+- Native multi-chunk/shard latency and OS peak-memory benchmark harness implemented with independent synthetic stores, fresh-process trials, cache-on/off comparisons and Linux/macOS/Windows native CI smoke reproduction. Typed region reads reuse validated indexes in bounded operation-local FIFO caches. See [BENCHMARKS.md](BENCHMARKS.md); this only measures the documented workloads, not general large-scale dataset performance or streaming whole-array memory bounds.
 - Gate: read representative scientific datasets without loading the whole array; cross-language tests and performance/memory benchmarks.
 
 ## Stage 4 — Release and maintenance
 
-CI covers native check/build/test and examples on Linux, macOS and Windows, plus wasm-gc check/build/test and the in-memory example on Linux. Release packaging, Python bidirectional interoperability and benchmark smoke reproduction run on Linux. A deterministic property test checks 120 N-dimensional chunk/region partitions on native and wasm-gc. Mooncakes `0.1.0` and `0.2.0` are published; the `0.3.0` milestone adds measured workloads and operation-local shard-index caching. Metadata fuzz tests and broader real-world performance validation remain open.
+CI covers native check/build/test, examples and benchmark smoke reproduction on Linux, macOS and Windows, plus wasm-gc check/build/test and the in-memory example on Linux. Release packaging and Python bidirectional interoperability run on Linux. A deterministic property test checks 120 N-dimensional chunk/region partitions on native and wasm-gc. Mooncakes `0.1.0` and `0.2.0` are published; the `0.3.0` milestone adds measured workloads and operation-local shard-index caching. Metadata fuzz tests and broader real-world performance validation remain open.
 
 - Public Mooncakes release with versioned API docs, installation snippet, examples, changelog and support matrix.
 - Linux/macOS/Windows and supported MoonBit backends in CI; fuzz/property tests for metadata and chunk boundaries.

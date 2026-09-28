@@ -1,6 +1,9 @@
 /* OS high-water memory and monotonic time for the benchmark executable only.
  * Original instrumentation; not part of the Zarr library implementation. */
-#if !defined(_WIN32)
+#if defined(__APPLE__)
+/* Darwin hides non-POSIX rusage fields under strict POSIX feature selection. */
+#define _DARWIN_C_SOURCE
+#elif !defined(_WIN32)
 #define _POSIX_C_SOURCE 200809L
 #endif
 #include <stdint.h>
