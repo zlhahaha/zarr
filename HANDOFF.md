@@ -2,7 +2,7 @@
 
 This file records verified progress and the next implementation priorities. Update it after each meaningful change; `docs/ROADMAP.md` remains the detailed phase plan. Do not add the contest proposal here: it is kept outside this repository.
 
-## Current baseline (2026-09-27)
+## Published 0.2.0 baseline (2026-09-27)
 
 - Module: `zlhahaha/zarr`, Apache-2.0. Version `0.2.0` with read-only Zarr v3 sharding-indexed support was published on Mooncakes on 2026-09-27; `moon view zlhahaha/zarr --versions` lists both `0.2.0` and `0.1.0`.
 - Public API covers v2/v3 numeric and boolean arrays, element and rectangular-slice I/O, groups and attributes, memory/native filesystem stores, and native read-only HTTP regional hydration. Native `FileStore` can read v3 sharding-indexed arrays through the same typed API, but cannot write them. Memory and HTTP stores do not hydrate shards. See README's support matrix for exact boundaries.
@@ -30,11 +30,18 @@ This file records verified progress and the next implementation priorities. Upda
 
 ## Priority queue
 
-The P0 Blosc LZ4 write milestone and P1 sharding-indexed read milestone are complete. The user has now authorized P1 benchmark/cache work and a new Mooncakes release; publication of `0.3.0` is pending final validation. Do not start unrelated priorities.
+The P0 Blosc LZ4 write milestone, P1 sharding-indexed reads and P1 synthetic benchmark/cache baseline are complete. `0.3.0` release metadata and archive are validated; the user has authorized its publication. Do not start unrelated priorities.
 
-1. **P1 — Storage scale (evidence complete; finalize release):** native fresh-process benchmarks cover v2 gzip, v3 raw/gzip, gzip shards and a raw index-stress layout. Typed regions use bounded operation-local validated-index FIFO caches and per-store read counters. Native 89/89 and wasm-gc 49/49 tests pass. The stable-source report at `docs/benchmarks/windows-native-20260928.json` records commit `7cb502e`, 17 cases/modes × 5 retained trials (85 samples), 32 MiB logical arrays and up to 1089 touched chunks. The index-heavy case measured 2708.24→177.90 ms (15.2×), 1089→1 index reads and effectively unchanged RSS; ordinary gzip-shard timing differences were small. Largest gzip-shard slice: 5627.52 ms median and 15.05 MiB max peak. CI run [36424096523](https://github.com/zlhahaha/zarr/actions/runs/36424096523) is pending. Complete public CI and `0.3.0` publication before closing. Buffered reads and broad real-dataset/whole-array performance validation remain open.
+1. **P1 — Storage-scale baseline (completed):** native fresh-process benchmarks cover v2 gzip, v3 raw/gzip, gzip shards and a raw index-stress layout. Typed regions use bounded operation-local validated-index FIFO caches and per-store read counters. Native 89/89 and wasm-gc 49/49 tests pass. The stable-source report at `docs/benchmarks/windows-native-20260928.json` records commit `7cb502e`, 17 cases/modes × 5 retained trials (85 samples), 32 MiB logical arrays and up to 1089 touched chunks. The index-heavy case measured 2708.24→177.90 ms (15.2×), 1089→1 index reads and effectively unchanged RSS; ordinary gzip-shard timing differences were small. Largest gzip-shard slice: 5627.52 ms median and 15.05 MiB max peak. [CI 36424636163](https://github.com/zlhahaha/zarr/actions/runs/36424636163), commit `cd24a7f`, passed all four jobs, including benchmark smoke execution on Linux/macOS/Windows native. Buffered reads and broad real-dataset/whole-array performance validation remain open and require a new user instruction.
 2. **P2 — Ecosystem fit (await user instruction):** evaluate an object-store adapter and ndarray interop without duplicating existing numeric-computation libraries; add only after store and typed-array boundaries are stable.
 3. **P2 — Release maintenance (await user instruction):** maintain docs, metadata fuzz/property tests and future codec/format compatibility.
+
+## 0.3.0 release verification (2026-09-28)
+
+- `cd24a7f` is the tested implementation and benchmark-report baseline. The first CI exposed Darwin hiding `ru_maxrss` under strict POSIX macros; benchmark instrumentation now selects Darwin's full declarations, and all three native platforms execute the benchmark smoke profile successfully. This instrumentation-only fix does not change the recorded Windows runtime path or library algorithms.
+- Local native/wasm-gc strict checks/builds/tests, three examples, format/interface generation and archive validation passed. Fresh reverse interop stores were generated under ignored `_build/interop-030-20260928` and all 32 passed the existing zarr-python verifiers. Existing partial `integration/.roundtrip` stores were preserved; directly verifying those old partial stores initially reported a missing checksum fixture, not a library regression.
+- Archive: `_build/publish/zlhahaha-zarr-0.3.0.zip`. README, usage, benchmark guide/results, changelog and roadmap reflect `0.3.0`. Benchmark reproduction requires the GitHub checkout because Python scripts are not in the Mooncakes library archive. The local contest proposal remains outside GitHub and has not been submitted.
+- Registry confirmation uses `moon view zlhahaha/zarr --versions`; existing published versions cannot be overwritten.
 
 ## Working rules
 
