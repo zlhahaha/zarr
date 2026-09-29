@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.0 — N-dimensional interoperability and faster region reads
+
+- Add eight independent 3D uint16 / 4D float32 Python read fixtures and eight MoonBit-written reverse stores: v2 C/F order, endian variants, raw/gzip/zlib/zstd, missing and edge chunks, non-aligned slices and rewrite/reopen. Two read fixtures cover N-D start/end-index shards; reverse writes remain unsharded. Inventory: 51 Python stores, 40 reverse stores.
+- Run the new reverse oracle checks on all three native CI platforms, plus portable N-D regressions on wasm-gc. Add a self-cleaning `cmd/nd_demo` and reproducible fresh-directory generators/verifiers.
+- Replace per-element region-coordinate arrays and discarded chunk keys in the shared byte reader with validated strided row spans; use the same geometry for native typed result assembly. Keep input/work budgets, missing fills, v2 F-order, decode checks and operation-local shard caches unchanged. No streaming, persistent handles, payload cache or write-path speedup is claimed.
+- Record a clean 0.5.0 baseline, intermediate kernel-only measurements, full optimized runs and an alternating-version five-trial comparison on identical synthetic datasets. In the paired Windows 2048² cases, raw reads improve 5256.33→133.76 ms (39.3×), gzip 5633.11→524.74 ms (10.7×); OS peak reader memory stays effectively unchanged. These are warm-cache synthetic 2D uint16 selections, not real-data, 3D/4D throughput or cold-disk guarantees.
+- Add low-level `chunk.copy_region_spans` with overflow/bounds and differential geometry tests. Typed array method signatures remain unchanged; the geometry helper itself is caller-managed and does not enforce `ReadLimits`.
+
 ## 0.5.0 — Safe single-key filesystem replacement
 
 - Replace direct destination truncation with exclusive sibling `.zarr-tmp-*` staging, complete data-synchronized writes, handle closure and replacement rename. Ordinary native chunks, metadata and attributes share this path; no delete-then-rename fallback is used.

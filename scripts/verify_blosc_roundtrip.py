@@ -1,6 +1,7 @@
 """Independently open MoonBit-written Blosc LZ4 stores with zarr-python."""
 
 from pathlib import Path
+import argparse
 import sys
 
 PROJECT = Path(__file__).resolve().parents[1]
@@ -12,10 +13,9 @@ import numpy as np
 import zarr
 
 
-def main() -> None:
+def main(base: Path) -> None:
     if zarr.__version__ != "3.4.0":
         raise RuntimeError(f"expected zarr-python 3.4.0, got {zarr.__version__}")
-    base = PROJECT / "integration" / ".roundtrip"
     for name in (
         "v2_blosc_lz4_shuffle_u16",
         "v3_blosc_lz4_bitshuffle_u16",
@@ -40,4 +40,6 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--root", type=Path, default=PROJECT / "integration/.roundtrip")
+    main(parser.parse_args().root)

@@ -2,7 +2,7 @@
 
 This benchmark measures ordinary multi-chunk rectangular reads and v3 sharding-indexed reads. It is a reproducible synthetic workload, **not evidence that large-scale scientific workloads or terabyte arrays have been fully performance-validated**. No speed or RSS threshold is enforced in CI.
 
-Version `0.4.0` adds [read resource budgets](RESOURCE_LIMITS.md); `0.5.0` adds [single-key filesystem write safety](WRITE_SAFETY.md). The documented benchmark selections fit the default budgets. The full Windows table below measures the recorded `0.3.0` implementation baseline, not newly measured `0.4.0`/`0.5.0` performance. Later hardening is verified separately by regression tests and the existing cross-platform read benchmark smoke profile; this benchmark does not measure write throughput or the overhead of staging/replacement. Policy caps are not substitutes for OS peak-memory measurements.
+Version `0.4.0` adds [read resource budgets](RESOURCE_LIMITS.md); `0.5.0` adds [single-key filesystem write safety](WRITE_SAFETY.md). The documented benchmark selections fit the default budgets. The historical table measures `0.3.0`; the new section below measures a clean `0.5.0` baseline and optimized `0.6.0` implementation. Do not relabel the historical samples. Later hardening is verified separately by regression tests and the existing cross-platform read benchmark smoke profile; this benchmark does not measure write throughput or the overhead of staging/replacement. Policy caps are not substitutes for OS peak-memory measurements.
 
 ## Reproduce
 
@@ -49,7 +49,49 @@ There is no index persistence across region calls or element reads. Changed file
 
 Index-heavy layouts are the intended optimization target. A small index or a slice touching one inner chunk may show little benefit or timing noise; a cache-on result is not automatically faster. Peak memory is reported for all cases rather than inferred from the cache cap. Rectangular reads still allocate the requested result and temporary decoded chunks, and some dtype wrappers allocate an additional conversion array. This work does not provide a streaming typed-array API, a full-array bounded-memory guarantee, HTTP-shard support, or broad dtype/codec/real-dataset performance coverage.
 
-## Recorded Windows run (2026-09-28)
+## 0.5.0 → 0.6.0 region-read comparison (2026-09-29)
+
+A new clean baseline was built from [7e779cb](https://github.com/zlhahaha/zarr/commit/7e779cb3cef289e5e26301f53e928402e9212882), the published 0.5.0 source. The optimized binary was verified byte-for-byte against a rebuild at [0b16cfa](https://github.com/zlhahaha/zarr/commit/0b16cfa3426eb0219d5a0926e46d5e81cc2a5762). No budget was raised, index-cache setting changed, or value check removed. Both versions used the **same generated stores**, release toolchain and reader instrumentation.
+
+The [alternating-version report](benchmarks/windows-native-050-vs-060-paired-20260929.json) retains five samples per version/case after one discarded trial. Baseline/optimized execution order alternates per trial; every element and checksum is checked, and index/payload counts and byte totals must match between versions. This mitigates simple version-order bias, but does not flush the OS cache or establish a statistical confidence interval.
+
+Environment: Windows 11 build 22631, Intel Core Ultra 9 185H, approximately 31.42 GiB RAM, NTFS volume, moonc v0.10.14+7d59c7ec9, native release. Times below are median (min–max); peak memory is the maximum OS reader-process peak among retained trials. All cases use the existing operation-local index cache. The first four output 8 MiB logical data and touch 1089 chunks; the final case outputs 128 KiB and also touches 1089 inner chunks.
+
+| Dataset | Extent | 0.5.0 ms (range) | Optimized ms (range) | Median ratio | Max peak MiB, old → new |
+| --- | --- | ---: | ---: | ---: | ---: |
+| v2_gzip | 2048² | 5236.81 (5195.57–5345.05) | 513.63 (504.92–524.52) | 10.2× | 15.00 → 14.90 |
+| v3_raw | 2048² | 5256.33 (5232.87–5523.64) | 133.76 (129.46–146.43) | 39.3× | 14.66 → 14.67 |
+| v3_gzip | 2048² | 5633.11 (5472.07–5783.13) | 524.74 (504.57–534.26) | 10.7× | 14.96 → 14.97 |
+| v3_shard_gzip | 2048² | 5400.29 (5317.13–5671.39) | 477.26 (470.49–549.88) | 11.3× | 15.06 → 15.05 |
+| v3_shard_index_stress | 256² | 173.16 (170.29–190.81) | 102.09 (97.60–113.33) | 1.7× | 6.93 → 6.93 |
+
+These selected workloads show a substantial latency improvement, **not reduced peak memory** or a general speed ratio. Both versions still allocate the selection and per-chunk scratch/decoded/conversion buffers. No whole-array streaming guarantee, 3D/4D throughput measurement, real scientific dataset benchmark, cloud-read result or competitor comparison is implied.
+
+### What changed and what remains
+
+Source inspection found two per-element coordinate loops: the shared memory byte reader allocated coordinates, recomputed source/destination offsets and even constructed a discarded chunk key; native assembly then recomputed coordinates to scatter each piece again. The new helper computes strides once and visits last-axis runs with O(rank) scratch state. C-order rows copy contiguously; v2 F-order rows use the appropriate source stride. This optimization applies to **reads**, not the existing write loops.
+
+The [clean baseline](benchmarks/windows-native-050-baseline-20260929.json), [shared-kernel-only stage](benchmarks/windows-native-060-memory-stage-20260929.json) and [full optimized run](benchmarks/windows-native-060-final-20260929.json) each retain 85 samples covering all 17 existing cases/modes. In those sequential full runs, the 2048² raw median was 5254.07 → 485.21 → 133.73 ms; gzip was 5686.53 → 819.17 → 522.50 ms. Removing the first coordinate loop accounted for most of the observed gain; removing native scatter coordinates improved it further. These are controlled implementation stages, **not a CPU profiler breakdown**. Filesystem open/size/read/close, gzip decoding, scratch stores and piece conversions remain; their individual costs were not isolated by a profiler, and no handle/payload reuse is claimed.
+
+Provenance: the baseline report records a clean worktree. The stage/final full reports intentionally retain their original pre-commit HEAD plus nonempty worktree changes and source fingerprints; those HEAD fields alone must not be called release commits. The paired report links the actual immutable binaries to the baseline and verified optimized commits; the optimized SHA-256 is `86dbb77b07e1a65f5b8a385a939a92ef2d8b05202698511d89f2026fb28994a7`. Binary/dataset hashes, raw times, RSS and counters are preserved in all reports. Documentation/test additions do not affect the measured executable.
+
+### Reproduce the version comparison on Windows PowerShell
+
+From the current GitHub checkout, build the old source separately; these commands create a new ignored clone rather than changing your current checkout:
+
+```powershell
+git clone https://github.com/zlhahaha/zarr.git _build/bench-050-src
+git -C _build/bench-050-src switch --detach 7e779cb3cef289e5e26301f53e928402e9212882
+moon -C _build/bench-050-src update
+moon -C _build/bench-050-src run --target native --release --build-only cmd/benchmark
+moon run --target native --release --build-only cmd/benchmark
+python scripts/benchmark_reads.py --trials 5 --work-dir _build/bench-compare-data --output _build/bench-new-full.json
+python scripts/compare_region_reads.py --baseline _build/bench-050-src/_build/native/release/build/cmd/benchmark/benchmark.exe --optimized _build/native/release/build/cmd/benchmark/benchmark.exe --baseline-commit 7e779cb3cef289e5e26301f53e928402e9212882 --optimized-commit (git rev-parse HEAD) --work-dir _build/bench-compare-data --trials 5 --output _build/bench-paired.json
+```
+
+Requires the pinned Python dependencies from the reproduction section above. Use new data/report/clone paths on another run; generators and reports refuse overwrite. Record the actual commits used to build your binaries. The report labels are supplied by the caller; it records binary hashes but does not infer source provenance from executables.
+
+## Historical 0.3.0 Windows run (2026-09-28)
 
 The [complete JSON report](https://github.com/zlhahaha/zarr/blob/main/docs/benchmarks/windows-native-20260928.json) records all 85 retained samples, input SHA-256 hashes, binary/source fingerprints and the measured implementation commit [7cb502e](https://github.com/zlhahaha/zarr/commit/7cb502ee04d7f864b58fce3f9d8d33f97a908c76). Environment: Windows 11 (build 22631), Intel Core Ultra 9 185H (16 cores / 22 logical processors), approximately 31.42 GiB OS-reported physical RAM, NTFS data volume, native release build, moonc v0.10.14+7d59c7ec9. Storage-device model and cold-cache performance were not measured. No benchmark speed threshold was applied.
 

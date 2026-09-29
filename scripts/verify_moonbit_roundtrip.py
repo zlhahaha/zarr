@@ -1,6 +1,7 @@
 """Verify MoonBit-written v2/v3 arrays with zarr-python 3.4.0."""
 
 from pathlib import Path
+import argparse
 import json
 import sys
 
@@ -12,9 +13,11 @@ if DEPS.exists():
 import numpy as np
 import zarr
 
+ROOT = PROJECT / "integration" / ".roundtrip"
+
 
 def check(name: str, expected: np.ndarray) -> None:
-    path = PROJECT / "integration" / ".roundtrip" / f"{name}.zarr"
+    path = ROOT / f"{name}.zarr"
     array = zarr.open_array(store=str(path), mode="r")
     actual = array[:]
     np.testing.assert_array_equal(actual, expected)
@@ -22,7 +25,7 @@ def check(name: str, expected: np.ndarray) -> None:
 
 
 def check_group(name: str, title: str) -> None:
-    path = PROJECT / "integration" / ".roundtrip" / f"{name}.zarr"
+    path = ROOT / f"{name}.zarr"
     root = zarr.open_group(store=str(path), mode="r")
     assert root["science"].attrs["title"] == title
     np.testing.assert_array_equal(
@@ -49,7 +52,7 @@ def main() -> None:
     check("v3_zstd_f32", np.array([1.5, 1.5, 42.25], dtype=np.float32))
     check("v3_zstd_checksum_u8", np.array([5, 5, 9], dtype=np.uint8))
     checksum_metadata = json.loads(
-        (PROJECT / "integration" / ".roundtrip" / "v3_zstd_checksum_u8.zarr" / "zarr.json").read_text()
+        (ROOT / "v3_zstd_checksum_u8.zarr" / "zarr.json").read_text()
     )
     assert checksum_metadata["codecs"][-1]["configuration"]["checksum"] is True
     image = np.full((3, 4), 5, dtype=np.uint8)
@@ -78,4 +81,7 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--root", type=Path, default=ROOT)
+    ROOT = parser.parse_args().root
     main()

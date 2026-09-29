@@ -3,7 +3,7 @@
 This library is an early Mooncakes release. Requires a MoonBit toolchain with **`moonc >= 0.10.14`**; inspect it with `moon version --all`. Filesystem and HTTP packages require the native backend. Add the published module to an existing MoonBit project:
 
 ```sh
-moon add zlhahaha/zarr@0.5.0
+moon add zlhahaha/zarr@0.6.0
 ```
 
 For native examples importing `moonbitlang/async` or `moonbitlang/async/fs`, add a direct dependency as well:
@@ -27,16 +27,18 @@ A transitive dependency is not enough for your own package imports. Pure in-memo
 | `zlhahaha/zarr/shard` | Internal v3 sharding layout and index validation used by the native filesystem adapter |
 | `zlhahaha/zarr/hierarchy` | In-memory group and attribute operations |
 
-The repository contains four runnable usage examples: `moon run --target wasm-gc cmd/main` for a portable in-memory v3 array, `moon run --target native cmd/native_demo` for zstd-compressed v3 creation and replacement of existing chunks, `moon run --target native cmd/v2_demo` for a gzip-compressed big-endian v2 array, and `moon run --target native cmd/budget_demo` for resource-budget rejection and recovery. The native examples create and remove their own temporary stores after a successful run. Each example exits unsuccessfully if a check fails.
+The repository contains five runnable usage examples: `moon run --target wasm-gc cmd/main` for a portable in-memory v3 array, `moon run --target native cmd/native_demo` for zstd-compressed v3 creation and replacement of existing chunks, `moon run --target native cmd/v2_demo` for a gzip-compressed big-endian v2 array, `moon run --target native cmd/nd_demo` for a compressed 3D image volume and 4D floating feature tensor, and `moon run --target native cmd/budget_demo` for resource-budget rejection and recovery. The native examples create and remove their own temporary stores after a successful run. Each example exits unsuccessfully if a check fails.
 
 ## Native array example
+
+For a complete 3D image-volume / 4D feature-tensor program, run `moon run --target native cmd/nd_demo` in the checkout. It writes `[4,3,8]` and `[2,2,6,3]` cross-chunk regions, reopens both arrays and verifies missing fills. Source: [cmd/nd_demo/main.mbt](../cmd/nd_demo/main.mbt). See [INTEROPERABILITY.md](INTEROPERABILITY.md) for independent Python verification, N-D layout coverage and exact output. Region results are flattened in C order even when opening v2 F-order chunks; origin and extent have one entry per array axis. Only bounded unit-step rectangles are supported, not arbitrary strided indexing or ndarray operations.
 
 To reproduce this example independently of the repository, create a new project and install the published dependencies:
 
 ```sh
 moon new --user example zarr-quickstart
 cd zarr-quickstart
-moon add zlhahaha/zarr@0.5.0
+moon add zlhahaha/zarr@0.6.0
 moon add moonbitlang/async@0.20.3
 ```
 
@@ -123,7 +125,7 @@ For a Zarr v2 hierarchy with `.zmetadata`, `FileStore::open_consolidated("data.z
 
 For a Zarr v3 hierarchy with zarr-python's inline `consolidated_metadata` field in the root `zarr.json`, use `FileStore::open_consolidated_v3("data.zarr")`. This is likewise a native-only read-only snapshot: child `zarr.json` documents come from the root index, chunk bytes come from the filesystem, and changes to the index require reopening. It accepts the `kind="inline", must_understand=false` convention and does not write or update consolidated metadata. This v3 convention remains experimental in zarr-python.
 
-For an existing v3 sharding-indexed array, use the same native typed opener, e.g. `store.open_u16("pixels")`, then `read` or `read_region`. The filesystem adapter locates the outer shard, reads at most 16 MiB of index data, validates its offsets and optional CRC32C, and reads only each selected encoded inner chunk (at most 64 MiB); it does not load a whole shard for a small selection. Indexes at the beginning or end of a shard, little- or big-endian index bytes, and supported inner bytes plus gzip/zstd/Blosc codecs are accepted. Missing shards and valid absent inner chunks return the declared fill value. Sharded arrays are **read-only**: `write` and `write_region` return `false`. `MemoryStore`, `HttpStore` hydration, and sharded array creation/writes are not implemented. This feature is tested against four zarr-python 3.4.0 fixtures, including edge shards and absent chunks.
+For an existing v3 sharding-indexed array, use the same native typed opener, e.g. `store.open_u16("pixels")`, then `read` or `read_region`. The filesystem adapter locates the outer shard, reads at most 16 MiB of index data, validates its offsets and optional CRC32C, and reads only each selected encoded inner chunk (at most 64 MiB); it does not load a whole shard for a small selection. Indexes at the beginning or end of a shard, little- or big-endian index bytes, and supported inner bytes plus gzip/zstd/Blosc codecs are accepted. Missing shards and valid absent inner chunks return the declared fill value. Sharded arrays are **read-only**: `write` and `write_region` return `false`. `MemoryStore`, `HttpStore` hydration, and sharded array creation/writes are not implemented. This feature is tested against six zarr-python 3.4.0 fixtures, including 3D/4D edge shards and absent chunks. See [N-D interoperability](INTEROPERABILITY.md).
 
 Since `0.3.0`, each native typed `read_region` has its own bounded FIFO shard-index cache (16 MiB of index payload / 64 entries by default). Retained indexes have their length and optional CRC32C checked once; every selected entry still has bounds validated. No index or file handle persists across calls. Configure `FileStore::new("data.zarr", shard_index_cache_bytes=1048576, shard_index_cache_entries=16)`, or set either cap to zero to disable it; negative caps return `None`. An index larger than the cap is not retained, and eviction can cause re-reads. Consolidated snapshot openers use the defaults. Files must remain stable during a region read: this is not a concurrent-writer snapshot, and unchanged-size edits during that call are not detected.
 

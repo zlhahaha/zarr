@@ -3,6 +3,9 @@
 async fn main {
   let dir = @async_fs.tmpdir(prefix="zarr-nd-demo")
   guard @fs.FileStore::new(dir) is Some(store) else { abort("store") }
+  if !store.create_group_tree(@metadata.V3, "") {
+    abort("root group")
+  }
   guard store.create_u16(
       @metadata.V3,
       "volume",
