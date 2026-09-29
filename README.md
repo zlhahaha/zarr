@@ -6,7 +6,7 @@ A MoonBit implementation of the Zarr v2 and v3 storage formats for chunked N-dim
 
 ## Status
 
-Early Mooncakes release (version `0.4.0`); `0.5.0` adds single-key safe filesystem replacement and is prepared for publication. The library can read and write `bool`, signed/unsigned 8/16/32/64-bit integers, and `float32`/`float64` arrays in memory and on native filesystems, including element access, rectangular slices, missing-chunk fill values and edge chunks. It supports raw chunks and gzip/zstd in both formats, plus zlib in v2, and a documented Blosc subset. Groups and attributes can be read and written for both formats. Native filesystem arrays can also **read** v3 sharding-indexed stores through the same typed API; sharded writes are not supported. A native-only HTTP adapter can download ordinary metadata and encoded chunks touched by a bounded rectangle into a `MemoryStore`; it does not hydrate shards. Rectangular slices batch file I/O and codec work by touched chunk, but still buffer the requested result and are not a streaming typed-array interface. Use it for the documented subset only; other dtypes/codecs and cloud object-store adapters are not implemented yet.
+Early Mooncakes release (version `0.5.0`). The library can read and write `bool`, signed/unsigned 8/16/32/64-bit integers, and `float32`/`float64` arrays in memory and on native filesystems, including element access, rectangular slices, missing-chunk fill values and edge chunks. It supports raw chunks and gzip/zstd in both formats, plus zlib in v2, and a documented Blosc subset. Groups and attributes can be read and written for both formats. Native filesystem arrays can also **read** v3 sharding-indexed stores through the same typed API; sharded writes are not supported. A native-only HTTP adapter can download ordinary metadata and encoded chunks touched by a bounded rectangle into a `MemoryStore`; it does not hydrate shards. Rectangular slices batch file I/O and codec work by touched chunk, but still buffer the requested result and are not a streaming typed-array interface. Use it for the documented subset only; other dtypes/codecs and cloud object-store adapters are not implemented yet.
 
 Float32/float64 fill values also support the standard JSON strings `"NaN"`, `"Infinity"`, and `"-Infinity"`. Creating an array with any NaN writes the canonical `"NaN"` fill value; v3 payload-specific hexadecimal NaN fills are not supported.
 
@@ -135,6 +135,7 @@ integration/     Cross-package tests
 cmd/main/        Portable in-memory v3 example
 cmd/native_demo/ Native filesystem v3 example
 cmd/v2_demo/     Native filesystem v2 example
+cmd/budget_demo/ Native read-budget rejection and recovery example
 cmd/benchmark/   Native read latency and OS peak-memory instrumentation
 scripts/         Independent data generation, interoperability and benchmarks
 ```

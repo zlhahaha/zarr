@@ -36,7 +36,7 @@ To reproduce this example independently of the repository, create a new project 
 ```sh
 moon new --user example zarr-quickstart
 cd zarr-quickstart
-moon add zlhahaha/zarr@0.4.0
+moon add zlhahaha/zarr@0.5.0
 moon add moonbitlang/async@0.20.3
 ```
 
