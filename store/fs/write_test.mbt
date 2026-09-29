@@ -75,7 +75,10 @@ async test "concurrent public writers leave complete values and no staging colli
   for i, value in values {
     assert_eq(store.get("separate/\{i}"), Some(value))
   }
-  assert_eq(@async_fs.readdir(dir, include_hidden=true), ["separate", "shared"])
+  let entries = @async_fs.readdir(dir, include_hidden=true)
+  assert_eq(entries.length(), 2)
+  assert_true(entries.contains("separate"))
+  assert_true(entries.contains("shared"))
   assert_eq(
     @async_fs.readdir("\{dir}/separate", include_hidden=true).length(),
     5,
@@ -109,8 +112,9 @@ async test "typed region failure keeps completed earlier chunks but not partial 
   assert_true(failed)
   assert_eq(store.get("values/c/0"), Some(b"\x03\x04"))
   assert_eq(store.get("values/c/1/marker"), Some(b"keep"))
-  assert_eq(@async_fs.readdir("\{dir}/values/c", include_hidden=true), [
-    "0", "1",
-  ])
+  let entries = @async_fs.readdir("\{dir}/values/c", include_hidden=true)
+  assert_eq(entries.length(), 2)
+  assert_true(entries.contains("0"))
+  assert_true(entries.contains("1"))
   @async_fs.rmdir(dir, recursive=true)
 }
