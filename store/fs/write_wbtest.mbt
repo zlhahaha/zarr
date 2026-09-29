@@ -266,3 +266,38 @@ async test "cancellation during protected commit completes replacement without r
   assert_eq(store.get("value"), Some(b"new"))
   @async_fs.rmdir(dir, recursive=true)
 }
+
+///|
+async test "cancelled acquisition cleans up even an empty write before staging or commit" {
+  let dir = @async_fs.tmpdir(prefix="zarr-write-cancel-acquire")
+  @async_fs.write_file("\{dir}/value", b"old", create_mode=@async_fs.CreateNew)
+  for value in [b"", b"new"] {
+    let active : Ref[@async.Task[Unit]?] = Ref(None)
+    let staged = Ref(false)
+    let committed = Ref(false)
+    @async.with_task_group(group => {
+      let task = group.spawn(() => {
+        @async.pause()
+        put_file_safely(
+          "\{dir}/value",
+          dir,
+          value,
+          candidate=() => {
+            guard active.val is Some(task) else { abort("task") }
+            task.cancel()
+            ".zarr-tmp-acquire-cancel"
+          },
+          stage=(_, _) => staged.val = true,
+          commit=(_, _) => committed.val = true,
+        )
+      })
+      active.val = Some(task)
+    })
+    assert_true(!staged.val)
+    assert_true(!committed.val)
+    assert_true(!@async_fs.exists("\{dir}/.zarr-tmp-acquire-cancel"))
+    guard FileStore::new(dir) is Some(store) else { fail("store") }
+    assert_eq(store.get("value"), Some(b"old"))
+  }
+  @async_fs.rmdir(dir, recursive=true)
+}
