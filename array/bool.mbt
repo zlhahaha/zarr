@@ -22,6 +22,9 @@ pub fn open_bool_from_metadata(
   metadata : @metadata.ArrayMetadata,
   path : String,
 ) -> BoolArray? {
+  if !store.read_limits().allows_array(metadata) {
+    return None
+  }
   guard @chunk.array_metadata_key(metadata.format, path) is Some(_) else {
     return None
   }
@@ -53,7 +56,12 @@ pub fn BoolArray::read(self : BoolArray, indices : Array[Int]) -> Bool? {
   match self.store.get(key) {
     None => Some(self.fill)
     Some(encoded) => {
-      guard @codec.decode_chunk(self.compression, encoded, self.chunk_len)
+      guard decode_read_chunk(
+          self.store,
+          self.compression,
+          encoded,
+          self.chunk_len,
+        )
         is Some(raw) else {
         return None
       }
@@ -75,7 +83,12 @@ pub fn BoolArray::write(
   let raw = match self.store.get(key) {
     None => Bytes::make(self.chunk_len, bool_byte(self.fill))
     Some(encoded) => {
-      guard @codec.decode_chunk(self.compression, encoded, self.chunk_len)
+      guard decode_read_chunk(
+          self.store,
+          self.compression,
+          encoded,
+          self.chunk_len,
+        )
         is Some(decoded) else {
         return false
       }

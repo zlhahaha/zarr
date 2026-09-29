@@ -3,11 +3,19 @@
 /// storage format itself is independent of the storage medium.
 pub struct MemoryStore {
   entries : Map[String, Bytes]
+  limits : ReadLimits
 }
 
 ///|
-pub fn MemoryStore::new() -> MemoryStore {
-  { entries: Map([]), }
+pub fn MemoryStore::new(
+  read_limits? : ReadLimits = ReadLimits::defaults(),
+) -> MemoryStore {
+  { entries: Map([]), limits: read_limits, }
+}
+
+///|
+pub fn MemoryStore::read_limits(self : MemoryStore) -> ReadLimits {
+  self.limits
 }
 
 ///|
@@ -99,6 +107,9 @@ pub fn MemoryStore::open_array(
     (Some(bytes), None) => (@metadata.V2, bytes)
     (None, Some(bytes)) => (@metadata.V3, bytes)
     _ => return None
+  }
+  if !self.limits.allows_metadata(bytes) {
+    return None
   }
   let raw = @utf8.decode(bytes[:]) catch { _ => return None }
   guard @metadata.parse_array_metadata(raw) is Some(parsed) else { return None }

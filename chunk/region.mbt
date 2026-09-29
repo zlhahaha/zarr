@@ -72,7 +72,14 @@ pub fn region_chunks(
   metadata : @metadata.ArrayMetadata,
   origin : Array[Int],
   extent : Array[Int],
+  max_chunks? : Int = 16384,
 ) -> Array[ChunkRegion]? {
+  guard region_chunk_count(metadata, origin, extent) is Some(count) else {
+    return None
+  }
+  if max_chunks < 0 || count > max_chunks {
+    return None
+  }
   guard region_len(metadata, origin, extent) is Some(length) else {
     return None
   }
@@ -132,6 +139,37 @@ pub fn region_chunks(
     result.push({ coordinates, origin: overlap_origin, extent: overlap_extent, })
   }
   Some(result)
+}
+
+///|
+/// Count touched chunks without allocating a list of chunks or coordinates.
+pub fn region_chunk_count(
+  metadata : @metadata.ArrayMetadata,
+  origin : Array[Int],
+  extent : Array[Int],
+) -> Int? {
+  guard region_len(metadata, origin, extent) is Some(length) else {
+    return None
+  }
+  if metadata.shape.length() != metadata.chunk_shape.length() {
+    return None
+  }
+  if length == 0 {
+    return Some(0)
+  }
+  let mut total = 1
+  for i in 0..<origin.length() {
+    let side = metadata.chunk_shape[i]
+    if side <= 0 {
+      return None
+    }
+    let count = (origin[i] + extent[i] - 1) / side - origin[i] / side + 1
+    if total > 2147483647 / count {
+      return None
+    }
+    total *= count
+  }
+  Some(total)
 }
 
 ///|

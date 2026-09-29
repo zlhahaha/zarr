@@ -6,7 +6,7 @@ A MoonBit implementation of the Zarr v2 and v3 storage formats for chunked N-dim
 
 ## Status
 
-Early Mooncakes release (version `0.3.0`). The library can read and write `bool`, signed/unsigned 8/16/32/64-bit integers, and `float32`/`float64` arrays in memory and on native filesystems, including element access, rectangular slices, missing-chunk fill values and edge chunks. It supports raw chunks and gzip/zstd in both formats, plus zlib in v2, and a documented Blosc subset. Groups and attributes can be read and written for both formats. Native filesystem arrays can also **read** v3 sharding-indexed stores through the same typed API; sharded writes are not supported. A native-only HTTP adapter can download ordinary metadata and encoded chunks touched by a bounded rectangle into a `MemoryStore`; it does not hydrate shards. Rectangular slices batch file I/O and codec work by touched chunk, but still buffer the requested result and are not a streaming typed-array interface. Use it for the documented subset only; other dtypes/codecs and cloud object-store adapters are not implemented yet.
+Early Mooncakes release (version `0.4.0`). The library can read and write `bool`, signed/unsigned 8/16/32/64-bit integers, and `float32`/`float64` arrays in memory and on native filesystems, including element access, rectangular slices, missing-chunk fill values and edge chunks. It supports raw chunks and gzip/zstd in both formats, plus zlib in v2, and a documented Blosc subset. Groups and attributes can be read and written for both formats. Native filesystem arrays can also **read** v3 sharding-indexed stores through the same typed API; sharded writes are not supported. A native-only HTTP adapter can download ordinary metadata and encoded chunks touched by a bounded rectangle into a `MemoryStore`; it does not hydrate shards. Rectangular slices batch file I/O and codec work by touched chunk, but still buffer the requested result and are not a streaming typed-array interface. Use it for the documented subset only; other dtypes/codecs and cloud object-store adapters are not implemented yet.
 
 Float32/float64 fill values also support the standard JSON strings `"NaN"`, `"Infinity"`, and `"-Infinity"`. Creating an array with any NaN writes the canonical `"NaN"` fill value; v3 payload-specific hexadecimal NaN fills are not supported.
 
@@ -45,7 +45,7 @@ Requires a MoonBit toolchain with **`moonc >= 0.10.14`**. Check the compiler ver
 Add the published module to a MoonBit project:
 
 ```sh
-moon add zlhahaha/zarr@0.3.0
+moon add zlhahaha/zarr@0.4.0
 ```
 
 For native filesystem/HTTP examples that import `moonbitlang/async` or its subpackages, also add it as a **direct module dependency**:
@@ -101,6 +101,12 @@ Native typed region reads now reuse validated shard indexes within each call, wi
 The [benchmark guide](docs/BENCHMARKS.md) provides independent zarr-python datasets, cache-on/off comparisons, every-value checks, monotonic slice timings and **OS reader-process peak resident memory**, with fresh processes per trial. The full profile covers 32 MiB logical arrays and slices touching up to 1089 chunks; Linux/macOS/Windows native CI reproduces a smaller smoke run and uploads the measurements without machine-dependent performance thresholds. These are synthetic local-filesystem measurements, not a cold-disk test or proof of fully validated large-scale/whole-array performance. Results remain buffered, and the index-cache byte cap is not a total-memory cap.
 
 In the recorded Windows five-trial run, the index-heavy 256² case fell from 2708.24 ms to 177.90 ms (15.2× for that layout), with index reads falling from 1089 to 1 and effectively unchanged peak process memory. Ordinary gzip-shard timing differences were small, not an established broad speedup. A 2048² gzip-shard slice touching 1089 inner chunks took 5627.52 ms with a maximum reader peak of 15.05 MiB. See the guide's full table, min–max ranges, raw samples and hardware/methodology before interpreting these numbers.
+
+## Read resource budgets
+
+Since `0.4.0`, native and in-memory typed arrays share configurable `store.ReadLimits`: 1 MiB metadata, 64 MiB encoded/decoded chunks, 64 MiB logical region data, 8388608 region elements, 16384 touched chunks, rank 64 and JSON nesting 64 by default. Region counts are checked without enumeration before result allocation; native files are size-checked on their opened handle before a fixed-length read. Oversized file inputs raise `fs.ReadLimitExceeded`, never missing-chunk fill values. Typed region/decode rejection returns `None`; missing data retains its fill behavior. HTTP uses the shared policy plus a 64 MiB cumulative encoded hydration cap and its existing stricter settings.
+
+Pass `read_limits=limits` to `MemoryStore::new`, `FileStore::new`, consolidated openers or `HttpStore::new`. Every policy cap must be positive; explicit increases are available for trusted workloads. These are input/work budgets, **not total-memory, streaming or concurrent-writer guarantees**. Raw in-memory map access and direct low-level codec/parser calls are caller-managed. See [configuration, failure semantics and regression tests](docs/RESOURCE_LIMITS.md). Run `moon run --target native cmd/budget_demo` for an executable rejection/recovery example.
 
 ## Design
 

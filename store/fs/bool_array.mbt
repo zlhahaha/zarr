@@ -12,7 +12,7 @@ pub async fn FileStore::open_bool(
   path : String,
 ) -> FileBoolArray? {
   guard self.open_array(path) is Some(metadata) else { return None }
-  let scratch = @store.MemoryStore::new()
+  let scratch = self.scratch()
   guard @array.open_bool_from_metadata(scratch, metadata, path) is Some(_) else {
     return None
   }
@@ -44,7 +44,7 @@ pub async fn FileBoolArray::read(
   indices : Array[Int],
 ) -> Bool? {
   guard self.chunk_coords(indices) is Some(coordinates) else { return None }
-  let scratch = @store.MemoryStore::new()
+  let scratch = self.store.scratch()
   guard @array.open_bool_from_metadata(scratch, self.metadata, self.path)
     is Some(array) else {
     return None
@@ -66,7 +66,7 @@ pub async fn FileBoolArray::write(
   value : Bool,
 ) -> Bool {
   guard self.chunk_coords(indices) is Some(coordinates) else { return false }
-  let scratch = @store.MemoryStore::new()
+  let scratch = self.store.scratch()
   guard @array.open_bool_from_metadata(scratch, self.metadata, self.path)
     is Some(array) else {
     return false
@@ -98,12 +98,21 @@ pub async fn FileBoolArray::read_region(
   guard @chunk.region_len(self.metadata, origin, extent) is Some(length) else {
     return None
   }
-  guard @chunk.region_chunks(self.metadata, origin, extent) is Some(pieces) else {
+  if !self.store.limits.allows_region(self.metadata, origin, extent) {
+    return None
+  }
+  guard @chunk.region_chunks(
+      self.metadata,
+      origin,
+      extent,
+      max_chunks=self.store.limits.max_chunks(),
+    )
+    is Some(pieces) else {
     return None
   }
   let result : Array[Bool] = Array::make(length, false)
   for piece in pieces {
-    let scratch = @store.MemoryStore::new()
+    let scratch = self.store.scratch()
     guard @array.open_bool_from_metadata(scratch, self.metadata, self.path)
       is Some(array) else {
       return None
@@ -152,11 +161,20 @@ pub async fn FileBoolArray::write_region(
   if values.length() != length {
     return false
   }
-  guard @chunk.region_chunks(self.metadata, origin, extent) is Some(pieces) else {
+  if !self.store.limits.allows_region(self.metadata, origin, extent) {
+    return false
+  }
+  guard @chunk.region_chunks(
+      self.metadata,
+      origin,
+      extent,
+      max_chunks=self.store.limits.max_chunks(),
+    )
+    is Some(pieces) else {
     return false
   }
   for piece in pieces {
-    let scratch = @store.MemoryStore::new()
+    let scratch = self.store.scratch()
     guard @array.open_bool_from_metadata(scratch, self.metadata, self.path)
       is Some(array) else {
       return false

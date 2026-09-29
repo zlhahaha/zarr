@@ -12,7 +12,7 @@ pub async fn FileStore::open_f32(
   path : String,
 ) -> FileF32Array? {
   guard self.open_array(path) is Some(metadata) else { return None }
-  let scratch = @store.MemoryStore::new()
+  let scratch = self.scratch()
   guard @array.open_f32_from_metadata(scratch, metadata, path) is Some(_) else {
     return None
   }
@@ -44,7 +44,7 @@ pub async fn FileF32Array::read(
   indices : Array[Int],
 ) -> Float? {
   guard self.chunk_coords(indices) is Some(coordinates) else { return None }
-  let scratch = @store.MemoryStore::new()
+  let scratch = self.store.scratch()
   guard @array.open_f32_from_metadata(scratch, self.metadata, self.path)
     is Some(array) else {
     return None
@@ -66,7 +66,7 @@ pub async fn FileF32Array::write(
   value : Float,
 ) -> Bool {
   guard self.chunk_coords(indices) is Some(coordinates) else { return false }
-  let scratch = @store.MemoryStore::new()
+  let scratch = self.store.scratch()
   guard @array.open_f32_from_metadata(scratch, self.metadata, self.path)
     is Some(array) else {
     return false

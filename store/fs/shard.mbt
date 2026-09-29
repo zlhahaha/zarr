@@ -54,6 +54,9 @@ async fn ShardSession::get_sharded_chunk(
     @shard.Absent => None
     @shard.Invalid => Some(b"")
     @shard.Data(at, length) => {
+      if length > self.store.limits.max_chunk_bytes() {
+        raise ReadLimitExceeded(key)
+      }
       let bytes = file.read_exactly_at(length, position=at)
       let stats = self.store.shard_metrics.val
       self.store.shard_metrics.val = {

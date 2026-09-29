@@ -12,6 +12,8 @@ pub struct HttpStore {
   mut cache_bytes : Int
   mut cache_entries : Int
   mut tick : UInt64
+  limits : @store.ReadLimits
+  max_hydration_bytes : Int
 }
 
 ///|
@@ -28,6 +30,8 @@ pub fn HttpStore::new(
   max_chunks? : Int = 1024,
   max_cache_bytes? : Int = 67108864,
   max_cache_entries? : Int = 4096,
+  read_limits? : @store.ReadLimits = @store.ReadLimits::defaults(),
+  max_hydration_bytes? : Int = 67108864,
 ) -> HttpStore? {
   if !(base_url.has_prefix("http://") || base_url.has_prefix("https://")) ||
     base_url.contains("?") ||
@@ -36,7 +40,8 @@ pub fn HttpStore::new(
     max_chunk_bytes <= 0 ||
     max_chunks <= 0 ||
     max_cache_bytes < 0 ||
-    max_cache_entries <= 0 {
+    max_cache_entries <= 0 ||
+    max_hydration_bytes <= 0 {
     return None
   }
   Some({
@@ -50,6 +55,8 @@ pub fn HttpStore::new(
     cache_bytes: 0,
     cache_entries: 0,
     tick: 0UL,
+    limits: read_limits,
+    max_hydration_bytes,
   })
 }
 
@@ -214,8 +221,14 @@ pub async fn HttpStore::hydrate_region(
   guard @chunk.array_metadata_key(@metadata.V3, path) is Some(v3_key) else {
     return None
   }
-  let v2 = self.fetch(v2_key, self.max_metadata_bytes)
-  let v3 = self.fetch(v3_key, self.max_metadata_bytes)
+  let metadata_limit = if self.max_metadata_bytes <
+    self.limits.max_metadata_bytes() {
+    self.max_metadata_bytes
+  } else {
+    self.limits.max_metadata_bytes()
+  }
+  let v2 = self.fetch(v2_key, metadata_limit)
+  let v3 = self.fetch(v3_key, metadata_limit)
   let (format, bytes) = match (v2, v3) {
     (Found(bytes), Missing) => (@metadata.V2, bytes)
     (Missing, Found(bytes)) => (@metadata.V3, bytes)
@@ -225,10 +238,13 @@ pub async fn HttpStore::hydrate_region(
     guard @chunk.group_metadata_key(format, path) is Some(group_key) else {
       return None
     }
-    match self.fetch(group_key, self.max_metadata_bytes) {
+    match self.fetch(group_key, metadata_limit) {
       Missing => ()
       _ => return None
     }
+  }
+  if !self.limits.allows_metadata(bytes) {
+    return None
   }
   let raw = @utf8.decode(bytes[:]) catch { _ => return None }
   guard @metadata.parse_array_metadata(raw) is Some(metadata) else {
@@ -237,10 +253,13 @@ pub async fn HttpStore::hydrate_region(
   if metadata.format != format {
     return None
   }
+  if !self.limits.allows_region(metadata, origin, extent) {
+    return None
+  }
   guard @chunk.region_len(metadata, origin, extent) is Some(length) else {
     return None
   }
-  let scratch = @store.MemoryStore::new()
+  let scratch = @store.MemoryStore::new(read_limits=self.limits)
   if !scratch.put_array_metadata(format, path, raw) {
     return None
   }
@@ -261,18 +280,35 @@ pub async fn HttpStore::hydrate_region(
     }
     count *= span
   }
-  guard @chunk.region_chunks(metadata, origin, extent) is Some(pieces) else {
+  guard @chunk.region_chunks(
+      metadata,
+      origin,
+      extent,
+      max_chunks=self.limits.max_chunks(),
+    )
+    is Some(pieces) else {
     return None
   }
+  let chunk_limit = if self.max_chunk_bytes < self.limits.max_chunk_bytes() {
+    self.max_chunk_bytes
+  } else {
+    self.limits.max_chunk_bytes()
+  }
+  let mut hydrated = 0
   for piece in pieces {
     guard @chunk.chunk_key(metadata, piece.coordinates, path) is Some(key) else {
       return None
     }
-    match self.fetch(key, self.max_chunk_bytes) {
-      Found(chunk) =>
+    match self.fetch(key, chunk_limit) {
+      Found(chunk) => {
+        if chunk.length() > self.max_hydration_bytes - hydrated {
+          return None
+        }
+        hydrated += chunk.length()
         if !scratch.put_chunk(metadata, piece.coordinates, path, chunk) {
           return None
         }
+      }
       Missing => ()
       Failed => return None
     }

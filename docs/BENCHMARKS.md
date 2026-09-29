@@ -2,6 +2,8 @@
 
 This benchmark measures ordinary multi-chunk rectangular reads and v3 sharding-indexed reads. It is a reproducible synthetic workload, **not evidence that large-scale scientific workloads or terabyte arrays have been fully performance-validated**. No speed or RSS threshold is enforced in CI.
 
+Version `0.4.0` adds [read resource budgets](RESOURCE_LIMITS.md). The documented benchmark selections fit their defaults. The full Windows table below measures the recorded `0.3.0` implementation baseline, not newly measured `0.4.0` performance; budget hardening is verified separately by regression tests and the existing cross-platform benchmark smoke profile. Policy caps are not substitutes for OS peak-memory measurements.
+
 ## Reproduce
 
 Requires `moonc >= 0.10.14`, a native C toolchain, Python 3.12 or newer, and the pinned independent data generator:

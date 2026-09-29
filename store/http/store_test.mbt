@@ -14,11 +14,15 @@ async test "HTTP hydration reads only a bounded remote region" {
   let fail_chunk = [false]
   let requests = [0]
   let found_requests = [0]
+  let chunk_requests = [0]
   @async.with_task_group() <| group => {
     group.spawn_bg(no_wait=true) <| () => {
       server.run_forever((request, _body, conn) => {
         requests[0] += 1
         let route = request.path[1:].to_owned()
+        if route.contains("/c/") {
+          chunk_requests[0] += 1
+        }
         let (files, key) = if route.has_prefix("v2/") {
           (v2_files, route[3:].to_owned())
         } else if route.has_prefix("v3z/") {
@@ -44,6 +48,20 @@ async test "HTTP hydration reads only a bounded remote region" {
     }
     let root = "http://127.0.0.1:\{server.addr.port()}"
     let url = "\{root}/v3"
+    guard @store.ReadLimits::new(max_region_elements=1) is Some(budget) else {
+      fail("limits")
+    }
+    guard @http.HttpStore::new(url, read_limits=budget) is Some(limited) else {
+      fail("limited HTTP store")
+    }
+    assert_true(limited.hydrate_region("science/image", [1], [2]) is None)
+    assert_eq(chunk_requests[0], 0)
+    guard @http.HttpStore::new(url, max_hydration_bytes=1)
+      is Some(tiny_download) else {
+      fail("hydration budget")
+    }
+    assert_true(tiny_download.hydrate_region("science/image", [1], [2]) is None)
+    assert_true(@http.HttpStore::new(url, max_hydration_bytes=0) is None)
     guard @http.HttpStore::new(url) is Some(remote) else { fail("HTTP store") }
     guard remote.hydrate_region("science/image", [1], [2]) is Some(cache) else {
       fail("hydrate")

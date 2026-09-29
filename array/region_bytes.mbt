@@ -21,7 +21,16 @@ fn read_region_bytes(
   if length > 2147483647 / element_size {
     return None
   }
-  guard @chunk.region_chunks(metadata, origin, extent) is Some(pieces) else {
+  if !store.read_limits().allows_region(metadata, origin, extent) {
+    return None
+  }
+  guard @chunk.region_chunks(
+      metadata,
+      origin,
+      extent,
+      max_chunks=store.read_limits().max_chunks(),
+    )
+    is Some(pieces) else {
     return None
   }
   let result = Bytes::make(length * element_size, b'\x00').to_array()
@@ -32,7 +41,7 @@ fn read_region_bytes(
     let raw = match store.get(key) {
       None => None
       Some(encoded) =>
-        match @codec.decode_chunk(compression, encoded, chunk_bytes) {
+        match decode_read_chunk(store, compression, encoded, chunk_bytes) {
           Some(decoded) => Some(decoded)
           None => return None
         }
@@ -86,7 +95,16 @@ fn write_region_bytes(
     values.length() != length * element_size {
     return false
   }
-  guard @chunk.region_chunks(metadata, origin, extent) is Some(pieces) else {
+  if !store.read_limits().allows_region(metadata, origin, extent) {
+    return false
+  }
+  guard @chunk.region_chunks(
+      metadata,
+      origin,
+      extent,
+      max_chunks=store.read_limits().max_chunks(),
+    )
+    is Some(pieces) else {
     return false
   }
   for piece in pieces {
@@ -102,7 +120,7 @@ fn write_region_bytes(
         Bytes::from_array(bytes[:])
       }
       Some(encoded) =>
-        match @codec.decode_chunk(compression, encoded, chunk_bytes) {
+        match decode_read_chunk(store, compression, encoded, chunk_bytes) {
           Some(decoded) => decoded
           None => return false
         }

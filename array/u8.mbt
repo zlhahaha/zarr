@@ -35,6 +35,9 @@ pub fn open_u8_bits_from_metadata(
   metadata : @metadata.ArrayMetadata,
   path : String,
 ) -> U8Array? {
+  if !store.read_limits().allows_array(metadata) {
+    return None
+  }
   guard @chunk.array_metadata_key(metadata.format, path) is Some(_) else {
     return None
   }
@@ -72,7 +75,12 @@ pub fn U8Array::read(self : U8Array, indices : Array[Int]) -> Byte? {
   match self.store.get(key) {
     None => Some(self.fill)
     Some(bytes) => {
-      guard @codec.decode_chunk(self.compression, bytes, self.chunk_len)
+      guard decode_read_chunk(
+          self.store,
+          self.compression,
+          bytes,
+          self.chunk_len,
+        )
         is Some(raw) else {
         return None
       }
@@ -92,7 +100,12 @@ pub fn U8Array::write(
   let raw = match self.store.get(key) {
     None => Bytes::make(self.chunk_len, self.fill)
     Some(bytes) => {
-      guard @codec.decode_chunk(self.compression, bytes, self.chunk_len)
+      guard decode_read_chunk(
+          self.store,
+          self.compression,
+          bytes,
+          self.chunk_len,
+        )
         is Some(raw) else {
         return false
       }

@@ -10,7 +10,7 @@ pub async fn FileStore::open_u32(
   path : String,
 ) -> FileU32Array? {
   guard self.open_array(path) is Some(metadata) else { return None }
-  let scratch = @store.MemoryStore::new()
+  let scratch = self.scratch()
   guard @array.open_u32_from_metadata(scratch, metadata, path) is Some(_) else {
     return None
   }

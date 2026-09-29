@@ -33,6 +33,9 @@ pub async fn FileStore::put_group_metadata(
     return false
   }
   if format == @metadata.V3 && self.get(key) is Some(bytes) {
+    if !self.limits.allows_metadata(bytes) {
+      return false
+    }
     let previous = @utf8.decode(bytes[:]) catch { _ => return false }
     if @metadata.parse_array_metadata(previous) is Some(_) {
       return false
@@ -117,6 +120,9 @@ pub async fn FileStore::open_group(
     (None, Some(bytes)) => (@metadata.V3, bytes)
     _ => return None
   }
+  if !self.limits.allows_metadata(bytes) {
+    return None
+  }
   let raw = @utf8.decode(bytes[:]) catch { _ => return None }
   guard @metadata.parse_group_metadata(raw) is Some(metadata) else {
     return None
@@ -133,6 +139,9 @@ pub async fn FileStore::open_group(
   let attributes = match self.get(attrs_key) {
     None => metadata.attributes
     Some(attrs_bytes) => {
+      if !self.limits.allows_metadata(attrs_bytes) {
+        return None
+      }
       let attrs_raw = @utf8.decode(attrs_bytes[:]) catch { _ => return None }
       guard @metadata.parse_attributes(attrs_raw) is Some(attrs) else {
         return None
@@ -164,7 +173,7 @@ async fn FileStore::attributes_scratch(
   if other_array || other_group {
     return None
   }
-  let scratch = @store.MemoryStore::new()
+  let scratch = self.scratch()
   if self.get(group_key) is Some(bytes) {
     scratch.put(group_key, bytes)
   }

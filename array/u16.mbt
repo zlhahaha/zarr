@@ -33,6 +33,9 @@ pub fn open_u16_bits_from_metadata(
   metadata : @metadata.ArrayMetadata,
   path : String,
 ) -> U16Array? {
+  if !store.read_limits().allows_array(metadata) {
+    return None
+  }
   guard @chunk.array_metadata_key(metadata.format, path) is Some(_) else {
     return None
   }
@@ -98,7 +101,12 @@ pub fn U16Array::read(self : U16Array, indices : Array[Int]) -> UInt16? {
   match self.store.get(key) {
     None => Some(self.fill)
     Some(encoded) => {
-      guard @codec.decode_chunk(self.compression, encoded, self.chunk_bytes)
+      guard decode_read_chunk(
+          self.store,
+          self.compression,
+          encoded,
+          self.chunk_bytes,
+        )
         is Some(raw) else {
         return None
       }
@@ -127,7 +135,13 @@ pub fn U16Array::write(
   let raw = match self.store.get(key) {
     None => self.encoded_fill()
     Some(encoded) =>
-      match @codec.decode_chunk(self.compression, encoded, self.chunk_bytes) {
+      match
+        decode_read_chunk(
+          self.store,
+          self.compression,
+          encoded,
+          self.chunk_bytes,
+        ) {
         Some(decoded) => decoded
         None => return false
       }

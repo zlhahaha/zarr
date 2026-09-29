@@ -23,6 +23,9 @@ pub fn put_group_metadata(
     return false
   }
   if format == @metadata.V3 && store.get(key) is Some(bytes) {
+    if !store.read_limits().allows_metadata(bytes) {
+      return false
+    }
     let previous = @utf8.decode(bytes[:]) catch { _ => return false }
     if @metadata.parse_array_metadata(previous) is Some(_) {
       return false
@@ -110,6 +113,9 @@ pub fn open_group(
     (None, Some(bytes)) => (@metadata.V3, bytes)
     _ => return None
   }
+  if !store.read_limits().allows_metadata(bytes) {
+    return None
+  }
   let raw = @utf8.decode(bytes[:]) catch { _ => return None }
   guard @metadata.parse_group_metadata(raw) is Some(group) else { return None }
   if group.format != format {
@@ -124,6 +130,9 @@ pub fn open_group(
   let attributes = match store.get(attrs_key) {
     None => group.attributes
     Some(attrs_bytes) => {
+      if !store.read_limits().allows_metadata(attrs_bytes) {
+        return None
+      }
       let attrs_raw = @utf8.decode(attrs_bytes[:]) catch { _ => return None }
       guard @metadata.parse_attributes(attrs_raw) is Some(attrs) else {
         return None
@@ -148,6 +157,9 @@ fn v2_node_exists(store : @store.MemoryStore, path : String) -> Bool {
     return false
   }
   if group is Some(bytes) {
+    if !store.read_limits().allows_metadata(bytes) {
+      return false
+    }
     let raw = @utf8.decode(bytes[:]) catch { _ => return false }
     guard @metadata.parse_group_metadata(raw) is Some(meta) else {
       return false
@@ -155,6 +167,9 @@ fn v2_node_exists(store : @store.MemoryStore, path : String) -> Bool {
     return meta.format == @metadata.V2
   }
   if array is Some(bytes) {
+    if !store.read_limits().allows_metadata(bytes) {
+      return false
+    }
     let raw = @utf8.decode(bytes[:]) catch { _ => return false }
     guard @metadata.parse_array_metadata(raw) is Some(meta) else {
       return false
@@ -202,12 +217,18 @@ pub fn read_attributes(
     match store.get(key) {
       None => Some(Json::empty_object())
       Some(bytes) => {
+        if !store.read_limits().allows_metadata(bytes) {
+          return None
+        }
         let raw = @utf8.decode(bytes[:]) catch { _ => return None }
         @metadata.parse_attributes(raw)
       }
     }
   } else {
     guard store.get(metadata_key) is Some(bytes) else { return None }
+    if !store.read_limits().allows_metadata(bytes) {
+      return None
+    }
     let raw = @utf8.decode(bytes[:]) catch { _ => return None }
     @metadata.v3_attributes(raw)
   }
@@ -239,6 +260,9 @@ pub fn put_attributes(
     true
   } else {
     guard store.get(metadata_key) is Some(bytes) else { return false }
+    if !store.read_limits().allows_metadata(bytes) {
+      return false
+    }
     let raw = @utf8.decode(bytes[:]) catch { _ => return false }
     guard @metadata.replace_v3_attributes(raw, attributes_raw) is Some(updated) else {
       return false

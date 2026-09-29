@@ -3,7 +3,7 @@
 This library is an early Mooncakes release. Requires a MoonBit toolchain with **`moonc >= 0.10.14`**; inspect it with `moon version --all`. Filesystem and HTTP packages require the native backend. Add the published module to an existing MoonBit project:
 
 ```sh
-moon add zlhahaha/zarr@0.3.0
+moon add zlhahaha/zarr@0.4.0
 ```
 
 For native examples importing `moonbitlang/async` or `moonbitlang/async/fs`, add a direct dependency as well:
@@ -19,7 +19,7 @@ A transitive dependency is not enough for your own package imports. Pure in-memo
 | Package | Purpose |
 | --- | --- |
 | `zlhahaha/zarr/metadata` | v2/v3 formats and parsed metadata |
-| `zlhahaha/zarr/store` | In-memory encoded-byte store |
+| `zlhahaha/zarr/store` | In-memory encoded-byte store and shared `ReadLimits` policy |
 | `zlhahaha/zarr/store/fs` | Native filesystem store and typed arrays |
 | `zlhahaha/zarr/store/http` | Native-only HTTP read-only regional hydration |
 | `zlhahaha/zarr/array` | In-memory typed arrays and creation helpers |
@@ -36,7 +36,7 @@ To reproduce this example independently of the repository, create a new project 
 ```sh
 moon new --user example zarr-quickstart
 cd zarr-quickstart
-moon add zlhahaha/zarr@0.3.0
+moon add zlhahaha/zarr@0.4.0
 moon add moonbitlang/async@0.20.3
 ```
 
@@ -145,6 +145,12 @@ Import `zlhahaha/zarr/store/http` as `@http` and `zlhahaha/zarr/array` as `@arra
 Both formats support regular chunk grids, safe logical paths, groups and attributes, boolean arrays and the ten numeric types above. v2 supports `.`/`/` chunk separators and C/F chunk order; v3 supports default and v2-compatible chunk keys plus the bytes serializer. Raw, gzip and zstd chunks are supported in both formats; zlib is supported in v2. A Blosc1 subset handles LZ4/LZ4HC, Zlib and Zstd frames with no shuffle, byte shuffle or bit shuffle, including incompressible memcpy frames and multiple internal blocks. LZ4 arrays can be created, opened and written with one-block Blosc1 frames; LZ4HC, Zlib and Zstd remain read-only. BloscLZ and Snappy are unsupported. Native filesystem reads also support the documented subset of v3 sharding-indexed; writes do not. Unsupported filters, storage transformers and codec chains are rejected rather than silently decoded incorrectly. Full-range `int64`/`uint64` fill values are preserved as exact JSON integers rather than rounded through floating point.
 
 Large reads and writes still buffer the requested region. A `FileStore` uses native async filesystem APIs and is not available on wasm-gc; `MemoryStore` works on the tested native and wasm-gc targets. See [Error handling](#error-handling) for return values, exceptions and non-atomic writes.
+
+## Resource budgets
+
+Version `0.4.0` adds `@store.ReadLimits::new(...)` (import `zlhahaha/zarr/store`) and the optional `read_limits=limits` constructor argument for memory/filesystem/HTTP stores and consolidated openers. Defaults are 1 MiB metadata, 64 MiB encoded/decoded chunks, 64 MiB logical region bytes, 8388608 elements, 16384 touched chunks, rank 64 and JSON nesting 64. All limits are checked together; zero/negative policy caps are invalid, not an opt-out. Native temporary memory views inherit custom policies.
+
+Oversized native metadata/encoded inputs raise `@fs.ReadLimitExceeded(key)` before allocating that input buffer. Region, declared decoded-size and JSON-depth rejection returns `None` from typed opening/reads; it is not a missing chunk. HTTP returns `None` and additionally defaults to 64 MiB cumulative encoded hydration (`max_hydration_bytes`). These controls are not a bound on total process memory; result buffers and conversions still allocate. Raw in-memory map and direct parser/codec calls remain caller-managed. See [RESOURCE_LIMITS.md](RESOURCE_LIMITS.md) for every setting, constructor example, native `catch` behavior and a runnable demo.
 
 Zstd decoding first checks the dependency's conservative frame-size bound against the declared uncompressed chunk length. Consequently, a valid frame without known content size may be rejected. Full Blosc support, sharded writes/HTTP hydration, consolidated-metadata writes, HTTP write access, cloud object-store adapters, additional dtypes, and general ndarray arithmetic are not implemented yet. See [ROADMAP.md](ROADMAP.md) and the [support table](../README.md#status).
 

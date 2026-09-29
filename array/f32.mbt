@@ -23,6 +23,9 @@ pub fn open_f32_from_metadata(
   metadata : @metadata.ArrayMetadata,
   path : String,
 ) -> F32Array? {
+  if !store.read_limits().allows_array(metadata) {
+    return None
+  }
   guard @chunk.array_metadata_key(metadata.format, path) is Some(_) else {
     return None
   }
@@ -75,7 +78,12 @@ pub fn F32Array::read(self : F32Array, indices : Array[Int]) -> Float? {
   match self.store.get(key) {
     None => Some(self.fill)
     Some(bytes) => {
-      guard @codec.decode_chunk(self.compression, bytes, self.chunk_bytes)
+      guard decode_read_chunk(
+          self.store,
+          self.compression,
+          bytes,
+          self.chunk_bytes,
+        )
         is Some(raw) else {
         return None
       }
@@ -104,7 +112,12 @@ pub fn F32Array::write(
   let raw = match self.store.get(key) {
     None => self.encoded_fill()
     Some(bytes) => {
-      guard @codec.decode_chunk(self.compression, bytes, self.chunk_bytes)
+      guard decode_read_chunk(
+          self.store,
+          self.compression,
+          bytes,
+          self.chunk_bytes,
+        )
         is Some(raw) else {
         return false
       }

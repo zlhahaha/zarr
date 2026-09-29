@@ -8,13 +8,22 @@ pub async fn FileI64Array::read_region(
   guard @chunk.region_len(self.metadata, origin, extent) is Some(length) else {
     return None
   }
-  guard @chunk.region_chunks(self.metadata, origin, extent) is Some(pieces) else {
+  if !self.store.limits.allows_region(self.metadata, origin, extent) {
+    return None
+  }
+  guard @chunk.region_chunks(
+      self.metadata,
+      origin,
+      extent,
+      max_chunks=self.store.limits.max_chunks(),
+    )
+    is Some(pieces) else {
     return None
   }
   let result : Array[Int64] = Array::make(length, 0L)
   let reader = self.store.shard_session()
   for piece in pieces {
-    let scratch = @store.MemoryStore::new()
+    let scratch = self.store.scratch()
     guard @array.open_i64_bits_from_metadata(scratch, self.metadata, self.path)
       is Some(array) else {
       return None
@@ -63,11 +72,20 @@ pub async fn FileI64Array::write_region(
   if values.length() != length {
     return false
   }
-  guard @chunk.region_chunks(self.metadata, origin, extent) is Some(pieces) else {
+  if !self.store.limits.allows_region(self.metadata, origin, extent) {
+    return false
+  }
+  guard @chunk.region_chunks(
+      self.metadata,
+      origin,
+      extent,
+      max_chunks=self.store.limits.max_chunks(),
+    )
+    is Some(pieces) else {
     return false
   }
   for piece in pieces {
-    let scratch = @store.MemoryStore::new()
+    let scratch = self.store.scratch()
     guard @array.open_i64_bits_from_metadata(scratch, self.metadata, self.path)
       is Some(array) else {
       return false

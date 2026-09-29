@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.0 — Read resource budgets and malformed-data regression checks
+
+- Add immutable configurable `store.ReadLimits` policies for metadata, encoded/decoded chunks, logical region bytes/elements, touched chunks, rank and JSON nesting. Defaults intentionally reject formerly accepted oversized inputs; all policy caps must be positive.
+- Check touched chunk counts without allocating coordinate lists; preflight typed regions before enumeration/result buffers and declared chunk sizes before fill/codec allocations. Native temporary memory views inherit their filesystem policy, including explicit increases.
+- Replace native unbounded read-to-EOF with same-handle size checks and fixed-length reads. Raise `fs.ReadLimitExceeded` for oversized inputs instead of treating them as absent chunks. Consolidated openers accept the policy.
+- Preflight JSON nesting in constant space before parsing, respecting quoted/escaped strings. Check encoded/expected decoded sizes before codec invocation. Preserve missing-fill semantics and explicit native I/O exceptions.
+- Apply shared policies to HTTP hydration and add a cumulative encoded-byte cap; keep existing stricter HTTP settings. Raw memory-map access and direct low-level codecs/parsers remain caller-managed.
+- Add executable native budget/recovery example and regression checks for huge selections, policy boundaries, rank/depth, scalar/empty regions, gzip expansion, truncated gzip/zstd/checked-zstd/Blosc frames, consolidated indexes, shard payloads and HTTP budgets. Input/work budgets do not guarantee total RAM, deadlines, transactional writes or streaming behavior.
+
 ## 0.3.0 — Measured native reads and operation-local shard indexes
 
 - Add reproducible synthetic benchmarks for v2 gzip, v3 raw/gzip, gzip shards, and an index-heavy raw shard layout. Measure multi-chunk slice wall time and native reader-process OS peak resident memory in fresh processes; verify every returned value. Keep raw samples, cache comparisons and measurement limits documented.

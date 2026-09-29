@@ -54,6 +54,9 @@ jobs:
       - name: Run native filesystem example
         if: matrix.target == 'native'
         run: moon run --target native cmd/native_demo
+      - name: Run native read-budget example
+        if: matrix.target == 'native'
+        run: moon run --target native cmd/budget_demo
       - name: Run Zarr v2 filesystem example
         if: matrix.target == 'native'
         run: moon run --target native cmd/v2_demo

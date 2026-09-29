@@ -10,6 +10,7 @@ pub struct FileStore {
   shard_index_cache_bytes : Int
   shard_index_cache_entries : Int
   shard_metrics : Ref[ShardReadStats]
+  limits : @store.ReadLimits
 }
 
 ///|
@@ -19,6 +20,7 @@ pub fn FileStore::new(
   root : String,
   shard_index_cache_bytes? : Int = 16777216,
   shard_index_cache_entries? : Int = 64,
+  read_limits? : @store.ReadLimits = @store.ReadLimits::defaults(),
 ) -> FileStore? {
   if root == "" || shard_index_cache_bytes < 0 || shard_index_cache_entries < 0 {
     None
@@ -32,6 +34,7 @@ pub fn FileStore::new(
       shard_index_cache_bytes,
       shard_index_cache_entries,
       shard_metrics: Ref(empty_shard_stats()),
+      limits: read_limits,
     })
   }
 }
@@ -39,9 +42,15 @@ pub fn FileStore::new(
 ///|
 /// Open a read-only Zarr v2 consolidated metadata snapshot. Chunk bytes still
 /// come from the filesystem; metadata comes only from `.zmetadata`.
-pub async fn FileStore::open_consolidated(root : String) -> FileStore? {
-  guard FileStore::new(root) is Some(plain) else { return None }
+pub async fn FileStore::open_consolidated(
+  root : String,
+  read_limits? : @store.ReadLimits = @store.ReadLimits::defaults(),
+) -> FileStore? {
+  guard FileStore::new(root, read_limits~) is Some(plain) else { return None }
   guard plain.get(".zmetadata") is Some(bytes) else { return None }
+  if !plain.limits.allows_metadata(bytes) {
+    return None
+  }
   let raw = @utf8.decode(bytes[:]) catch { _ => return None }
   guard @json.parse(raw) is Object(document) else { return None }
   guard document.get("zarr_consolidated_format") is Some(Number(version, ..)) else {
@@ -63,9 +72,15 @@ pub async fn FileStore::open_consolidated(root : String) -> FileStore? {
 ///|
 /// Open a read-only snapshot of the v3 inline consolidated-metadata
 /// convention. Metadata comes only from the root index; chunks remain on disk.
-pub async fn FileStore::open_consolidated_v3(root : String) -> FileStore? {
-  guard FileStore::new(root) is Some(plain) else { return None }
+pub async fn FileStore::open_consolidated_v3(
+  root : String,
+  read_limits? : @store.ReadLimits = @store.ReadLimits::defaults(),
+) -> FileStore? {
+  guard FileStore::new(root, read_limits~) is Some(plain) else { return None }
   guard plain.get("zarr.json") is Some(bytes) else { return None }
+  if !plain.limits.allows_metadata(bytes) {
+    return None
+  }
   let raw = @utf8.decode(bytes[:]) catch { _ => return None }
   guard @metadata.parse_group_metadata(raw) is Some(group) else { return None }
   if group.format != @metadata.V3 {
@@ -210,7 +225,15 @@ pub async fn FileStore::get(self : FileStore, key : String) -> Bytes? {
   if !@async_fs.exists(path) {
     return None
   }
-  Some(@async_fs.read_file(path).binary())
+  let file = @async_fs.open(path, mode=@async_fs.ReadOnly)
+  defer file.close()
+  let size = file.size()
+  if size < 0L || size > self.limits.key_limit(key).to_int64() {
+    raise ReadLimitExceeded(key)
+  }
+  // Use a fixed-length read on this handle, never an unbounded read-to-EOF.
+  // Concurrent shrinkage may raise an I/O error; concurrent growth is not read.
+  Some(file.read_exactly_at(size.to_int(), position=0L))
 }
 
 ///|
@@ -277,6 +300,9 @@ pub async fn FileStore::put_array_metadata(
     return false
   }
   if format == @metadata.V3 && self.get(key) is Some(bytes) {
+    if !self.limits.allows_metadata(bytes) {
+      return false
+    }
     let previous = @utf8.decode(bytes[:]) catch { _ => return false }
     if @metadata.parse_group_metadata(previous) is Some(_) {
       return false
@@ -310,12 +336,20 @@ pub async fn FileStore::open_array(
     (None, Some(bytes)) => (@metadata.V3, bytes)
     _ => return None
   }
+  if !self.limits.allows_metadata(bytes) {
+    return None
+  }
   let raw = @utf8.decode(bytes[:]) catch { _ => return None }
   guard @metadata.parse_array_metadata(raw) is Some(metadata) else {
     return None
   }
   if metadata.format == format {
-    @shard.prepare(metadata)
+    guard @shard.prepare(metadata) is Some(prepared) else { return None }
+    if self.limits.allows_array(prepared) {
+      Some(prepared)
+    } else {
+      None
+    }
   } else {
     None
   }

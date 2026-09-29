@@ -12,7 +12,7 @@ pub async fn FileStore::open_f64(
   path : String,
 ) -> FileF64Array? {
   guard self.open_array(path) is Some(metadata) else { return None }
-  let scratch = @store.MemoryStore::new()
+  let scratch = self.scratch()
   guard @array.open_f64_from_metadata(scratch, metadata, path) is Some(_) else {
     return None
   }
@@ -44,7 +44,7 @@ pub async fn FileF64Array::read(
   indices : Array[Int],
 ) -> Double? {
   guard self.chunk_coords(indices) is Some(coordinates) else { return None }
-  let scratch = @store.MemoryStore::new()
+  let scratch = self.store.scratch()
   guard @array.open_f64_from_metadata(scratch, self.metadata, self.path)
     is Some(array) else {
     return None
@@ -66,7 +66,7 @@ pub async fn FileF64Array::write(
   value : Double,
 ) -> Bool {
   guard self.chunk_coords(indices) is Some(coordinates) else { return false }
-  let scratch = @store.MemoryStore::new()
+  let scratch = self.store.scratch()
   guard @array.open_f64_from_metadata(scratch, self.metadata, self.path)
     is Some(array) else {
     return false

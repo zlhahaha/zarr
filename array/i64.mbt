@@ -34,6 +34,9 @@ pub fn open_i64_bits_from_metadata(
   metadata : @metadata.ArrayMetadata,
   path : String,
 ) -> I64Array? {
+  if !store.read_limits().allows_array(metadata) {
+    return None
+  }
   guard @chunk.array_metadata_key(metadata.format, path) is Some(_) else {
     return None
   }
@@ -89,7 +92,12 @@ pub fn I64Array::read(self : I64Array, indices : Array[Int]) -> Int64? {
   match self.store.get(key) {
     None => Some(self.fill)
     Some(bytes) => {
-      guard @codec.decode_chunk(self.compression, bytes, self.chunk_bytes)
+      guard decode_read_chunk(
+          self.store,
+          self.compression,
+          bytes,
+          self.chunk_bytes,
+        )
         is Some(raw) else {
         return None
       }
@@ -118,7 +126,12 @@ pub fn I64Array::write(
   let raw = match self.store.get(key) {
     None => self.encoded_fill()
     Some(bytes) => {
-      guard @codec.decode_chunk(self.compression, bytes, self.chunk_bytes)
+      guard decode_read_chunk(
+          self.store,
+          self.compression,
+          bytes,
+          self.chunk_bytes,
+        )
         is Some(raw) else {
         return false
       }

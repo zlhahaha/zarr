@@ -17,7 +17,7 @@ pub async fn FileStore::open_u16(
     metadata.data_type == "uint16" else {
     return None
   }
-  let scratch = @store.MemoryStore::new()
+  let scratch = self.scratch()
   guard @array.open_u16_from_metadata(scratch, metadata, path) is Some(_) else {
     return None
   }
@@ -49,7 +49,7 @@ pub async fn FileU16Array::read(
   indices : Array[Int],
 ) -> UInt16? {
   guard self.chunk_coords(indices) is Some(coordinates) else { return None }
-  let scratch = @store.MemoryStore::new()
+  let scratch = self.store.scratch()
   guard @array.open_u16_bits_from_metadata(scratch, self.metadata, self.path)
     is Some(array) else {
     return None
@@ -71,7 +71,7 @@ pub async fn FileU16Array::write(
   value : UInt16,
 ) -> Bool {
   guard self.chunk_coords(indices) is Some(coordinates) else { return false }
-  let scratch = @store.MemoryStore::new()
+  let scratch = self.store.scratch()
   guard @array.open_u16_bits_from_metadata(scratch, self.metadata, self.path)
     is Some(array) else {
     return false
