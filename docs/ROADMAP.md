@@ -40,7 +40,7 @@ Partial implementation: `store/http` can hydrate only ordinary v2/v3 metadata an
 
 ## Stage 4 — Release and maintenance
 
-CI covers native check/build/test, examples and benchmark smoke reproduction on Linux, macOS and Windows, plus wasm-gc check/build/test and the in-memory example on Linux. Release packaging and Python bidirectional interoperability run on Linux. A deterministic property test checks 120 N-dimensional chunk/region partitions on native and wasm-gc. Mooncakes `0.1.0`, `0.2.0` and `0.3.0` are published; the `0.4.0` milestone adds read budgets and malformed-input regression checks. Exhaustive fuzzing and broader real-world performance validation remain open.
+CI covers native check/build/test, examples and benchmark smoke reproduction on Linux, macOS and Windows, plus wasm-gc check/build/test and the in-memory example on Linux. Release packaging and Python bidirectional interoperability run on Linux. A deterministic property test checks 120 N-dimensional chunk/region partitions on native and wasm-gc. Mooncakes `0.1.0`, `0.2.0`, `0.3.0` and `0.4.0` are published; the `0.4.0` milestone adds read budgets and malformed-input regression checks and passed independent published-package consumer verification. Exhaustive fuzzing and broader real-world performance validation remain open.
 
 - Public Mooncakes release with versioned API docs, installation snippet, examples, changelog and support matrix.
 - Linux/macOS/Windows and supported MoonBit backends in CI; fuzz/property tests for metadata and chunk boundaries.
