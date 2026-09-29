@@ -6,7 +6,7 @@ A MoonBit implementation of the Zarr v2 and v3 storage formats for chunked N-dim
 
 ## Status
 
-Early Mooncakes release (version `0.4.0`). The library can read and write `bool`, signed/unsigned 8/16/32/64-bit integers, and `float32`/`float64` arrays in memory and on native filesystems, including element access, rectangular slices, missing-chunk fill values and edge chunks. It supports raw chunks and gzip/zstd in both formats, plus zlib in v2, and a documented Blosc subset. Groups and attributes can be read and written for both formats. Native filesystem arrays can also **read** v3 sharding-indexed stores through the same typed API; sharded writes are not supported. A native-only HTTP adapter can download ordinary metadata and encoded chunks touched by a bounded rectangle into a `MemoryStore`; it does not hydrate shards. Rectangular slices batch file I/O and codec work by touched chunk, but still buffer the requested result and are not a streaming typed-array interface. Use it for the documented subset only; other dtypes/codecs and cloud object-store adapters are not implemented yet.
+Early Mooncakes release (version `0.4.0`); `0.5.0` adds single-key safe filesystem replacement and is prepared for publication. The library can read and write `bool`, signed/unsigned 8/16/32/64-bit integers, and `float32`/`float64` arrays in memory and on native filesystems, including element access, rectangular slices, missing-chunk fill values and edge chunks. It supports raw chunks and gzip/zstd in both formats, plus zlib in v2, and a documented Blosc subset. Groups and attributes can be read and written for both formats. Native filesystem arrays can also **read** v3 sharding-indexed stores through the same typed API; sharded writes are not supported. A native-only HTTP adapter can download ordinary metadata and encoded chunks touched by a bounded rectangle into a `MemoryStore`; it does not hydrate shards. Rectangular slices batch file I/O and codec work by touched chunk, but still buffer the requested result and are not a streaming typed-array interface. Use it for the documented subset only; other dtypes/codecs and cloud object-store adapters are not implemented yet.
 
 Float32/float64 fill values also support the standard JSON strings `"NaN"`, `"Infinity"`, and `"-Infinity"`. Creating an array with any NaN writes the canonical `"NaN"` fill value; v3 payload-specific hexadecimal NaN fills are not supported.
 
@@ -15,6 +15,7 @@ Float32/float64 fill values also support the standard JSON strings `"NaN"`, `"In
 | Parse regular-grid array metadata | Yes, common string dtypes | Yes, common string data types |
 | Metadata and chunk keys | `.` and `/` separators | default and v2-compatible encodings |
 | Raw encoded chunk storage | Memory and native filesystem | Memory and native filesystem |
+| Safe single-key filesystem replacement | Native: exclusive sibling staging + replace | Native: exclusive sibling staging + replace |
 | `bool` element and slice I/O | Memory and native filesystem | Memory and native filesystem; bytes codec |
 | `uint8` element and slice I/O | Memory and native filesystem; C/F order | Memory and native filesystem; bytes codec |
 | `int8` element and slice I/O (`Int` API, range-checked) | Memory and native filesystem; C/F order | Memory and native filesystem; bytes codec |
@@ -45,7 +46,7 @@ Requires a MoonBit toolchain with **`moonc >= 0.10.14`**. Check the compiler ver
 Add the published module to a MoonBit project:
 
 ```sh
-moon add zlhahaha/zarr@0.4.0
+moon add zlhahaha/zarr@0.5.0
 ```
 
 For native filesystem/HTTP examples that import `moonbitlang/async` or its subpackages, also add it as a **direct module dependency**:
@@ -65,9 +66,10 @@ moon update
 moon run --target wasm-gc cmd/main
 moon run --target native cmd/native_demo
 moon run --target native cmd/v2_demo
+moon run --target native cmd/budget_demo
 ```
 
-The native examples create temporary v3 and v2 stores, reopen them, verify slice values, and clean up after a successful run. The repository already declares the direct `async` dependency, so `moon update` is sufficient after cloning. See [docs/USAGE.md](docs/USAGE.md) for typed API examples and limits.
+The native examples create temporary stores, verify slice values or budget rejection, and clean up after a successful run. The v3 filesystem example also overwrites existing compressed chunks through the safe replacement path. The repository already declares the direct `async` dependency, so `moon update` is sufficient after cloning. See [docs/USAGE.md](docs/USAGE.md) for typed API examples and limits.
 
 ## Build and run
 
@@ -107,6 +109,12 @@ In the recorded Windows five-trial run, the index-heavy 256² case fell from 270
 Since `0.4.0`, native and in-memory typed arrays share configurable `store.ReadLimits`: 1 MiB metadata, 64 MiB encoded/decoded chunks, 64 MiB logical region data, 8388608 region elements, 16384 touched chunks, rank 64 and JSON nesting 64 by default. Region counts are checked without enumeration before result allocation; native files are size-checked on their opened handle before a fixed-length read. Oversized file inputs raise `fs.ReadLimitExceeded`, never missing-chunk fill values. Typed region/decode rejection returns `None`; missing data retains its fill behavior. HTTP uses the shared policy plus a 64 MiB cumulative encoded hydration cap and its existing stricter settings.
 
 Pass `read_limits=limits` to `MemoryStore::new`, `FileStore::new`, consolidated openers or `HttpStore::new`. Every policy cap must be positive; explicit increases are available for trusted workloads. These are input/work budgets, **not total-memory, streaming or concurrent-writer guarantees**. Raw in-memory map access and direct low-level codec/parser calls are caller-managed. See [configuration, failure semantics and regression tests](docs/RESOURCE_LIMITS.md). Run `moon run --target native cmd/budget_demo` for an executable rejection/recovery example.
+
+## Filesystem write safety
+
+Since `0.5.0`, `FileStore::put` writes to an exclusively created `.zarr-tmp-*` file in the destination's directory. It completes the data-synchronized write and closes the handle before replacing the destination by rename; it never deletes or truncates the old destination as a fallback. This path also applies to ordinary chunks, metadata and attributes written through the native typed APIs. A pre-replacement write/rename failure leaves the previous target intact (or absent if new) and cleans up only the owned temporary file. Cooperative cancellation runs protected cleanup; a replacement already in progress can complete despite cancellation.
+
+This is **single-key replacement, not a multi-chunk transaction, concurrent read-modify-write lock, whole-store snapshot or power-loss durability guarantee**. Safe visibility depends on the filesystem's same-directory rename semantics. Cleanup failure raises `fs.WriteCleanupFailed` with the temporary path and diagnostic; forced termination may leave staging files. Replacement creates a new file rather than preserving inode identity, hard links or custom permissions. See [failure contracts, recovery and reproducible tests](docs/WRITE_SAFETY.md).
 
 ## Design
 

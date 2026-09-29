@@ -20,6 +20,16 @@ async fn main {
     is Some(pixels) else {
     abort("array creation failed")
   }
+  // Write initial data, then replace these existing chunk files through the
+  // filesystem store's single-key staging/rename path.
+  if !pixels.write_region([0, 1], [2, 2], [
+      (10 : UInt16),
+      (20 : UInt16),
+      (30 : UInt16),
+      (40 : UInt16),
+    ]) {
+    abort("initial slice write failed")
+  }
   if !pixels.write_region([0, 1], [2, 2], [
       (1000 : UInt16),
       (2000 : UInt16),

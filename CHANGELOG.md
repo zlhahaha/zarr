@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.0 — Safe single-key filesystem replacement
+
+- Replace direct destination truncation with exclusive sibling `.zarr-tmp-*` staging, complete data-synchronized writes, handle closure and replacement rename. Ordinary native chunks, metadata and attributes share this path; no delete-then-rename fallback is used.
+- Retry temporary-name collisions up to 128 attempts without opening/truncating or deleting foreign files. Handle concurrent parent-directory creation without swallowing an existing non-directory error.
+- Register owned-temp cleanup with `errdefer` and protect acquisition, commit and cleanup from cancellation at ownership boundaries. A commit already in progress can complete despite cancellation; completed keys are not rolled back.
+- Add `fs.WriteCleanupFailed(temporary_path, diagnostic)` when cleanup fails; this error supersedes the original operation failure and exposes the orphan path. Forced termination can leave temporary files; no automatic orphan sweeper is provided.
+- Add 13 write-safety regressions: partial writes/commit failures on existing and absent keys, collisions/exhaustion, creation/cleanup failures, cooperative cancellation, protected commit, actual rename rejection, replacement lengths/empty values, retained reader handles, concurrent writers and partial multi-chunk failure. Update the native v3 example to overwrite existing compressed chunks.
+- Document the filesystem-dependent single-key visibility contract, new-file identity/permissions and symlink/hard-link behavior, recovery, staging space requirements and explicit exclusions: no multi-key transaction, write lock, snapshot or power-loss durability guarantee. Existing measured read performance remains the `0.3.0` baseline.
+
 ## 0.4.0 — Read resource budgets and malformed-data regression checks
 
 - Add immutable configurable `store.ReadLimits` policies for metadata, encoded/decoded chunks, logical region bytes/elements, touched chunks, rank and JSON nesting. Defaults intentionally reject formerly accepted oversized inputs; all policy caps must be positive.

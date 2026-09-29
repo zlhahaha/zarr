@@ -237,7 +237,9 @@ pub async fn FileStore::get(self : FileStore, key : String) -> Bytes? {
 }
 
 ///|
-/// Write a key and create parent directories as needed.
+/// Write a key through an exclusively created sibling temporary file, then
+/// replace the destination after the complete write and handle closure.
+/// I/O errors propagate; this is not a multi-key transaction or durability guarantee.
 pub async fn FileStore::put(
   self : FileStore,
   key : String,
@@ -255,13 +257,15 @@ pub async fn FileStore::put(
     None => self.root
   }
   if !@async_fs.exists(parent) {
-    @async_fs.mkdir(parent, recursive=true)
+    @async_fs.mkdir(parent, recursive=true) catch {
+      @os_error.OSError(_) as err if err.is_EEXIST() =>
+        if @async_fs.kind(parent) != @async_fs.Directory {
+          raise err
+        }
+      err => raise err
+    }
   }
-  @async_fs.write_file(
-    path,
-    value as &@io.Data,
-    create_mode=@async_fs.CreateOrTruncate,
-  )
+  put_file_safely(path, parent, value)
   true
 }
 

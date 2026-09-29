@@ -7,13 +7,14 @@ import {
   "zlhahaha/zarr/shard",
   "zlhahaha/zarr/hierarchy",
   "moonbitlang/async/fs" @async_fs,
-  "moonbitlang/async/io",
+  "moonbitlang/async",
+  "moonbitlang/async/os_error",
+  "moonbitlang/core/random",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/json",
 }
 
 import {
-  "moonbitlang/async",
   "zlhahaha/zarr/codec",
 } for "test"
 

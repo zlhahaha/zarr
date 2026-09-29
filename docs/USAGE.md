@@ -3,7 +3,7 @@
 This library is an early Mooncakes release. Requires a MoonBit toolchain with **`moonc >= 0.10.14`**; inspect it with `moon version --all`. Filesystem and HTTP packages require the native backend. Add the published module to an existing MoonBit project:
 
 ```sh
-moon add zlhahaha/zarr@0.4.0
+moon add zlhahaha/zarr@0.5.0
 ```
 
 For native examples importing `moonbitlang/async` or `moonbitlang/async/fs`, add a direct dependency as well:
@@ -27,7 +27,7 @@ A transitive dependency is not enough for your own package imports. Pure in-memo
 | `zlhahaha/zarr/shard` | Internal v3 sharding layout and index validation used by the native filesystem adapter |
 | `zlhahaha/zarr/hierarchy` | In-memory group and attribute operations |
 
-The repository contains three executable examples. Run `moon run --target wasm-gc cmd/main` for a portable in-memory v3 array, `moon run --target native cmd/native_demo` for a zstd-compressed v3 array on disk, or `moon run --target native cmd/v2_demo` for a gzip-compressed, big-endian v2 array on disk. Both native examples create a temporary store, reopen it, verify a slice, and remove the temporary store. Each example exits unsuccessfully if a check fails.
+The repository contains four runnable usage examples: `moon run --target wasm-gc cmd/main` for a portable in-memory v3 array, `moon run --target native cmd/native_demo` for zstd-compressed v3 creation and replacement of existing chunks, `moon run --target native cmd/v2_demo` for a gzip-compressed big-endian v2 array, and `moon run --target native cmd/budget_demo` for resource-budget rejection and recovery. The native examples create and remove their own temporary stores after a successful run. Each example exits unsuccessfully if a check fails.
 
 ## Native array example
 
@@ -182,4 +182,6 @@ async fn print_metadata(store : @fs.FileStore) -> Unit {
 
 The helper logs and handles an exception locally; it does not change the library's error contract. Wrap typed calls in `catch` similarly when your application needs recovery, or leave exceptions to propagate when the operation must fail.
 
-A region write spanning multiple chunks is **not atomic**: if a later chunk returns `false` or raises an exception, earlier chunks may already be saved. Catching an exception does not roll back those writes. Temporary-store cleanup can itself fail and is another filesystem operation to handle when needed.
+Since `0.5.0`, individual native keys are written through an exclusively created sibling temporary file, a complete data-synchronized write, handle closure and same-directory replacement rename. Failure before replacement does not truncate the destination. Cooperative cancellation cleans up staging; cancellation during protected replacement can still result in a committed key. If cleanup itself fails, `fs.WriteCleanupFailed(temporary_path, diagnostic)` supersedes the original error and identifies the leftover file. See [WRITE_SAFETY.md](WRITE_SAFETY.md) for recovery guidance and the full failure contract.
+
+A region write spanning multiple chunks is still **not atomic**: if a later chunk returns `false` or raises an exception, earlier chunks may already be saved. Catching an exception does not roll back those writes. This also applies to multi-key metadata/group creation. Individual replacement is not a lock, snapshot or crash-durability promise. Temporary-store cleanup can itself fail and is another filesystem operation to handle when needed.
