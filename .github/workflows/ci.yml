@@ -60,6 +60,9 @@ jobs:
       - name: Run Zarr v2 filesystem example
         if: matrix.target == 'native'
         run: moon run --target native cmd/v2_demo
+      - name: Run 3D image / 4D feature example
+        if: matrix.target == 'native'
+        run: moon run --target native cmd/nd_demo
       - name: Validate release archive
         if: matrix.os == 'ubuntu-latest' && matrix.target == 'native'
         run: moon package --list
@@ -79,6 +82,11 @@ jobs:
       - name: Install zarr-python test oracle
         if: matrix.target == 'native'
         run: python -m pip install zarr==3.4.0 numpy==2.5.3
+      - name: Verify 3D/4D MoonBit writes with zarr-python
+        if: matrix.target == 'native'
+        run: |
+          moon run --target native cmd/nd_interop
+          python scripts/verify_nd_roundtrip.py
       - name: Reproduce native read benchmarks (smoke, no speed threshold)
         if: matrix.target == 'native'
         run: python scripts/benchmark_reads.py --quick --trials 2 --work-dir _build/bench-ci --output _build/bench-ci.json
