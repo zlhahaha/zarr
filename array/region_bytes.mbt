@@ -46,25 +46,46 @@ fn read_region_bytes(
           None => return None
         }
     }
-    guard @chunk.region_len(metadata, piece.origin, piece.extent)
-      is Some(piece_len) else {
+    let chunk_origin = piece.coordinates.mapi(fn(axis, coordinate) {
+      coordinate * metadata.chunk_shape[axis]
+    })
+    if !@chunk.copy_region_spans(
+        chunk_origin,
+        metadata.chunk_shape,
+        origin,
+        extent,
+        piece.origin,
+        piece.extent,
+        fn(input, output, count, stride) {
+          match raw {
+            None =>
+              for i in 0..<(count * element_size) {
+                result[output * element_size + i] = fill_element[i %
+                  element_size]
+              }
+            Some(decoded) =>
+              if stride == 1 {
+                for i in 0..<(count * element_size) {
+                  result[output * element_size + i] = decoded[input *
+                    element_size +
+                    i]
+                }
+              } else {
+                for i in 0..<count {
+                  for byte in 0..<element_size {
+                    result[(output + i) * element_size + byte] = decoded[(
+                        input + i * stride
+                      ) *
+                      element_size +
+                      byte]
+                  }
+                }
+              }
+          }
+        },
+        source_fortran=metadata.order == "F",
+      ) {
       return None
-    }
-    for linear in 0..<piece_len {
-      let indices = @chunk.region_coords(piece.origin, piece.extent, linear)
-      guard @chunk.region_index(origin, extent, indices) is Some(output_index) else {
-        return None
-      }
-      guard @chunk.element_location(metadata, indices, path)
-        is Some((_, input_index)) else {
-        return None
-      }
-      for byte_index in 0..<element_size {
-        result[output_index * element_size + byte_index] = match raw {
-          None => fill_element[byte_index]
-          Some(decoded) => decoded[input_index * element_size + byte_index]
-        }
-      }
     }
   }
   Some(Bytes::from_array(result[:]))

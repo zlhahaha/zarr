@@ -40,19 +40,23 @@ pub async fn FileU8Array::read_region(
         }
       None => ()
     }
-    guard @chunk.region_len(self.metadata, piece.origin, piece.extent)
-      is Some(piece_len) else {
-      return None
-    }
     guard array.read_region(piece.origin, piece.extent) is Some(piece_values) else {
       return None
     }
-    for linear in 0..<piece_len {
-      let indices = @chunk.region_coords(piece.origin, piece.extent, linear)
-      guard @chunk.region_index(origin, extent, indices) is Some(index) else {
-        return None
-      }
-      result[index] = piece_values[linear]
+    if !@chunk.copy_region_spans(
+        piece.origin,
+        piece.extent,
+        origin,
+        extent,
+        piece.origin,
+        piece.extent,
+        fn(source, destination, count, _stride) {
+          for i in 0..<count {
+            result[destination + i] = piece_values[source + i]
+          }
+        },
+      ) {
+      return None
     }
   }
   Some(Bytes::from_array(result[:]))
@@ -179,19 +183,23 @@ pub async fn FileF32Array::read_region(
         }
       None => ()
     }
-    guard @chunk.region_len(self.metadata, piece.origin, piece.extent)
-      is Some(piece_len) else {
-      return None
-    }
     guard array.read_region(piece.origin, piece.extent) is Some(piece_values) else {
       return None
     }
-    for linear in 0..<piece_len {
-      let indices = @chunk.region_coords(piece.origin, piece.extent, linear)
-      guard @chunk.region_index(origin, extent, indices) is Some(index) else {
-        return None
-      }
-      result[index] = piece_values[linear]
+    if !@chunk.copy_region_spans(
+        piece.origin,
+        piece.extent,
+        origin,
+        extent,
+        piece.origin,
+        piece.extent,
+        fn(source, destination, count, _stride) {
+          for i in 0..<count {
+            result[destination + i] = piece_values[source + i]
+          }
+        },
+      ) {
+      return None
     }
   }
   Some(result)
@@ -314,19 +322,23 @@ pub async fn FileF64Array::read_region(
         }
       None => ()
     }
-    guard @chunk.region_len(self.metadata, piece.origin, piece.extent)
-      is Some(piece_len) else {
-      return None
-    }
     guard array.read_region(piece.origin, piece.extent) is Some(piece_values) else {
       return None
     }
-    for linear in 0..<piece_len {
-      let indices = @chunk.region_coords(piece.origin, piece.extent, linear)
-      guard @chunk.region_index(origin, extent, indices) is Some(index) else {
-        return None
-      }
-      result[index] = piece_values[linear]
+    if !@chunk.copy_region_spans(
+        piece.origin,
+        piece.extent,
+        origin,
+        extent,
+        piece.origin,
+        piece.extent,
+        fn(source, destination, count, _stride) {
+          for i in 0..<count {
+            result[destination + i] = piece_values[source + i]
+          }
+        },
+      ) {
+      return None
     }
   }
   Some(result)
@@ -449,19 +461,23 @@ pub async fn FileI32Array::read_region(
         }
       None => ()
     }
-    guard @chunk.region_len(self.metadata, piece.origin, piece.extent)
-      is Some(piece_len) else {
-      return None
-    }
     guard array.read_region(piece.origin, piece.extent) is Some(piece_values) else {
       return None
     }
-    for linear in 0..<piece_len {
-      let indices = @chunk.region_coords(piece.origin, piece.extent, linear)
-      guard @chunk.region_index(origin, extent, indices) is Some(index) else {
-        return None
-      }
-      result[index] = piece_values[linear]
+    if !@chunk.copy_region_spans(
+        piece.origin,
+        piece.extent,
+        origin,
+        extent,
+        piece.origin,
+        piece.extent,
+        fn(source, destination, count, _stride) {
+          for i in 0..<count {
+            result[destination + i] = piece_values[source + i]
+          }
+        },
+      ) {
+      return None
     }
   }
   Some(result)
@@ -584,19 +600,23 @@ pub async fn FileU16Array::read_region(
         }
       None => ()
     }
-    guard @chunk.region_len(self.metadata, piece.origin, piece.extent)
-      is Some(piece_len) else {
-      return None
-    }
     guard array.read_region(piece.origin, piece.extent) is Some(piece_values) else {
       return None
     }
-    for linear in 0..<piece_len {
-      let indices = @chunk.region_coords(piece.origin, piece.extent, linear)
-      guard @chunk.region_index(origin, extent, indices) is Some(index) else {
-        return None
-      }
-      result[index] = piece_values[linear]
+    if !@chunk.copy_region_spans(
+        piece.origin,
+        piece.extent,
+        origin,
+        extent,
+        piece.origin,
+        piece.extent,
+        fn(source, destination, count, _stride) {
+          for i in 0..<count {
+            result[destination + i] = piece_values[source + i]
+          }
+        },
+      ) {
+      return None
     }
   }
   Some(result)
