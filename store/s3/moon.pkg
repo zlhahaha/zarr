@@ -1,0 +1,24 @@
+import {
+  "zlhahaha/zarr/store/http",
+  "zlhahaha/zarr/store",
+  "zlhahaha/zarr/metadata",
+  "moonbitlang/x/crypto",
+  "moonbitlang/x/time",
+  "moonbitlang/core/encoding/utf8",
+}
+
+import {
+  "zlhahaha/zarr/store/fs",
+  "zlhahaha/zarr/array",
+  "moonbitlang/async",
+  "moonbitlang/async/http" @client_http,
+  "moonbitlang/async/socket",
+  "moonbitlang/async/io",
+  "moonbitlang/core/string",
+} for "test"
+
+supported_targets = "native"
+
+options(
+  "native-stub": [ "clock.c" ],
+)

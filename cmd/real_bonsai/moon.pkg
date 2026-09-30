@@ -1,0 +1,11 @@
+import {
+  "zlhahaha/zarr/store/s3",
+  "zlhahaha/zarr/array",
+  "zlhahaha/zarr/chunk",
+  "moonbitlang/async",
+  "moonbitlang/core/env",
+}
+
+pkgtype(kind: "executable")
+
+supported_targets = "native"

@@ -1,9 +1,9 @@
 # Using Zarr from MoonBit
 
-This library is an early Mooncakes release. Requires a MoonBit toolchain with **`moonc >= 0.10.14`**; inspect it with `moon version --all`. Filesystem and HTTP packages require the native backend. Add the published module to an existing MoonBit project:
+This library is an early Mooncakes release. Requires a MoonBit toolchain with **`moonc >= 0.10.14`**; inspect it with `moon version --all`. Filesystem, HTTP and S3 packages require the native backend. Add the published module to an existing MoonBit project:
 
 ```sh
-moon add zlhahaha/zarr@0.6.0
+moon add zlhahaha/zarr@0.7.0
 ```
 
 For native examples importing `moonbitlang/async` or `moonbitlang/async/fs`, add a direct dependency as well:
@@ -21,10 +21,11 @@ A transitive dependency is not enough for your own package imports. Pure in-memo
 | `zlhahaha/zarr/metadata` | v2/v3 formats and parsed metadata |
 | `zlhahaha/zarr/store` | In-memory encoded-byte store and shared `ReadLimits` policy |
 | `zlhahaha/zarr/store/fs` | Native filesystem store and typed arrays |
-| `zlhahaha/zarr/store/http` | Native-only HTTP read-only regional hydration |
+| `zlhahaha/zarr/store/http` | Native-only HTTP read-only ordinary/sharded regional hydration |
+| `zlhahaha/zarr/store/s3` | Native-only S3-compatible read-only adapter with optional SigV4 credentials |
 | `zlhahaha/zarr/array` | In-memory typed arrays and creation helpers |
 | `zlhahaha/zarr/codec` | Compression choices (`Raw`, `Gzip`, `Zlib`, `Zstd`, `BloscLz4`) |
-| `zlhahaha/zarr/shard` | Internal v3 sharding layout and index validation used by the native filesystem adapter |
+| `zlhahaha/zarr/shard` | Internal v3 sharding layout and index validation shared by filesystem/HTTP/S3 readers |
 | `zlhahaha/zarr/hierarchy` | In-memory group and attribute operations |
 
 The repository contains five runnable usage examples: `moon run --target wasm-gc cmd/main` for a portable in-memory v3 array, `moon run --target native cmd/native_demo` for zstd-compressed v3 creation and replacement of existing chunks, `moon run --target native cmd/v2_demo` for a gzip-compressed big-endian v2 array, `moon run --target native cmd/nd_demo` for a compressed 3D image volume and 4D floating feature tensor, and `moon run --target native cmd/budget_demo` for resource-budget rejection and recovery. The native examples create and remove their own temporary stores after a successful run. Each example exits unsuccessfully if a check fails.
@@ -38,7 +39,7 @@ To reproduce this example independently of the repository, create a new project 
 ```sh
 moon new --user example zarr-quickstart
 cd zarr-quickstart
-moon add zlhahaha/zarr@0.6.0
+moon add zlhahaha/zarr@0.7.0
 moon add moonbitlang/async@0.20.3
 ```
 
@@ -125,7 +126,7 @@ For a Zarr v2 hierarchy with `.zmetadata`, `FileStore::open_consolidated("data.z
 
 For a Zarr v3 hierarchy with zarr-python's inline `consolidated_metadata` field in the root `zarr.json`, use `FileStore::open_consolidated_v3("data.zarr")`. This is likewise a native-only read-only snapshot: child `zarr.json` documents come from the root index, chunk bytes come from the filesystem, and changes to the index require reopening. It accepts the `kind="inline", must_understand=false` convention and does not write or update consolidated metadata. This v3 convention remains experimental in zarr-python.
 
-For an existing v3 sharding-indexed array, use the same native typed opener, e.g. `store.open_u16("pixels")`, then `read` or `read_region`. The filesystem adapter locates the outer shard, reads at most 16 MiB of index data, validates its offsets and optional CRC32C, and reads only each selected encoded inner chunk (at most 64 MiB); it does not load a whole shard for a small selection. Indexes at the beginning or end of a shard, little- or big-endian index bytes, and supported inner bytes plus gzip/zstd/Blosc codecs are accepted. Missing shards and valid absent inner chunks return the declared fill value. Sharded arrays are **read-only**: `write` and `write_region` return `false`. `MemoryStore`, `HttpStore` hydration, and sharded array creation/writes are not implemented. This feature is tested against six zarr-python 3.4.0 fixtures, including 3D/4D edge shards and absent chunks. See [N-D interoperability](INTEROPERABILITY.md).
+For an existing v3 sharding-indexed array, use the same native typed opener, e.g. `store.open_u16("pixels")`, then `read` or `read_region`. The filesystem adapter locates the outer shard, reads at most 16 MiB of index data, validates its offsets and optional CRC32C, and reads only each selected encoded inner chunk (at most 64 MiB); it does not load a whole shard for a small selection. Indexes at the beginning or end of a shard, little- or big-endian index bytes, and supported inner bytes plus gzip/zstd/Blosc codecs are accepted. Missing shards and valid absent inner chunks return the declared fill value. Sharded arrays are **read-only**: `write` and `write_region` return `false`. HTTP/S3 can now hydrate selected inner chunks into a temporary ordinary `MemoryStore` view, but sharded array creation/writes and direct in-memory shard decoding are not implemented. The native feature is tested against six zarr-python 3.4.0 fixtures, including 3D/4D edge shards and absent chunks. See [N-D interoperability](INTEROPERABILITY.md) and [remote access](REMOTE.md).
 
 Since `0.3.0`, each native typed `read_region` has its own bounded FIFO shard-index cache (16 MiB of index payload / 64 entries by default). Retained indexes have their length and optional CRC32C checked once; every selected entry still has bounds validated. No index or file handle persists across calls. Configure `FileStore::new("data.zarr", shard_index_cache_bytes=1048576, shard_index_cache_entries=16)`, or set either cap to zero to disable it; negative caps return `None`. An index larger than the cap is not retained, and eviction can cause re-reads. Consolidated snapshot openers use the defaults. Files must remain stable during a region read: this is not a concurrent-writer snapshot, and unchanged-size edits during that call are not detected.
 
@@ -140,13 +141,13 @@ guard @array.open_u8(cache, "science/image") is Some(image) else { return }
 let values = image.read_region([10, 20], [1, 3])
 ```
 
-Import `zlhahaha/zarr/store/http` as `@http` and `zlhahaha/zarr/array` as `@array`. Hydration is read-only and returns a `MemoryStore`; changing it does not update the remote store. A 404 chunk is treated as the declared fill value, while non-200 responses and transport errors fail. The default caps are 1 MiB per metadata document, 64 MiB per encoded chunk and 1024 chunks per call; `HttpStore::new` accepts `max_metadata_bytes`, `max_chunk_bytes`, and `max_chunks` overrides. Successful metadata and chunk responses are cached on the `HttpStore` instance with 64 MiB and 4096-entry in-memory LRU limits by default; set `max_cache_bytes=0` to disable it, or tune `max_cache_bytes` and `max_cache_entries`. Missing and empty responses are not cached. Recreate the `HttpStore` to see remote changes. This is not yet an HTTP-backed typed array or a disk-persistent cache.
+Import `zlhahaha/zarr/store/http` as `@http` and `zlhahaha/zarr/array` as `@array`. `HttpStore::open_array(path)` discovers validated metadata. Hydration is read-only and returns a `MemoryStore`; changing it does not update the remote store. A 404 chunk is treated as the declared fill value, while a 403, 412, non-206 range response, malformed `Content-Range`, timeout and transport failure reject hydration. For shards the returned metadata is a temporary ordinary inner-chunk view; it must not replace the source metadata. The default caps are 1 MiB per metadata document, 64 MiB per encoded chunk, 1024 touched chunks and 64 MiB cumulative encoded hydration per call, including shard indexes. `HttpStore::new` accepts cap and per-request timeout overrides. Successful full-object metadata/chunk responses are cached on the `HttpStore` instance with 64 MiB and 4096-entry LRU limits by default; selected shard indexes are reused only within one hydration. Recreate the store to see changed ordinary objects. This is not yet an HTTP-backed typed array or disk-persistent cache. See [REMOTE.md](REMOTE.md) for range validation, SigV4 S3 configuration, bounded retries and a live dataset.
 
 ## Supported format subset
 
 Both formats support regular chunk grids, safe logical paths, groups and attributes, boolean arrays and the ten numeric types above. v2 supports `.`/`/` chunk separators and C/F chunk order; v3 supports default and v2-compatible chunk keys plus the bytes serializer. Raw, gzip and zstd chunks are supported in both formats; zlib is supported in v2. A Blosc1 subset handles LZ4/LZ4HC, Zlib and Zstd frames with no shuffle, byte shuffle or bit shuffle, including incompressible memcpy frames and multiple internal blocks. LZ4 arrays can be created, opened and written with one-block Blosc1 frames; LZ4HC, Zlib and Zstd remain read-only. BloscLZ and Snappy are unsupported. Native filesystem reads also support the documented subset of v3 sharding-indexed; writes do not. Unsupported filters, storage transformers and codec chains are rejected rather than silently decoded incorrectly. Full-range `int64`/`uint64` fill values are preserved as exact JSON integers rather than rounded through floating point.
 
-Large reads and writes still buffer the requested region. A `FileStore` uses native async filesystem APIs and is not available on wasm-gc; `MemoryStore` works on the tested native and wasm-gc targets. See [Error handling](#error-handling) for return values, exceptions and non-atomic writes.
+Large individual reads and writes still buffer the requested region. `chunk.RegionTileCursor` lets callers traverse a larger logical region as individually bounded `read_region` calls; it is not an automatically streaming typed-array interface. A `FileStore` uses native async filesystem APIs and is not available on wasm-gc; `MemoryStore` and the tile cursor work on the tested native and wasm-gc targets. See [REMOTE.md](REMOTE.md) and [Error handling](#error-handling).
 
 ## Resource budgets
 
@@ -154,7 +155,7 @@ Version `0.4.0` adds `@store.ReadLimits::new(...)` (import `zlhahaha/zarr/store`
 
 Oversized native metadata/encoded inputs raise `@fs.ReadLimitExceeded(key)` before allocating that input buffer. Region, declared decoded-size and JSON-depth rejection returns `None` from typed opening/reads; it is not a missing chunk. HTTP returns `None` and additionally defaults to 64 MiB cumulative encoded hydration (`max_hydration_bytes`). These controls are not a bound on total process memory; result buffers and conversions still allocate. Raw in-memory map and direct parser/codec calls remain caller-managed. See [RESOURCE_LIMITS.md](RESOURCE_LIMITS.md) for every setting, constructor example, native `catch` behavior and a runnable demo.
 
-Zstd decoding first checks the dependency's conservative frame-size bound against the declared uncompressed chunk length. Consequently, a valid frame without known content size may be rejected. Full Blosc support, sharded writes/HTTP hydration, consolidated-metadata writes, HTTP write access, cloud object-store adapters, additional dtypes, and general ndarray arithmetic are not implemented yet. See [ROADMAP.md](ROADMAP.md) and the [support table](../README.md#status).
+Zstd decoding first checks the dependency's conservative frame-size bound against the declared uncompressed chunk length. Consequently, a valid frame without known content size may be rejected. Full Blosc support, sharded writes, consolidated-metadata writes, remote writes, credential-chain discovery, additional dtypes, and general ndarray arithmetic are not implemented yet. The S3 adapter covers documented read-only path-style endpoints only. See [ROADMAP.md](ROADMAP.md), [REMOTE.md](REMOTE.md) and the [support table](../README.md#status).
 
 For floating-point arrays, `"NaN"`, `"Infinity"`, and `"-Infinity"` metadata fill values are accepted in both formats. Array creation serializes a NaN fill as the canonical `"NaN"` string. Hexadecimal NaN payload encodings from the v3 data-type specification are not yet supported.
 
@@ -162,7 +163,7 @@ For floating-point arrays, `"NaN"`, `"Infinity"`, and `"-Infinity"` metadata fil
 
 Typed creation, opening, reading and writing operations return `None` or `false` when their validation or decoding rejects invalid metadata, unsupported encodings, out-of-bounds coordinates, or corrupt chunk data. Read-only views reject writes with `false`. Missing chunks (including valid absent inner chunks in a shard) are normal: typed reads return the declared fill value.
 
-This is **not** a blanket I/O-error convention. `FileStore::get` returns `None` for an absent or invalid key, but other filesystem errors can propagate as exceptions. Native creation, opening, reading, writing and cleanup can also propagate filesystem exceptions, for example permission errors, reading a directory as a file, or an interrupted/truncated file read. Handle these separately from `None`/`false`; an uncaught exception fails the program. `HttpStore::hydrate_region`, in contrast, converts failed HTTP responses and transport errors to `None` (a 404 chunk still means a fill value).
+This is **not** a blanket I/O-error convention. `FileStore::get` returns `None` for an absent or invalid key, but other filesystem errors can propagate as exceptions. Native creation, opening, reading, writing and cleanup can also propagate filesystem exceptions, for example permission errors, reading a directory as a file, or an interrupted/truncated file read. Handle these separately from `None`/`false`; an uncaught exception fails the program. `HttpStore::hydrate_region` and `S3Store::hydrate_region`, in contrast, convert failed HTTP responses and transport errors to `None` (a 404 chunk still means a fill value). They do not yet expose a reason-bearing result type.
 
 For example, this complete helper uses the native package imports above and distinguishes a returned `None` from an exception. Add it to `native_demo/main.mbt` and call `print_metadata(reopened)` before cleanup to inspect the created metadata:
 

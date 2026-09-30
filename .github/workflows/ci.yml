@@ -63,6 +63,9 @@ jobs:
       - name: Run 3D image / 4D feature example
         if: matrix.target == 'native'
         run: moon run --target native cmd/nd_demo
+      - name: Run bounded 256 MiB tiled scan
+        if: matrix.target == 'native'
+        run: moon run --target native cmd/tile_demo
       - name: Validate release archive
         if: matrix.os == 'ubuntu-latest' && matrix.target == 'native'
         run: moon package --list

@@ -1,15 +1,17 @@
 import {
   "zlhahaha/zarr/metadata",
   "zlhahaha/zarr/chunk",
+  "zlhahaha/zarr/shard",
   "zlhahaha/zarr/store",
   "moonbitlang/async/http" @client_http,
+  "moonbitlang/async",
   "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/string",
 }
 
 import {
   "zlhahaha/zarr/array",
   "zlhahaha/zarr/store/fs",
-  "moonbitlang/async",
   "moonbitlang/async/socket",
   "moonbitlang/async/io",
 } for "test"

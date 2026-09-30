@@ -14,6 +14,8 @@ pub struct HttpStore {
   mut tick : UInt64
   limits : @store.ReadLimits
   max_hydration_bytes : Int
+  request_timeout_ms : Int
+  get_headers : ((String, String?, String?) -> Map[String, String]?)?
 }
 
 ///|
@@ -32,6 +34,7 @@ pub fn HttpStore::new(
   max_cache_entries? : Int = 4096,
   read_limits? : @store.ReadLimits = @store.ReadLimits::defaults(),
   max_hydration_bytes? : Int = 67108864,
+  request_timeout_ms? : Int = 30000,
 ) -> HttpStore? {
   if !(base_url.has_prefix("http://") || base_url.has_prefix("https://")) ||
     base_url.contains("?") ||
@@ -41,7 +44,8 @@ pub fn HttpStore::new(
     max_chunks <= 0 ||
     max_cache_bytes < 0 ||
     max_cache_entries <= 0 ||
-    max_hydration_bytes <= 0 {
+    max_hydration_bytes <= 0 ||
+    request_timeout_ms <= 0 {
     return None
   }
   Some({
@@ -57,7 +61,44 @@ pub fn HttpStore::new(
     tick: 0UL,
     limits: read_limits,
     max_hydration_bytes,
+    request_timeout_ms,
+    get_headers: None,
   })
+}
+
+///|
+/// Configure per-request headers for authenticated read-only endpoints.
+/// The callback receives the full URL, optional Range and optional If-Match.
+/// Returning None rejects the request before network I/O.
+pub fn HttpStore::with_get_headers(
+  self : HttpStore,
+  provider : (String, String?, String?) -> Map[String, String]?,
+) -> HttpStore {
+  { ..self, get_headers: Some(provider), }
+}
+
+///|
+fn HttpStore::headers(
+  self : HttpStore,
+  url : String,
+  range : String?,
+  if_match : String?,
+) -> Map[String, String]? {
+  let headers = match self.get_headers {
+    Some(provider) => {
+      guard provider(url, range, if_match) is Some(headers) else { return None }
+      headers
+    }
+    None => Map([])
+  }
+  headers["Accept-Encoding"] = "identity"
+  if range is Some(value) {
+    headers["Range"] = value
+  }
+  if if_match is Some(value) {
+    headers["If-Match"] = value
+  }
+  Some(headers)
 }
 
 ///|
@@ -65,6 +106,35 @@ priv enum FetchResult {
   Found(Bytes)
   Missing
   Failed
+  Transient
+}
+
+///|
+priv enum RangeResult {
+  RangeFound(Bytes, Int64, String?)
+  RangeMissing
+  RangeFailed
+  RangeTransient
+}
+
+///|
+fn content_range(value : String) -> (Int64, Int64, Int64)? {
+  if !value.has_prefix("bytes ") {
+    return None
+  }
+  guard value[6:].split_once("/") is Some((bounds, total_raw)) else {
+    return None
+  }
+  guard bounds.split_once("-") is Some((first_raw, last_raw)) else {
+    return None
+  }
+  let first = @string.parse_int64(first_raw) catch { _ => return None }
+  let last = @string.parse_int64(last_raw) catch { _ => return None }
+  let total = @string.parse_int64(total_raw) catch { _ => return None }
+  if first < 0 || last < first || total <= last {
+    return None
+  }
+  Some((first, last, total))
 }
 
 ///|
@@ -161,7 +231,19 @@ fn encode_key(key : String) -> String? {
 }
 
 ///|
-async fn HttpStore::fetch(
+fn HttpStore::key_url(self : HttpStore, key : String) -> String? {
+  guard encode_key(key) is Some(encoded) else { return None }
+  Some(
+    if self.base_url.has_suffix("/") {
+      "\{self.base_url}\{encoded}"
+    } else {
+      "\{self.base_url}/\{encoded}"
+    },
+  )
+}
+
+///|
+async fn HttpStore::fetch_uncached(
   self : HttpStore,
   key : String,
   limit : Int,
@@ -169,22 +251,24 @@ async fn HttpStore::fetch(
   if self.cached(key, limit) is Some(result) {
     return result
   }
-  guard encode_key(key) is Some(encoded) else { return Failed }
-  let url = if self.base_url.has_suffix("/") {
-    "\{self.base_url}\{encoded}"
-  } else {
-    "\{self.base_url}/\{encoded}"
-  }
-  let (response, client) = @client_http.get_stream(url) catch {
-    _ => return Failed
+  guard self.key_url(key) is Some(url) else { return Failed }
+  guard self.headers(url, None, None) is Some(headers) else { return Failed }
+  let (response, client) = @client_http.get_stream(url, headers~) catch {
+    _ => return Transient
   }
   defer client.close()
+  if response.headers.get("content-encoding") is Some(encoding) &&
+    encoding.to_lower() != "identity" {
+    return Failed
+  }
   match response.code {
     404 => Missing
     200 => {
       let output : Array[Byte] = []
       for ;; {
-        let next = client.read_some(max_len=32768) catch { _ => return Failed }
+        let next = client.read_some(max_len=32768) catch {
+          _ => return Transient
+        }
         match next {
           None => {
             let found = Bytes::from_array(output)
@@ -201,20 +285,151 @@ async fn HttpStore::fetch(
       }
       Failed
     }
+    429 | 500 | 502 | 503 | 504 => Transient
     _ => Failed
   }
 }
 
 ///|
-/// Download the array metadata and only chunks touched by a bounded region.
-/// The returned MemoryStore can be opened with typed functions in `array/`.
-/// Missing chunks retain their declared fill value; HTTP failures do not.
-pub async fn HttpStore::hydrate_region(
+async fn HttpStore::fetch(
+  self : HttpStore,
+  key : String,
+  limit : Int,
+) -> FetchResult {
+  for attempt in 0..<2 {
+    let result = @async.with_timeout_opt(self.request_timeout_ms, async fn() {
+      self.fetch_uncached(key, limit)
+    })
+    match result {
+      Some(Found(value)) => return Found(value)
+      Some(Missing) => return Missing
+      Some(Failed) => return Failed
+      Some(Transient) | None => if attempt == 0 { @async.sleep(50) }
+    }
+  }
+  Failed
+}
+
+///|
+/// Strict partial read: a server that ignores Range or lies about its extent
+/// is an error, never a missing chunk or a successful truncated shard.
+async fn HttpStore::fetch_range_once(
+  self : HttpStore,
+  key : String,
+  range : String,
+  limit : Int,
+  expected_etag : String?,
+) -> RangeResult {
+  guard self.key_url(key) is Some(url) else { return RangeFailed }
+  guard self.headers(url, Some(range), expected_etag) is Some(headers) else {
+    return RangeFailed
+  }
+  let (response, client) = @client_http.get_stream(url, headers~) catch {
+    _ => return RangeTransient
+  }
+  defer client.close()
+  if response.headers.get("content-encoding") is Some(encoding) &&
+    encoding.to_lower() != "identity" {
+    return RangeFailed
+  }
+  if response.code == 404 {
+    return RangeMissing
+  }
+  if response.code == 429 ||
+    response.code == 500 ||
+    response.code == 502 ||
+    response.code == 503 ||
+    response.code == 504 {
+    return RangeTransient
+  }
+  if response.code != 206 {
+    return RangeFailed
+  }
+  guard response.headers.get("content-range") is Some(raw_range) else {
+    return RangeFailed
+  }
+  guard content_range(raw_range) is Some((first, last, total)) else {
+    return RangeFailed
+  }
+  let length = last - first + 1L
+  if length <= 0L || length > limit.to_int64() {
+    return RangeFailed
+  }
+  if range.has_prefix("bytes=-") {
+    let suffix = @string.parse_int64(range[7:]) catch {
+      _ => return RangeFailed
+    }
+    if suffix != length || last != total - 1L {
+      return RangeFailed
+    }
+  } else {
+    guard range[6:].split_once("-") is Some((a, b)) else { return RangeFailed }
+    let requested_first = @string.parse_int64(a) catch {
+      _ => return RangeFailed
+    }
+    let requested_last = @string.parse_int64(b) catch {
+      _ => return RangeFailed
+    }
+    if first != requested_first || last != requested_last {
+      return RangeFailed
+    }
+  }
+  let output : Array[Byte] = []
+  for ;; {
+    let next = client.read_some(max_len=32768) catch {
+      _ => return RangeTransient
+    }
+    match next {
+      None => {
+        if output.length().to_int64() != length {
+          return RangeFailed
+        }
+        return RangeFound(
+          Bytes::from_array(output),
+          total,
+          response.headers.get("etag"),
+        )
+      }
+      Some(bytes) => {
+        if bytes.length() > limit - output.length() ||
+          bytes.length().to_int64() > length - output.length().to_int64() {
+          return RangeFailed
+        }
+        output.append(bytes.to_array()[:])
+      }
+    }
+  }
+  RangeFailed
+}
+
+///|
+async fn HttpStore::fetch_range(
+  self : HttpStore,
+  key : String,
+  range : String,
+  limit : Int,
+  expected_etag : String?,
+) -> RangeResult {
+  for attempt in 0..<2 {
+    let result = @async.with_timeout_opt(self.request_timeout_ms, async fn() {
+      self.fetch_range_once(key, range, limit, expected_etag)
+    })
+    match result {
+      Some(RangeFound(bytes, total, etag)) =>
+        return RangeFound(bytes, total, etag)
+      Some(RangeMissing) => return RangeMissing
+      Some(RangeFailed) => return RangeFailed
+      Some(RangeTransient) | None => if attempt == 0 { @async.sleep(50) }
+    }
+  }
+  RangeFailed
+}
+
+///|
+async fn HttpStore::load_array(
   self : HttpStore,
   path : String,
-  origin : Array[Int],
-  extent : Array[Int],
-) -> @store.MemoryStore? {
+) -> (@metadata.Format, String, @metadata.ArrayMetadata)? {
   guard @chunk.array_metadata_key(@metadata.V2, path) is Some(v2_key) else {
     return None
   }
@@ -247,10 +462,40 @@ pub async fn HttpStore::hydrate_region(
     return None
   }
   let raw = @utf8.decode(bytes[:]) catch { _ => return None }
-  guard @metadata.parse_array_metadata(raw) is Some(metadata) else {
+  guard @metadata.parse_array_metadata(raw) is Some(outer) else { return None }
+  if outer.format != format {
     return None
   }
-  if metadata.format != format {
+  guard @shard.prepare(outer) is Some(metadata) else { return None }
+  if !self.limits.allows_array(metadata) {
+    return None
+  }
+  Some((format, raw, metadata))
+}
+
+///|
+/// Discover a remote array's validated logical shape, dtype and inner-chunk
+/// shape without fetching chunk data. For sharded v3 arrays the returned
+/// metadata is an inner-chunk view, consistent with FileStore::open_array.
+pub async fn HttpStore::open_array(
+  self : HttpStore,
+  path : String,
+) -> @metadata.ArrayMetadata? {
+  guard self.load_array(path) is Some((_, _, metadata)) else { return None }
+  Some(metadata)
+}
+
+///|
+/// Download the array metadata and only chunks touched by a bounded region.
+/// The returned MemoryStore can be opened with typed functions in `array/`.
+/// Missing chunks retain their declared fill value; HTTP failures do not.
+pub async fn HttpStore::hydrate_region(
+  self : HttpStore,
+  path : String,
+  origin : Array[Int],
+  extent : Array[Int],
+) -> @store.MemoryStore? {
+  guard self.load_array(path) is Some((format, raw, metadata)) else {
     return None
   }
   if !self.limits.allows_region(metadata, origin, extent) {
@@ -260,7 +505,13 @@ pub async fn HttpStore::hydrate_region(
     return None
   }
   let scratch = @store.MemoryStore::new(read_limits=self.limits)
-  if !scratch.put_array_metadata(format, path, raw) {
+  let scratch_raw = if metadata.sharding is Some(_) {
+    guard @shard.inner_metadata_json(raw) is Some(inner) else { return None }
+    inner
+  } else {
+    raw
+  }
+  if !scratch.put_array_metadata(format, path, scratch_raw) {
     return None
   }
   if length == 0 {
@@ -295,11 +546,88 @@ pub async fn HttpStore::hydrate_region(
     self.limits.max_chunk_bytes()
   }
   let mut hydrated = 0
+  let indices : Map[String, @shard.ValidatedIndex] = Map([])
+  let shard_sizes : Map[String, Int64] = Map([])
+  let shard_etags : Map[String, String] = Map([])
+  let absent_shards : Map[String, Bool] = Map([])
   for piece in pieces {
-    guard @chunk.chunk_key(metadata, piece.coordinates, path) is Some(key) else {
-      return None
+    let fetched = if metadata.sharding is Some(layout) {
+      guard @shard.coordinates(metadata, piece.coordinates)
+        is Some((outer_coords, within)) else {
+        return None
+      }
+      guard @chunk.shard_key(metadata, outer_coords, path) is Some(key) else {
+        return None
+      }
+      if absent_shards.get(key) is Some(_) {
+        Missing
+      } else {
+        let index = match indices.get(key) {
+          Some(index) => index
+          None => {
+            if layout.index_size > self.max_hydration_bytes - hydrated {
+              return None
+            }
+            let range = if layout.index_at_start {
+              "bytes=0-\{layout.index_size - 1}"
+            } else {
+              "bytes=-\{layout.index_size}"
+            }
+            match self.fetch_range(key, range, layout.index_size, None) {
+              RangeMissing => {
+                absent_shards[key] = true
+                continue
+              }
+              RangeFailed | RangeTransient => return None
+              RangeFound(bytes, size, etag) => {
+                hydrated += bytes.length()
+                guard @shard.validate_index(layout, bytes, size)
+                  is Some(validated) else {
+                  return None
+                }
+                indices[key] = validated
+                shard_sizes[key] = size
+                if etag is Some(tag) {
+                  shard_etags[key] = tag
+                }
+                validated
+              }
+            }
+          }
+        }
+        match index.entry(within) {
+          @shard.Absent => Missing
+          @shard.Invalid => Failed
+          @shard.Data(at, size) => {
+            if size > chunk_limit || size > self.max_hydration_bytes - hydrated {
+              return None
+            }
+            let last = at + size.to_int64() - 1L
+            match
+              self.fetch_range(
+                key,
+                "bytes=\{at}-\{last}",
+                size,
+                shard_etags.get(key),
+              ) {
+              RangeFound(bytes, total, _) => {
+                if shard_sizes.get(key) != Some(total) {
+                  return None
+                }
+                Found(bytes)
+              }
+              RangeMissing | RangeFailed | RangeTransient => Failed
+            }
+          }
+        }
+      }
+    } else {
+      guard @chunk.chunk_key(metadata, piece.coordinates, path) is Some(key) else {
+        return None
+      }
+      self.fetch(key, chunk_limit)
     }
-    match self.fetch(key, chunk_limit) {
+    match fetched {
       Found(chunk) => {
         if chunk.length() > self.max_hydration_bytes - hydrated {
           return None
@@ -310,7 +638,7 @@ pub async fn HttpStore::hydrate_region(
         }
       }
       Missing => ()
-      Failed => return None
+      Failed | Transient => return None
     }
   }
   Some(scratch)

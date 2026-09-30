@@ -146,3 +146,36 @@ pub fn coordinates(
   }
   Some((outer, within))
 }
+
+///|
+/// A hydrated shard exposes selected encoded inner chunks through an ordinary
+/// in-memory array. This metadata is a temporary view, never written back to
+/// the remote Zarr hierarchy.
+pub fn inner_metadata_json(raw : String) -> String? {
+  guard @metadata.parse_array_metadata(raw) is Some(outer) else { return None }
+  guard prepare(outer) is Some(inner) else { return None }
+  if inner.sharding is None {
+    return None
+  }
+  guard (@json.parse(raw) catch { _ => return None }) is Object(fields) else {
+    return None
+  }
+  guard fields.get("chunk_grid") is Some(Object(grid)) else { return None }
+  guard grid.get("configuration") is Some(Object(config)) else { return None }
+  let sides : Array[Json] = []
+  for side in inner.chunk_shape {
+    sides.push(Json::number(side.to_double()))
+  }
+  config.set("chunk_shape", Json::array(sides))
+  grid.set("configuration", Json::object(config))
+  fields.set("chunk_grid", Json::object(grid))
+  fields.set("codecs", Json::array(inner.codecs))
+  let result = Json::object(fields).stringify()
+  guard @metadata.parse_array_metadata(result) is Some(view) else {
+    return None
+  }
+  if view.sharding is Some(_) || view.chunk_shape != inner.chunk_shape {
+    return None
+  }
+  Some(result)
+}

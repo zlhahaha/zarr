@@ -34,3 +34,13 @@ test "HTTP cache evicts least recently used entries within both caps" {
   assert_true(remote.cached("empty", 0) is None)
   assert_true(remote.cached("a", 1) is Some(Failed))
 }
+
+///|
+test "HTTP Content-Range parser rejects ambiguous or invalid ranges" {
+  assert_eq(content_range("bytes 1-2/4"), Some((1L, 2L, 4L)))
+  assert_true(content_range("bytes */4") is None)
+  assert_true(content_range("bytes 2-1/4") is None)
+  assert_true(content_range("bytes 0-4/4") is None)
+  assert_true(content_range("items 0-1/4") is None)
+  assert_true(content_range("bytes 0-1/*") is None)
+}

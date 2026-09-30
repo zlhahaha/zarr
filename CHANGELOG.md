@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.0 — Bounded tile traversal and read-only remote shards
+
+- Add `chunk.RegionTileCursor` for incremental C-order N-D tile planning without allocating or counting the whole logical region. Each caller-requested typed tile still buffers its own result and obeys the existing `ReadLimits`; this is not an automatic streaming typed array or a total-memory cap.
+- Add native HTTP `open_array` discovery and strict Range hydration for selected inner chunks of supported v3 sharding-indexed arrays, including start/end index, CRC32C validation, missing fills, exact Content-Range/body-length checks and ETag conditional payload reads when supplied. Hydrated shard metadata is a temporary ordinary inner-chunk view, not a replica of the original shard layout.
+- Add native, read-only `store/s3` path-style S3-compatible adapter with anonymous access or explicitly provided SigV4 credentials/session token. It reuses the HTTP ordinary/ranged object reader and supports custom endpoints. Per-request timeout defaults to 30 seconds; GETs retry once for transport/timeouts, 429 and selected 5xx statuses. No credential-chain lookup, listing, writes, directory-bucket support or private AWS/MinIO end-to-end certification is claimed.
+- Test Python-generated start/end-index shards through a local HTTP server and a signed S3-style local endpoint; reject ignored/malformed ranges, 403 and ETag conflicts. Validate signing against AWS's published GET Range test vector.
+- Add a runnable 256 MiB logical-array scan through 256 one-MiB tiles, with the unbounded whole-region read rejected by default policy. Read a public 3D OME-Zarr microscopy array on AWS: quick mode checks 512 voxels, and `--volume` checks a 128³ ROI spanning eight encoded objects (2,097,152 voxels, independently verified checksum `24039966`). One Windows run sampled 10.84 MiB maximum working set; no portable memory bound, whole-dataset compatibility or broad throughput improvement is inferred.
+
 ## 0.6.0 — N-dimensional interoperability and faster region reads
 
 - Add eight independent 3D uint16 / 4D float32 Python read fixtures and eight MoonBit-written reverse stores: v2 C/F order, endian variants, raw/gzip/zlib/zstd, missing and edge chunks, non-aligned slices and rewrite/reopen. Two read fixtures cover N-D start/end-index shards; reverse writes remain unsharded. Inventory: 51 Python stores, 40 reverse stores.

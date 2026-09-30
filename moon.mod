@@ -11,7 +11,7 @@
 
 name = "zlhahaha/zarr"
 
-version = "0.6.0"
+version = "0.7.0"
 
 readme = "README.md"
 
@@ -29,4 +29,5 @@ import {
   "moonbitlang/async@0.20.3",
   "moonbit-community/flate@0.8.0",
   "Milky2018/zstd@0.1.3",
+  "moonbitlang/x@0.5.1",
 }

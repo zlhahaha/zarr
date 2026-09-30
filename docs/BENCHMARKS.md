@@ -47,7 +47,7 @@ There is no index persistence across region calls or element reads. Changed file
 
 ## Interpretation
 
-Index-heavy layouts are the intended optimization target. A small index or a slice touching one inner chunk may show little benefit or timing noise; a cache-on result is not automatically faster. Peak memory is reported for all cases rather than inferred from the cache cap. Rectangular reads still allocate the requested result and temporary decoded chunks, and some dtype wrappers allocate an additional conversion array. This work does not provide a streaming typed-array API, a full-array bounded-memory guarantee, HTTP-shard support, or broad dtype/codec/real-dataset performance coverage.
+Index-heavy layouts are the intended optimization target. A small index or a slice touching one inner chunk may show little benefit or timing noise; a cache-on result is not automatically faster. Peak memory is reported for all cases rather than inferred from the cache cap. Rectangular reads still allocate the requested result and temporary decoded chunks, and some dtype wrappers allocate an additional conversion array. These recorded `0.3.0` workloads do not establish a streaming typed-array API, a full-array bounded-memory guarantee, HTTP-shard performance, or broad dtype/codec/real-dataset performance coverage.
 
 ## 0.5.0 → 0.6.0 region-read comparison (2026-09-29)
 

@@ -1,0 +1,8 @@
+import {
+  "zlhahaha/zarr/array",
+  "zlhahaha/zarr/chunk",
+  "zlhahaha/zarr/store",
+  "zlhahaha/zarr/metadata",
+}
+
+pkgtype(kind: "executable")
