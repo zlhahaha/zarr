@@ -97,4 +97,4 @@ The P0 Blosc LZ4 write and read-resource-budget milestones, P1 sharding-indexed 
 
 - Treat README support claims as test-backed, not aspirational. Run `moon info && moon fmt`, inspect `.mbti` diffs, then native/wasm checks and tests after code changes; verify Python interoperability and CI for codec/storage changes.
 - Preserve unrelated work and generated `integration/.roundtrip/` stores. Fixture generators refuse to overwrite existing stores; use new fixture names or validated, recoverable moves for regeneration.
-- Commit coherent features; push verified work to `main` under the user's prior authorization. Do not force-push or submit contest materials. A new Mooncakes version must be requested and verified before publication; versions `0.1.0` through `0.6.0` are published and cannot be overwritten.
+- Commit coherent features; push verified work to `main` under the user's prior authorization. Do not force-push or submit contest materials. A new Mooncakes version must be requested and verified before publication; versions `0.1.0` through `0.7.0` are published and cannot be overwritten.
