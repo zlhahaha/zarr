@@ -35,7 +35,9 @@ def main():
                 raise RuntimeError(f"consumer command failed: {command[:3]}\n{result.stdout}\n{result.stderr}")
             if command[1] == "run":
                 print(result.stdout.strip())
-        manifest = (CONSUMER / ".mooncakes" / "zlhahaha" / "zarr" / "moon.mod").read_text(encoding="utf-8")
+        module_root = CONSUMER / ".mooncakes" / "zlhahaha" / "zarr"
+        assert module_root.resolve() != PROJECT.resolve(), "consumer must not resolve to checkout source"
+        manifest = (module_root / "moon.mod").read_text(encoding="utf-8")
         assert f'version = "{version}"' in manifest, "consumer did not install the pinned registry version"
         expected = np.full((3, 4, 5), 60000, dtype=np.uint16)
         expected[1:3, 1:3, 1:4] = np.arange(100, 112, dtype=np.uint16).reshape(2, 2, 3)
@@ -50,10 +52,16 @@ def main():
             else:
                 assert metadata["codecs"][-1]["name"] == "zstd"
             print(f"independent Python verified registry {fmt}: all 60 values, compression and edge chunks")
+        group = zarr.open_group(str(root / "groups"), mode="r")
+        assert sorted(group.group_keys()) == ["a"]
+        assert sorted(group.array_keys()) == ["b"]
+        np.testing.assert_array_equal(group["b"][:], np.array([7], dtype=np.uint8))
+        print("independent Python verified published group hierarchy")
         report = {"package": f"zlhahaha/zarr@{version}", "source": "registry dependency; no local path override",
                   "toolchain": subprocess.check_output(["moon", "version", "--all"], text=True).strip(),
                   "zarr_python": zarr.__version__, "numpy": np.__version__,
-                  "native_check_build_run": True, "python_v2_v3_values": True}
+                  "native_check_build_run": True, "python_v2_v3_values": True,
+                  "discovery_and_structured_errors": True, "python_group_hierarchy": True}
         if args.output:
             args.output.parent.mkdir(parents=True, exist_ok=True)
             args.output.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")

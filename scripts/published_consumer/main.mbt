@@ -44,6 +44,15 @@ async fn check_array(
       }
     }
   }
+  guard reopened.open_node_result("") is Ok(node) else {
+    abort("published node API")
+  }
+  if node.kind != @hierarchy.ArrayNode || node.format != format {
+    abort("node descriptor")
+  }
+  if !(reopened.list_children_result("") is Err(@store.NotGroup(""))) {
+    abort("node kind error")
+  }
 }
 
 ///|
@@ -54,7 +63,37 @@ async fn main {
   }
   check_array("\{args[1]}/v2", @metadata.V2, @codec.Gzip(1))
   check_array("\{args[1]}/v3", @metadata.V3, @codec.Zstd(3))
+  guard @fs.FileStore::new("\{args[1]}/groups") is Some(groups) else {
+    abort("group store")
+  }
+  if !groups.create_group_tree(@metadata.V3, "a") {
+    abort("groups")
+  }
+  guard groups.create_u8(@metadata.V3, "b", [1], [1], b'\x07') is Some(_) else {
+    abort("group array")
+  }
+  let nodes = match groups.walk_result("") {
+    Ok(nodes) => nodes
+    Err(_) => abort("published traversal")
+  }
+  if nodes.map(node => node.path) != ["a", "b"] {
+    abort("published children")
+  }
+  if !(groups.walk_result("", max_nodes=1) is Err(@store.LimitExceeded(_, _))) {
+    abort("published walk budget")
+  }
+  guard @s3.S3Store::new("bucket", "us-east-1", listing_page_size=2)
+    is Some(remote) else {
+    abort("published S3")
+  }
+  if !(remote.open_array_result("../blocked") is Err(@store.InvalidPath(_))) ||
+    !(remote.hydrate_region_result("../blocked", [], [])
+    is Err(@store.InvalidPath(_))) ||
+    !(remote.list_children_result("../blocked") is Err(@store.InvalidPath(_))) {
+    abort("published remote diagnostics")
+  }
   println(
     "published Zarr: v2/v3 compressed 3D writes, reopen, all values and missing fills verified",
   )
+  println("published discovery and structured errors verified")
 }

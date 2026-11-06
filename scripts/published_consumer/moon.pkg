@@ -1,5 +1,8 @@
 import {
   "zlhahaha/zarr/store/fs",
+  "zlhahaha/zarr/store",
+  "zlhahaha/zarr/store/s3",
+  "zlhahaha/zarr/hierarchy",
   "zlhahaha/zarr/metadata",
   "zlhahaha/zarr/codec",
   "moonbitlang/async",
