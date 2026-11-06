@@ -10,8 +10,8 @@ test "tiles traverse a rectangle in C order without allocating it" {
     is Some(cursor) else {
     fail("tile cursor")
   }
-  let origins : Array[Array[Int]] = []
-  let extents : Array[Array[Int]] = []
+  let origins : Array[Array[Int32]] = []
+  let extents : Array[Array[Int32]] = []
   while cursor.next() is Some(tile) {
     origins.push(tile.origin)
     extents.push(tile.extent)

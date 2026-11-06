@@ -1,14 +1,15 @@
 ///|
 /// Cumulative counters for this FileStore. Bytes count explicit library range
 /// reads, not physical disk I/O; OS page-cache activity is not measured.
+#derive(Debug)
 pub(all) struct ShardReadStats {
-  index_reads : Int
+  index_reads : Int32
   index_bytes : Int64
-  index_cache_hits : Int
-  payload_reads : Int
+  index_cache_hits : Int32
+  payload_reads : Int32
   payload_bytes : Int64
-  peak_cached_index_bytes : Int
-} derive(Debug)
+  peak_cached_index_bytes : Int32
+}
 
 ///|
 pub extend ShardReadStats with Debug::{to_repr}
@@ -43,7 +44,7 @@ priv struct ShardSession {
   store : FileStore
   indices : Map[String, @shard.ValidatedIndex]
   order : Array[String]
-  mut bytes : Int
+  mut bytes : Int32
 }
 
 ///|
@@ -117,7 +118,7 @@ fn ShardSession::remember(
 async fn ShardSession::get_chunk(
   self : ShardSession,
   metadata : @metadata.ArrayMetadata,
-  coordinates : Array[Int],
+  coordinates : Array[Int32],
   path : String,
 ) -> Bytes? {
   if metadata.sharding is Some(_) {

@@ -18,10 +18,10 @@ pub async fn FileStore::create_u8(
   self : FileStore,
   format : @metadata.Format,
   path : String,
-  shape : Array[Int],
-  chunk_shape : Array[Int],
+  shape : Array[Int32],
+  chunk_shape : Array[Int32],
   fill : Byte,
-  compression? : @codec.Compression = @codec.Raw,
+  compression~ : @codec.Compression = @codec.Raw,
 ) -> FileU8Array? {
   if self.node_exists(path) {
     return None
@@ -41,10 +41,10 @@ pub async fn FileStore::create_i8(
   self : FileStore,
   format : @metadata.Format,
   path : String,
-  shape : Array[Int],
-  chunk_shape : Array[Int],
-  fill : Int,
-  compression? : @codec.Compression = @codec.Raw,
+  shape : Array[Int32],
+  chunk_shape : Array[Int32],
+  fill : Int32,
+  compression~ : @codec.Compression = @codec.Raw,
 ) -> FileI8Array? {
   if self.node_exists(path) {
     return None
@@ -64,10 +64,10 @@ pub async fn FileStore::create_bool(
   self : FileStore,
   format : @metadata.Format,
   path : String,
-  shape : Array[Int],
-  chunk_shape : Array[Int],
+  shape : Array[Int32],
+  chunk_shape : Array[Int32],
   fill : Bool,
-  compression? : @codec.Compression = @codec.Raw,
+  compression~ : @codec.Compression = @codec.Raw,
 ) -> FileBoolArray? {
   if self.node_exists(path) {
     return None
@@ -93,11 +93,11 @@ pub async fn FileStore::create_u16(
   self : FileStore,
   format : @metadata.Format,
   path : String,
-  shape : Array[Int],
-  chunk_shape : Array[Int],
+  shape : Array[Int32],
+  chunk_shape : Array[Int32],
   fill : UInt16,
-  big_endian? : Bool = false,
-  compression? : @codec.Compression = @codec.Raw,
+  big_endian~ : Bool = false,
+  compression~ : @codec.Compression = @codec.Raw,
 ) -> FileU16Array? {
   if self.node_exists(path) {
     return None
@@ -124,11 +124,11 @@ pub async fn FileStore::create_i16(
   self : FileStore,
   format : @metadata.Format,
   path : String,
-  shape : Array[Int],
-  chunk_shape : Array[Int],
+  shape : Array[Int32],
+  chunk_shape : Array[Int32],
   fill : Int16,
-  big_endian? : Bool = false,
-  compression? : @codec.Compression = @codec.Raw,
+  big_endian~ : Bool = false,
+  compression~ : @codec.Compression = @codec.Raw,
 ) -> FileI16Array? {
   if self.node_exists(path) {
     return None
@@ -155,11 +155,11 @@ pub async fn FileStore::create_f64(
   self : FileStore,
   format : @metadata.Format,
   path : String,
-  shape : Array[Int],
-  chunk_shape : Array[Int],
+  shape : Array[Int32],
+  chunk_shape : Array[Int32],
   fill : Double,
-  big_endian? : Bool = false,
-  compression? : @codec.Compression = @codec.Raw,
+  big_endian~ : Bool = false,
+  compression~ : @codec.Compression = @codec.Raw,
 ) -> FileF64Array? {
   if self.node_exists(path) {
     return None
@@ -186,11 +186,11 @@ pub async fn FileStore::create_f32(
   self : FileStore,
   format : @metadata.Format,
   path : String,
-  shape : Array[Int],
-  chunk_shape : Array[Int],
+  shape : Array[Int32],
+  chunk_shape : Array[Int32],
   fill : Float,
-  big_endian? : Bool = false,
-  compression? : @codec.Compression = @codec.Raw,
+  big_endian~ : Bool = false,
+  compression~ : @codec.Compression = @codec.Raw,
 ) -> FileF32Array? {
   if self.node_exists(path) {
     return None
@@ -217,11 +217,11 @@ pub async fn FileStore::create_i32(
   self : FileStore,
   format : @metadata.Format,
   path : String,
-  shape : Array[Int],
-  chunk_shape : Array[Int],
-  fill : Int,
-  big_endian? : Bool = false,
-  compression? : @codec.Compression = @codec.Raw,
+  shape : Array[Int32],
+  chunk_shape : Array[Int32],
+  fill : Int32,
+  big_endian~ : Bool = false,
+  compression~ : @codec.Compression = @codec.Raw,
 ) -> FileI32Array? {
   if self.node_exists(path) {
     return None
@@ -248,11 +248,11 @@ pub async fn FileStore::create_u32(
   self : FileStore,
   format : @metadata.Format,
   path : String,
-  shape : Array[Int],
-  chunk_shape : Array[Int],
-  fill : UInt,
-  big_endian? : Bool = false,
-  compression? : @codec.Compression = @codec.Raw,
+  shape : Array[Int32],
+  chunk_shape : Array[Int32],
+  fill : UInt32,
+  big_endian~ : Bool = false,
+  compression~ : @codec.Compression = @codec.Raw,
 ) -> FileU32Array? {
   if self.node_exists(path) {
     return None
@@ -279,11 +279,11 @@ pub async fn FileStore::create_i64(
   self : FileStore,
   format : @metadata.Format,
   path : String,
-  shape : Array[Int],
-  chunk_shape : Array[Int],
+  shape : Array[Int32],
+  chunk_shape : Array[Int32],
   fill : Int64,
-  big_endian? : Bool = false,
-  compression? : @codec.Compression = @codec.Raw,
+  big_endian~ : Bool = false,
+  compression~ : @codec.Compression = @codec.Raw,
 ) -> FileI64Array? {
   if self.node_exists(path) {
     return None
@@ -310,11 +310,11 @@ pub async fn FileStore::create_u64(
   self : FileStore,
   format : @metadata.Format,
   path : String,
-  shape : Array[Int],
-  chunk_shape : Array[Int],
+  shape : Array[Int32],
+  chunk_shape : Array[Int32],
   fill : UInt64,
-  big_endian? : Bool = false,
-  compression? : @codec.Compression = @codec.Raw,
+  big_endian~ : Bool = false,
+  compression~ : @codec.Compression = @codec.Raw,
 ) -> FileU64Array? {
   if self.node_exists(path) {
     return None

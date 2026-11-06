@@ -13,12 +13,12 @@ fn codec_configuration(value : Json) -> Map[String, Json]? {
 }
 
 ///|
-fn positive_dimensions(value : Json, rank : Int) -> Array[Int]? {
+fn positive_dimensions(value : Json, rank : Int32) -> Array[Int32]? {
   guard value is Array(values) else { return None }
   if values.length() != rank {
     return None
   }
-  let result : Array[Int] = []
+  let result : Array[Int32] = []
   for value in values {
     guard value is Number(n, ..) else { return None }
     if n < 1.0 || n > 2147483647.0 {
@@ -85,7 +85,7 @@ pub fn prepare(metadata : @metadata.ArrayMetadata) -> @metadata.ArrayMetadata? {
     Some(String("start")) => true
     _ => return None
   }
-  let chunks_per_shard : Array[Int] = []
+  let chunks_per_shard : Array[Int32] = []
   let mut index_entries = 1
   for i in 0..<inner_shape.length() {
     let outer = metadata.chunk_shape[i]
@@ -128,14 +128,14 @@ pub fn prepare(metadata : @metadata.ArrayMetadata) -> @metadata.ArrayMetadata? {
 /// Map an inner chunk coordinate to its outer shard and local index.
 pub fn coordinates(
   metadata : @metadata.ArrayMetadata,
-  inner : Array[Int],
-) -> (Array[Int], Array[Int])? {
+  inner : Array[Int32],
+) -> (Array[Int32], Array[Int32])? {
   guard metadata.sharding is Some(layout) else { return None }
   if inner.length() != layout.chunks_per_shard.length() {
     return None
   }
-  let outer : Array[Int] = []
-  let within : Array[Int] = []
+  let outer : Array[Int32] = []
+  let within : Array[Int32] = []
   for i in 0..<inner.length() {
     if inner[i] < 0 {
       return None

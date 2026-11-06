@@ -24,7 +24,7 @@ pub fn open_i8_from_metadata(
 }
 
 ///|
-fn signed_byte(value : Byte) -> Int {
+fn signed_byte(value : Byte) -> Int32 {
   let bits = value.to_int()
   if bits < 128 {
     bits
@@ -34,7 +34,7 @@ fn signed_byte(value : Byte) -> Int {
 }
 
 ///|
-pub fn I8Array::read(self : I8Array, indices : Array[Int]) -> Int? {
+pub fn I8Array::read(self : I8Array, indices : Array[Int32]) -> Int32? {
   match self.bits.read(indices) {
     Some(value) => Some(signed_byte(value))
     None => None
@@ -44,8 +44,8 @@ pub fn I8Array::read(self : I8Array, indices : Array[Int]) -> Int? {
 ///|
 pub fn I8Array::write(
   self : I8Array,
-  indices : Array[Int],
-  value : Int,
+  indices : Array[Int32],
+  value : Int32,
 ) -> Bool {
   if value < -128 || value > 127 {
     return false
@@ -56,13 +56,13 @@ pub fn I8Array::write(
 ///|
 pub fn I8Array::read_region(
   self : I8Array,
-  origin : Array[Int],
-  extent : Array[Int],
-) -> Array[Int]? {
+  origin : Array[Int32],
+  extent : Array[Int32],
+) -> Array[Int32]? {
   guard self.bits.read_region(origin, extent) is Some(bytes) else {
     return None
   }
-  let values : Array[Int] = []
+  let values : Array[Int32] = []
   for value in bytes {
     values.push(signed_byte(value))
   }
@@ -72,9 +72,9 @@ pub fn I8Array::read_region(
 ///|
 pub fn I8Array::write_region(
   self : I8Array,
-  origin : Array[Int],
-  extent : Array[Int],
-  values : Array[Int],
+  origin : Array[Int32],
+  extent : Array[Int32],
+  values : Array[Int32],
 ) -> Bool {
   let bytes : Array[Byte] = []
   for value in values {

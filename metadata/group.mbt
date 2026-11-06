@@ -1,10 +1,11 @@
 ///|
 /// Validated group metadata. V2 attributes live in a separate `.zattrs` key;
 /// V3 attributes are part of the group's `zarr.json` document.
+#derive(Debug)
 pub(all) struct GroupMetadata {
   format : Format
   attributes : Json
-} derive(Debug)
+}
 
 ///|
 pub extend GroupMetadata with Debug::{to_repr}

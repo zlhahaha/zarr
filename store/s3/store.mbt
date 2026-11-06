@@ -202,19 +202,27 @@ pub async fn S3Store::open_array(
 /// `endpoint` selects a path-style S3-compatible service, e.g. MinIO. With
 /// no endpoint, an AWS regional path-style endpoint is used. Credentials are
 /// optional for public buckets; no environment-variable lookup is performed.
+/// Signed HTTP requests require explicit `allow_insecure_http=true`, including
+/// local test endpoints. Use HTTPS for credentials outside isolated tests.
 pub fn S3Store::new(
   bucket : String,
   region : String,
-  prefix? : String = "",
-  endpoint? : String = "",
+  prefix~ : String = "",
+  endpoint~ : String = "",
   credentials? : Credentials,
-  read_limits? : @store.ReadLimits = @store.ReadLimits::defaults(),
-  request_timeout_ms? : Int = 30000,
+  allow_insecure_http~ : Bool = false,
+  read_limits~ : @store.ReadLimits = @store.ReadLimits::defaults(),
+  request_timeout_ms~ : Int32 = 30000,
 ) -> S3Store? {
   if !valid_label(bucket) || !valid_label(region) {
     return None
   }
   guard clean_prefix(prefix) is Some(prefix) else { return None }
+  if credentials is Some(_) &&
+    endpoint.has_prefix("http://") &&
+    !allow_insecure_http {
+    return None
+  }
   if endpoint != "" &&
     (
       !(endpoint.has_prefix("https://") || endpoint.has_prefix("http://")) ||
@@ -253,8 +261,8 @@ pub fn S3Store::new(
 pub async fn S3Store::hydrate_region(
   self : S3Store,
   path : String,
-  origin : Array[Int],
-  extent : Array[Int],
+  origin : Array[Int32],
+  extent : Array[Int32],
 ) -> @store.MemoryStore? {
   self.http.hydrate_region(path, origin, extent)
 }

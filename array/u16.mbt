@@ -5,7 +5,7 @@ pub struct U16Array {
   metadata : @metadata.ArrayMetadata
   path : String
   fill : UInt16
-  chunk_bytes : Int
+  chunk_bytes : Int32
   big_endian : Bool
   compression : @codec.Compression
 }
@@ -93,7 +93,7 @@ fn U16Array::encoded_fill(self : U16Array) -> Bytes {
 }
 
 ///|
-pub fn U16Array::read(self : U16Array, indices : Array[Int]) -> UInt16? {
+pub fn U16Array::read(self : U16Array, indices : Array[Int32]) -> UInt16? {
   guard @chunk.element_location(self.metadata, indices, self.path)
     is Some((key, offset)) else {
     return None
@@ -125,7 +125,7 @@ pub fn U16Array::read(self : U16Array, indices : Array[Int]) -> UInt16? {
 ///|
 pub fn U16Array::write(
   self : U16Array,
-  indices : Array[Int],
+  indices : Array[Int32],
   value : UInt16,
 ) -> Bool {
   guard @chunk.element_location(self.metadata, indices, self.path)
@@ -161,8 +161,8 @@ pub fn U16Array::write(
 ///|
 pub fn U16Array::read_region(
   self : U16Array,
-  origin : Array[Int],
-  extent : Array[Int],
+  origin : Array[Int32],
+  extent : Array[Int32],
 ) -> Array[UInt16]? {
   guard read_region_bytes(
       self.store,
@@ -195,8 +195,8 @@ pub fn U16Array::read_region(
 ///|
 pub fn U16Array::write_region(
   self : U16Array,
-  origin : Array[Int],
-  extent : Array[Int],
+  origin : Array[Int32],
+  extent : Array[Int32],
   values : Array[UInt16],
 ) -> Bool {
   guard @chunk.region_len(self.metadata, origin, extent) is Some(length) else {

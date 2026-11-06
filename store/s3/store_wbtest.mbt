@@ -36,3 +36,40 @@ test "S3 address configuration validates bucket and path" {
   )
   assert_true(S3Store::new("valid", "us-east-1", request_timeout_ms=0) is None)
 }
+
+///|
+test "signed plaintext endpoints require explicit opt in" {
+  guard Credentials::new("test-access", "test-secret", session_token="token")
+    is Some(credentials) else {
+    fail("test credentials")
+  }
+  for
+    endpoint in [
+      "http://127.0.0.1:9000", "http://localhost:9000", "http://storage.example",
+    ] {
+    assert_true(
+      S3Store::new("bucket", "us-east-1", endpoint~, credentials~) is None,
+    )
+    assert_true(
+      S3Store::new(
+        "bucket",
+        "us-east-1",
+        endpoint~,
+        credentials~,
+        allow_insecure_http=true,
+      )
+      is Some(_),
+    )
+    assert_true(S3Store::new("bucket", "us-east-1", endpoint~) is Some(_))
+  }
+  assert_true(S3Store::new("bucket", "us-east-1", credentials~) is Some(_))
+  assert_true(
+    S3Store::new(
+      "bucket",
+      "us-east-1",
+      endpoint="https://storage.example",
+      credentials~,
+    )
+    is Some(_),
+  )
+}

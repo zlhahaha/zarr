@@ -6,7 +6,7 @@ pub struct F32Array {
   metadata : @metadata.ArrayMetadata
   path : String
   fill : Float
-  chunk_bytes : Int
+  chunk_bytes : Int32
   big_endian : Bool
   compression : @codec.Compression
 }
@@ -70,7 +70,7 @@ fn F32Array::encoded_fill(self : F32Array) -> Bytes {
 }
 
 ///|
-pub fn F32Array::read(self : F32Array, indices : Array[Int]) -> Float? {
+pub fn F32Array::read(self : F32Array, indices : Array[Int32]) -> Float? {
   guard @chunk.element_location(self.metadata, indices, self.path)
     is Some((key, offset)) else {
     return None
@@ -102,7 +102,7 @@ pub fn F32Array::read(self : F32Array, indices : Array[Int]) -> Float? {
 ///|
 pub fn F32Array::write(
   self : F32Array,
-  indices : Array[Int],
+  indices : Array[Int32],
   value : Float,
 ) -> Bool {
   guard @chunk.element_location(self.metadata, indices, self.path)
@@ -141,8 +141,8 @@ pub fn F32Array::write(
 /// Read a bounded N-dimensional rectangle in C order across chunk boundaries.
 pub fn F32Array::read_region(
   self : F32Array,
-  origin : Array[Int],
-  extent : Array[Int],
+  origin : Array[Int32],
+  extent : Array[Int32],
 ) -> Array[Float]? {
   guard read_region_bytes(
       self.store,
@@ -176,8 +176,8 @@ pub fn F32Array::read_region(
 /// Write a C-order rectangle. Writes spanning multiple chunks are not atomic.
 pub fn F32Array::write_region(
   self : F32Array,
-  origin : Array[Int],
-  extent : Array[Int],
+  origin : Array[Int32],
+  extent : Array[Int32],
   values : Array[Float],
 ) -> Bool {
   guard @chunk.region_len(self.metadata, origin, extent) is Some(length) else {

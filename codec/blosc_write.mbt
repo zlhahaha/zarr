@@ -1,5 +1,5 @@
 ///|
-fn blosc_put_i32(output : Array[Byte], value : Int) -> Unit {
+fn blosc_put_i32(output : Array[Byte], value : Int32) -> Unit {
   output.push((value & 255).to_byte())
   output.push(((value >> 8) & 255).to_byte())
   output.push(((value >> 16) & 255).to_byte())
@@ -7,7 +7,7 @@ fn blosc_put_i32(output : Array[Byte], value : Int) -> Unit {
 }
 
 ///|
-fn blosc_lz4_hash(input : Bytes, at : Int) -> Int {
+fn blosc_lz4_hash(input : Bytes, at : Int32) -> Int32 {
   (
     (input[at].to_int() << 8) ^
     (input[at + 1].to_int() << 4) ^
@@ -18,7 +18,7 @@ fn blosc_lz4_hash(input : Bytes, at : Int) -> Int {
 }
 
 ///|
-fn blosc_lz4_extra(output : Array[Byte], length : Int) -> Unit {
+fn blosc_lz4_extra(output : Array[Byte], length : Int32) -> Unit {
   let mut remaining = length
   while remaining >= 255 {
     output.push(b'\xff')
@@ -31,10 +31,10 @@ fn blosc_lz4_extra(output : Array[Byte], length : Int) -> Unit {
 fn blosc_lz4_match(
   output : Array[Byte],
   input : Bytes,
-  anchor : Int,
-  at : Int,
-  previous : Int,
-  match_length : Int,
+  anchor : Int32,
+  at : Int32,
+  previous : Int32,
+  match_length : Int32,
 ) -> Unit {
   let literals = at - anchor
   let match_code = match_length - 4
@@ -97,7 +97,11 @@ fn blosc_lz4_encode(input : Bytes) -> Bytes {
 }
 
 ///|
-fn blosc_shuffle_bytes(raw : Bytes, typesize : Int, shuffle : Int) -> Bytes? {
+fn blosc_shuffle_bytes(
+  raw : Bytes,
+  typesize : Int32,
+  shuffle : Int32,
+) -> Bytes? {
   if typesize <= 0 || typesize > 255 || raw.length() % typesize != 0 {
     return None
   }
@@ -142,9 +146,9 @@ fn blosc_shuffle_bytes(raw : Bytes, typesize : Int, shuffle : Int) -> Bytes? {
 /// use the format's memcpy representation so incompressible arrays stay small.
 fn encode_blosc_lz4(
   raw : Bytes,
-  level : Int,
-  typesize : Int,
-  shuffle : Int,
+  level : Int32,
+  typesize : Int32,
+  shuffle : Int32,
 ) -> Bytes? {
   if raw.length() <= 0 || raw.length() > 2147483000 {
     return None

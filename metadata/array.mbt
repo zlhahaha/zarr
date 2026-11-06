@@ -1,9 +1,10 @@
 ///|
 /// Version of the Zarr storage specification, not the Python package version.
+#derive(Eq, Debug)
 pub(all) enum Format {
   V2
   V3
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Format with Eq::{not_equal, equal}
@@ -14,14 +15,15 @@ pub extend Format with Debug::{to_repr}
 ///|
 /// Validated read-only sharding layout for a filesystem-backed v3 array.
 /// `ArrayMetadata.chunk_shape` is the inner chunk shape when this is present.
+#derive(Debug)
 pub(all) struct Sharding {
-  shard_shape : Array[Int]
-  chunks_per_shard : Array[Int]
-  index_size : Int
+  shard_shape : Array[Int32]
+  chunks_per_shard : Array[Int32]
+  index_size : Int32
   index_at_start : Bool
   index_big_endian : Bool
   index_crc32c : Bool
-} derive(Debug)
+}
 
 ///|
 pub extend Sharding with Debug::{to_repr}
@@ -29,20 +31,21 @@ pub extend Sharding with Debug::{to_repr}
 ///|
 /// Validated metadata needed to locate chunks in a regular grid.
 /// Codecs are retained verbatim; decoding them is a separate capability.
+#derive(Debug)
 pub(all) struct ArrayMetadata {
   format : Format
-  shape : Array[Int]
-  chunk_shape : Array[Int]
+  shape : Array[Int32]
+  chunk_shape : Array[Int32]
   data_type : String
   separator : String
   key_encoding : String
   codecs : Array[Json]
-  v2_filter_count : Int
+  v2_filter_count : Int32
   storage_transformers : Array[Json]
   fill_value : Json
   order : String
   sharding : Sharding?
-} derive(Debug)
+}
 
 ///|
 pub extend ArrayMetadata with Debug::{to_repr}
@@ -64,7 +67,7 @@ fn string_field(value : Json, name : String) -> String? {
 }
 
 ///|
-fn nonnegative_int(value : Json) -> Int? {
+fn nonnegative_int(value : Json) -> Int32? {
   match value {
     Number(n, ..) =>
       if n < 0.0 || n > 2147483647.0 {
@@ -82,9 +85,9 @@ fn nonnegative_int(value : Json) -> Int? {
 }
 
 ///|
-fn dimensions(value : Json, positive : Bool) -> Array[Int]? {
+fn dimensions(value : Json, positive : Bool) -> Array[Int32]? {
   guard value is Array(values) else { return None }
-  let result : Array[Int] = []
+  let result : Array[Int32] = []
   for value in values {
     guard nonnegative_int(value) is Some(n) else { return None }
     if positive && n == 0 {

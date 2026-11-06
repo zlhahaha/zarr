@@ -2,6 +2,8 @@
 
 This library is an early Mooncakes release. Requires a MoonBit toolchain with **`moonc >= 0.10.14`**; inspect it with `moon version --all`. Filesystem, HTTP and S3 packages require the native backend. Add the published module to an existing MoonBit project:
 
+The current repository prepares unreleased 0.7.1 and requires **0.10.20**. Commands below install published **0.7.0**, which is also checked on 0.10.20 by a separate registry-only consumer; see [maintenance verification](MAINTENANCE.md).
+
 ```sh
 moon add zlhahaha/zarr@0.7.0
 ```

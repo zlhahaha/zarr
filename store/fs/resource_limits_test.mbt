@@ -1,7 +1,12 @@
 ///|
+// The legacy async dependency shields cleanup at runtime, without nocancel types.
+#warnings("-cancellable_defer")
 async test "native object limits check size before reads and do not mask absence" {
   let dir = @async_fs.tmpdir(prefix="zarr-budget-object")
-  defer @async_fs.rmdir(dir, recursive=true)
+  defer @async.protect_from_cancel(
+    () => @async_fs.rmdir(dir, recursive=true),
+    resume_on_cancel=true,
+  )
   guard @fs.FileStore::new(dir) is Some(plain) else { fail("store") }
   guard plain.create_u8(@metadata.V3, "", [4], [4], b'\x07') is Some(_) else {
     fail("array")
@@ -32,9 +37,13 @@ async test "native object limits check size before reads and do not mask absence
 }
 
 ///|
+#warnings("-cancellable_defer")
 async test "native metadata and consolidated input budgets include exact boundary" {
   let dir = @async_fs.tmpdir(prefix="zarr-budget-metadata")
-  defer @async_fs.rmdir(dir, recursive=true)
+  defer @async.protect_from_cancel(
+    () => @async_fs.rmdir(dir, recursive=true),
+    resume_on_cancel=true,
+  )
   guard @fs.FileStore::new(dir) is Some(plain) else { fail("store") }
   assert_true(
     plain.put(".zmetadata", b"{\"zarr_consolidated_format\":1,\"metadata\":{}}"),
@@ -85,9 +94,13 @@ async test "native metadata and consolidated input budgets include exact boundar
 }
 
 ///|
+#warnings("-cancellable_defer")
 async test "native regions preflight huge selections and all typed widths" {
   let dir = @async_fs.tmpdir(prefix="zarr-budget-region")
-  defer @async_fs.rmdir(dir, recursive=true)
+  defer @async.protect_from_cancel(
+    () => @async_fs.rmdir(dir, recursive=true),
+    resume_on_cancel=true,
+  )
   guard @fs.FileStore::new(dir) is Some(plain) else { fail("store") }
   guard plain.create_u8(@metadata.V3, "huge", [2147483647], [1], b'\x06')
     is Some(huge) else {

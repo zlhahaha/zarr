@@ -7,6 +7,7 @@
 /cmd/nonfinite_interop/
 /cmd/int64_interop/
 /cmd/int8_interop/
+/cmd/s3_integration/
 /fs/
 *_test.mbt
 *_wbtest.mbt

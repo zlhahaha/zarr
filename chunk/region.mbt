@@ -2,9 +2,9 @@
 /// Validate a bounded N-dimensional rectangle and return its element count.
 pub fn region_len(
   metadata : @metadata.ArrayMetadata,
-  origin : Array[Int],
-  extent : Array[Int],
-) -> Int? {
+  origin : Array[Int32],
+  extent : Array[Int32],
+) -> Int32? {
   if origin.length() != metadata.shape.length() ||
     extent.length() != metadata.shape.length() {
     return None
@@ -38,11 +38,11 @@ pub fn region_len(
 /// Convert a C-order linear position within a validated region to indices.
 /// Call only when every extent is positive or when the region is scalar.
 pub fn region_coords(
-  origin : Array[Int],
-  extent : Array[Int],
-  linear : Int,
-) -> Array[Int] {
-  let coords : Array[Int] = []
+  origin : Array[Int32],
+  extent : Array[Int32],
+  linear : Int32,
+) -> Array[Int32] {
+  let coords : Array[Int32] = []
   for _ in 0..<origin.length() {
     coords.push(0)
   }
@@ -57,11 +57,12 @@ pub fn region_coords(
 
 ///|
 /// The overlap between a requested rectangle and one regular-grid chunk.
+#derive(Debug)
 pub(all) struct ChunkRegion {
-  coordinates : Array[Int]
-  origin : Array[Int]
-  extent : Array[Int]
-} derive(Debug)
+  coordinates : Array[Int32]
+  origin : Array[Int32]
+  extent : Array[Int32]
+}
 
 ///|
 pub extend ChunkRegion with Debug::{to_repr}
@@ -70,9 +71,9 @@ pub extend ChunkRegion with Debug::{to_repr}
 /// Enumerate chunks touched by a validated rectangle in chunk-grid C order.
 pub fn region_chunks(
   metadata : @metadata.ArrayMetadata,
-  origin : Array[Int],
-  extent : Array[Int],
-  max_chunks? : Int = 16384,
+  origin : Array[Int32],
+  extent : Array[Int32],
+  max_chunks~ : Int32 = 16384,
 ) -> Array[ChunkRegion]? {
   guard region_chunk_count(metadata, origin, extent) is Some(count) else {
     return None
@@ -87,8 +88,8 @@ pub fn region_chunks(
   if length == 0 {
     return Some(result)
   }
-  let starts : Array[Int] = []
-  let counts : Array[Int] = []
+  let starts : Array[Int32] = []
+  let counts : Array[Int32] = []
   let mut total = 1
   for i in 0..<origin.length() {
     let side = metadata.chunk_shape[i]
@@ -106,7 +107,7 @@ pub fn region_chunks(
     counts.push(count)
   }
   for linear in 0..<total {
-    let coordinates : Array[Int] = []
+    let coordinates : Array[Int32] = []
     for _ in 0..<origin.length() {
       coordinates.push(0)
     }
@@ -116,8 +117,8 @@ pub fn region_chunks(
       coordinates[i] = starts[i] + remainder % counts[i]
       remainder /= counts[i]
     }
-    let overlap_origin : Array[Int] = []
-    let overlap_extent : Array[Int] = []
+    let overlap_origin : Array[Int32] = []
+    let overlap_extent : Array[Int32] = []
     for i in 0..<origin.length() {
       let chunk_start = coordinates[i] * metadata.chunk_shape[i]
       let chunk_end = if metadata.chunk_shape[i] >
@@ -145,9 +146,9 @@ pub fn region_chunks(
 /// Count touched chunks without allocating a list of chunks or coordinates.
 pub fn region_chunk_count(
   metadata : @metadata.ArrayMetadata,
-  origin : Array[Int],
-  extent : Array[Int],
-) -> Int? {
+  origin : Array[Int32],
+  extent : Array[Int32],
+) -> Int32? {
   guard region_len(metadata, origin, extent) is Some(length) else {
     return None
   }
@@ -175,10 +176,10 @@ pub fn region_chunk_count(
 ///|
 /// C-order offset of an element inside a previously validated rectangle.
 pub fn region_index(
-  origin : Array[Int],
-  extent : Array[Int],
-  indices : Array[Int],
-) -> Int? {
+  origin : Array[Int32],
+  extent : Array[Int32],
+  indices : Array[Int32],
+) -> Int32? {
   if origin.length() != extent.length() || origin.length() != indices.length() {
     return None
   }

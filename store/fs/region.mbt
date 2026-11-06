@@ -2,8 +2,8 @@
 /// Read a bounded C-order uint8 rectangle across native filesystem chunks.
 pub async fn FileU8Array::read_region(
   self : FileU8Array,
-  origin : Array[Int],
-  extent : Array[Int],
+  origin : Array[Int32],
+  extent : Array[Int32],
 ) -> Bytes? {
   guard @chunk.region_len(self.metadata, origin, extent) is Some(length) else {
     return None
@@ -66,8 +66,8 @@ pub async fn FileU8Array::read_region(
 /// Writes spanning chunks are not atomic.
 pub async fn FileU8Array::write_region(
   self : FileU8Array,
-  origin : Array[Int],
-  extent : Array[Int],
+  origin : Array[Int32],
+  extent : Array[Int32],
   values : Bytes,
 ) -> Bool {
   guard @chunk.region_len(self.metadata, origin, extent) is Some(length) else {
@@ -145,8 +145,8 @@ pub async fn FileU8Array::write_region(
 /// Read a bounded C-order float32 rectangle across native filesystem chunks.
 pub async fn FileF32Array::read_region(
   self : FileF32Array,
-  origin : Array[Int],
-  extent : Array[Int],
+  origin : Array[Int32],
+  extent : Array[Int32],
 ) -> Array[Float]? {
   guard @chunk.region_len(self.metadata, origin, extent) is Some(length) else {
     return None
@@ -209,8 +209,8 @@ pub async fn FileF32Array::read_region(
 /// Writes spanning chunks are not atomic.
 pub async fn FileF32Array::write_region(
   self : FileF32Array,
-  origin : Array[Int],
-  extent : Array[Int],
+  origin : Array[Int32],
+  extent : Array[Int32],
   values : Array[Float],
 ) -> Bool {
   guard @chunk.region_len(self.metadata, origin, extent) is Some(length) else {
@@ -284,8 +284,8 @@ pub async fn FileF32Array::write_region(
 /// Read a bounded C-order float64 rectangle across native filesystem chunks.
 pub async fn FileF64Array::read_region(
   self : FileF64Array,
-  origin : Array[Int],
-  extent : Array[Int],
+  origin : Array[Int32],
+  extent : Array[Int32],
 ) -> Array[Double]? {
   guard @chunk.region_len(self.metadata, origin, extent) is Some(length) else {
     return None
@@ -348,8 +348,8 @@ pub async fn FileF64Array::read_region(
 /// Writes spanning chunks are not atomic.
 pub async fn FileF64Array::write_region(
   self : FileF64Array,
-  origin : Array[Int],
-  extent : Array[Int],
+  origin : Array[Int32],
+  extent : Array[Int32],
   values : Array[Double],
 ) -> Bool {
   guard @chunk.region_len(self.metadata, origin, extent) is Some(length) else {
@@ -423,9 +423,9 @@ pub async fn FileF64Array::write_region(
 /// Read a bounded C-order int32 rectangle across native filesystem chunks.
 pub async fn FileI32Array::read_region(
   self : FileI32Array,
-  origin : Array[Int],
-  extent : Array[Int],
-) -> Array[Int]? {
+  origin : Array[Int32],
+  extent : Array[Int32],
+) -> Array[Int32]? {
   guard @chunk.region_len(self.metadata, origin, extent) is Some(length) else {
     return None
   }
@@ -441,7 +441,7 @@ pub async fn FileI32Array::read_region(
     is Some(pieces) else {
     return None
   }
-  let result : Array[Int] = Array::make(length, 0)
+  let result : Array[Int32] = Array::make(length, 0)
   let reader = self.store.shard_session()
   for piece in pieces {
     let scratch = self.store.scratch()
@@ -487,9 +487,9 @@ pub async fn FileI32Array::read_region(
 /// Writes spanning chunks are not atomic.
 pub async fn FileI32Array::write_region(
   self : FileI32Array,
-  origin : Array[Int],
-  extent : Array[Int],
-  values : Array[Int],
+  origin : Array[Int32],
+  extent : Array[Int32],
+  values : Array[Int32],
 ) -> Bool {
   guard @chunk.region_len(self.metadata, origin, extent) is Some(length) else {
     return false
@@ -531,7 +531,7 @@ pub async fn FileI32Array::write_region(
       is Some(piece_len) else {
       return false
     }
-    let piece_values : Array[Int] = []
+    let piece_values : Array[Int32] = []
     for linear in 0..<piece_len {
       let indices = @chunk.region_coords(piece.origin, piece.extent, linear)
       guard @chunk.region_index(origin, extent, indices) is Some(index) else {
@@ -562,8 +562,8 @@ pub async fn FileI32Array::write_region(
 /// Read a C-order uint16 rectangle, loading each touched filesystem chunk once.
 pub async fn FileU16Array::read_region(
   self : FileU16Array,
-  origin : Array[Int],
-  extent : Array[Int],
+  origin : Array[Int32],
+  extent : Array[Int32],
 ) -> Array[UInt16]? {
   guard @chunk.region_len(self.metadata, origin, extent) is Some(length) else {
     return None
@@ -626,8 +626,8 @@ pub async fn FileU16Array::read_region(
 /// Cross-chunk writes are not atomic.
 pub async fn FileU16Array::write_region(
   self : FileU16Array,
-  origin : Array[Int],
-  extent : Array[Int],
+  origin : Array[Int32],
+  extent : Array[Int32],
   values : Array[UInt16],
 ) -> Bool {
   guard @chunk.region_len(self.metadata, origin, extent) is Some(length) else {

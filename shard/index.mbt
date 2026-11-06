@@ -1,15 +1,16 @@
 ///|
+#derive(Debug)
 pub(all) enum Entry {
   Absent
-  Data(Int64, Int)
+  Data(Int64, Int32)
   Invalid
-} derive(Debug)
+}
 
 ///|
 pub extend Entry with Debug::{to_repr}
 
 ///|
-fn crc32c(bytes : BytesView) -> UInt {
+fn crc32c(bytes : BytesView) -> UInt32 {
   let mut crc = 0xFFFFFFFFU
   for byte in bytes {
     crc = crc ^ byte.to_uint()
@@ -21,7 +22,7 @@ fn crc32c(bytes : BytesView) -> UInt {
 }
 
 ///|
-fn index_u64(bytes : Bytes, at : Int, big_endian : Bool) -> UInt64? {
+fn index_u64(bytes : Bytes, at : Int32, big_endian : Bool) -> UInt64? {
   if at < 0 || at > bytes.length() - 8 {
     return None
   }
@@ -36,7 +37,7 @@ fn index_u64(bytes : Bytes, at : Int, big_endian : Bool) -> UInt64? {
 }
 
 ///|
-fn index_u32(bytes : Bytes, at : Int) -> UInt? {
+fn index_u32(bytes : Bytes, at : Int32) -> UInt32? {
   if at < 0 || at > bytes.length() - 4 {
     return None
   }
@@ -74,7 +75,7 @@ pub fn validate_index(
 }
 
 ///|
-pub fn ValidatedIndex::size_bytes(self : ValidatedIndex) -> Int {
+pub fn ValidatedIndex::size_bytes(self : ValidatedIndex) -> Int32 {
   self.bytes.length()
 }
 
@@ -89,7 +90,7 @@ pub fn ValidatedIndex::matches_size(
 ///|
 pub fn ValidatedIndex::entry(
   self : ValidatedIndex,
-  within : Array[Int],
+  within : Array[Int32],
 ) -> Entry {
   let layout = self.layout
   let index = self.bytes
@@ -142,7 +143,7 @@ pub fn ValidatedIndex::entry(
 pub fn entry(
   layout : @metadata.Sharding,
   index : Bytes,
-  within : Array[Int],
+  within : Array[Int32],
   shard_size : Int64,
 ) -> Entry {
   match validate_index(layout, index, shard_size) {

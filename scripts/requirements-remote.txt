@@ -1,0 +1,2 @@
+# Test-only uploader; the MoonBit library has no Python runtime dependency.
+boto3==1.43.125

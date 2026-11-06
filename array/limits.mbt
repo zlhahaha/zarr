@@ -4,7 +4,7 @@ fn decode_read_chunk(
   store : @store.MemoryStore,
   compression : @codec.Compression,
   encoded : Bytes,
-  expected : Int,
+  expected : Int32,
 ) -> Bytes? {
   if !store.read_limits().allows_decode(encoded.length(), expected) {
     return None

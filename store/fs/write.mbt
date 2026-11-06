@@ -2,15 +2,16 @@
 /// Both the operation and cleanup failed. Fields are the owned temporary path
 /// and cleanup failure diagnostic; this error supersedes the original failure.
 /// The destination is never deleted as a fallback.
+#derive(Debug)
 pub suberror WriteCleanupFailed {
   WriteCleanupFailed(String, String)
-} derive(Debug)
+}
 
 ///|
 pub extend WriteCleanupFailed with Debug::{to_repr}
 
 ///|
-let write_name_source : @random.Rand = @random.Rand::new()
+let write_name_source : @random.Rand = @random.Rand()
 
 ///|
 priv struct StagedWrite {
@@ -94,14 +95,18 @@ async fn remove_staged(temporary : String) -> Unit {
 ///|
 // Private operation seams let whitebox tests inject partial writes, commit
 // failures, cancellation and cleanup failures in the actual production path.
+// async@0.20.3 shields cleanup at runtime, but predates the compiler's
+// `nocancel` effect annotation. Keep this suppression local to the already
+// protected errdefer; write-safety cancellation regressions verify cleanup.
+#warnings("-cancellable_defer")
 async fn put_file_safely(
   destination : String,
   parent : String,
   value : Bytes,
-  candidate? : () -> String = next_write_name,
-  stage? : async (@async_fs.File, Bytes) -> Unit = write_staged,
-  commit? : async (String, String) -> Unit = replace_staged,
-  cleanup? : async (String) -> Unit = remove_staged,
+  candidate~ : () -> String = next_write_name,
+  stage~ : async (@async_fs.File, Bytes) -> Unit = write_staged,
+  commit~ : async (String, String) -> Unit = replace_staged,
+  cleanup~ : async (String) -> Unit = remove_staged,
 ) -> Unit {
   let owned : Ref[StagedWrite?] = Ref(None)
   // Unlike an ordinary catch handler, errdefer also handles cancellation.

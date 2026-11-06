@@ -35,7 +35,7 @@ fn bits_to_i16(value : UInt16) -> Int16 {
 }
 
 ///|
-pub fn I16Array::read(self : I16Array, indices : Array[Int]) -> Int16? {
+pub fn I16Array::read(self : I16Array, indices : Array[Int32]) -> Int16? {
   match self.bits.read(indices) {
     Some(value) => Some(bits_to_i16(value))
     None => None
@@ -45,7 +45,7 @@ pub fn I16Array::read(self : I16Array, indices : Array[Int]) -> Int16? {
 ///|
 pub fn I16Array::write(
   self : I16Array,
-  indices : Array[Int],
+  indices : Array[Int32],
   value : Int16,
 ) -> Bool {
   self.bits.write(indices, i16_to_bits(value))
@@ -54,8 +54,8 @@ pub fn I16Array::write(
 ///|
 pub fn I16Array::read_region(
   self : I16Array,
-  origin : Array[Int],
-  extent : Array[Int],
+  origin : Array[Int32],
+  extent : Array[Int32],
 ) -> Array[Int16]? {
   guard self.bits.read_region(origin, extent) is Some(raw) else { return None }
   let result : Array[Int16] = []
@@ -68,8 +68,8 @@ pub fn I16Array::read_region(
 ///|
 pub fn I16Array::write_region(
   self : I16Array,
-  origin : Array[Int],
-  extent : Array[Int],
+  origin : Array[Int32],
+  extent : Array[Int32],
   values : Array[Int16],
 ) -> Bool {
   let raw : Array[UInt16] = []

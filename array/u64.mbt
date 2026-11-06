@@ -24,7 +24,7 @@ pub fn open_u64_from_metadata(
 }
 
 ///|
-pub fn U64Array::read(self : U64Array, indices : Array[Int]) -> UInt64? {
+pub fn U64Array::read(self : U64Array, indices : Array[Int32]) -> UInt64? {
   match self.bits.read(indices) {
     Some(value) => Some(value.reinterpret_as_uint64())
     None => None
@@ -34,7 +34,7 @@ pub fn U64Array::read(self : U64Array, indices : Array[Int]) -> UInt64? {
 ///|
 pub fn U64Array::write(
   self : U64Array,
-  indices : Array[Int],
+  indices : Array[Int32],
   value : UInt64,
 ) -> Bool {
   self.bits.write(indices, value.reinterpret_as_int64())
@@ -43,8 +43,8 @@ pub fn U64Array::write(
 ///|
 pub fn U64Array::read_region(
   self : U64Array,
-  origin : Array[Int],
-  extent : Array[Int],
+  origin : Array[Int32],
+  extent : Array[Int32],
 ) -> Array[UInt64]? {
   guard self.bits.read_region(origin, extent) is Some(raw) else { return None }
   let result : Array[UInt64] = []
@@ -57,8 +57,8 @@ pub fn U64Array::read_region(
 ///|
 pub fn U64Array::write_region(
   self : U64Array,
-  origin : Array[Int],
-  extent : Array[Int],
+  origin : Array[Int32],
+  extent : Array[Int32],
   values : Array[UInt64],
 ) -> Bool {
   let raw : Array[Int64] = []

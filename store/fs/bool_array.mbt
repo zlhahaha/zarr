@@ -22,12 +22,12 @@ pub async fn FileStore::open_bool(
 ///|
 fn FileBoolArray::chunk_coords(
   self : FileBoolArray,
-  indices : Array[Int],
-) -> Array[Int]? {
+  indices : Array[Int32],
+) -> Array[Int32]? {
   if indices.length() != self.metadata.shape.length() {
     return None
   }
-  let coordinates : Array[Int] = []
+  let coordinates : Array[Int32] = []
   for i in 0..<indices.length() {
     let index = indices[i]
     if index < 0 || index >= self.metadata.shape[i] {
@@ -41,7 +41,7 @@ fn FileBoolArray::chunk_coords(
 ///|
 pub async fn FileBoolArray::read(
   self : FileBoolArray,
-  indices : Array[Int],
+  indices : Array[Int32],
 ) -> Bool? {
   guard self.chunk_coords(indices) is Some(coordinates) else { return None }
   let scratch = self.store.scratch()
@@ -62,7 +62,7 @@ pub async fn FileBoolArray::read(
 ///|
 pub async fn FileBoolArray::write(
   self : FileBoolArray,
-  indices : Array[Int],
+  indices : Array[Int32],
   value : Bool,
 ) -> Bool {
   guard self.chunk_coords(indices) is Some(coordinates) else { return false }
@@ -92,8 +92,8 @@ pub async fn FileBoolArray::write(
 /// Read a C-order rectangle, loading each touched filesystem chunk once.
 pub async fn FileBoolArray::read_region(
   self : FileBoolArray,
-  origin : Array[Int],
-  extent : Array[Int],
+  origin : Array[Int32],
+  extent : Array[Int32],
 ) -> Array[Bool]? {
   guard @chunk.region_len(self.metadata, origin, extent) is Some(length) else {
     return None
@@ -155,8 +155,8 @@ pub async fn FileBoolArray::read_region(
 /// Cross-chunk writes are not atomic.
 pub async fn FileBoolArray::write_region(
   self : FileBoolArray,
-  origin : Array[Int],
-  extent : Array[Int],
+  origin : Array[Int32],
+  extent : Array[Int32],
   values : Array[Bool],
 ) -> Bool {
   guard @chunk.region_len(self.metadata, origin, extent) is Some(length) else {

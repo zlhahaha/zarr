@@ -27,12 +27,12 @@ pub async fn FileStore::open_u16(
 ///|
 fn FileU16Array::chunk_coords(
   self : FileU16Array,
-  indices : Array[Int],
-) -> Array[Int]? {
+  indices : Array[Int32],
+) -> Array[Int32]? {
   if indices.length() != self.metadata.shape.length() {
     return None
   }
-  let coordinates : Array[Int] = []
+  let coordinates : Array[Int32] = []
   for i in 0..<indices.length() {
     let index = indices[i]
     if index < 0 || index >= self.metadata.shape[i] {
@@ -46,7 +46,7 @@ fn FileU16Array::chunk_coords(
 ///|
 pub async fn FileU16Array::read(
   self : FileU16Array,
-  indices : Array[Int],
+  indices : Array[Int32],
 ) -> UInt16? {
   guard self.chunk_coords(indices) is Some(coordinates) else { return None }
   let scratch = self.store.scratch()
@@ -67,7 +67,7 @@ pub async fn FileU16Array::read(
 ///|
 pub async fn FileU16Array::write(
   self : FileU16Array,
-  indices : Array[Int],
+  indices : Array[Int32],
   value : UInt16,
 ) -> Bool {
   guard self.chunk_coords(indices) is Some(coordinates) else { return false }

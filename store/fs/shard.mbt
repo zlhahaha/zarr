@@ -5,7 +5,7 @@
 async fn ShardSession::get_sharded_chunk(
   self : ShardSession,
   metadata : @metadata.ArrayMetadata,
-  coordinates : Array[Int],
+  coordinates : Array[Int32],
   path : String,
 ) -> Bytes? {
   guard metadata.sharding is Some(layout) else { return Some(b"") }

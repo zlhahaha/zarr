@@ -6,6 +6,8 @@ A MoonBit implementation of the Zarr v2 and v3 storage formats for chunked N-dim
 
 ## Status
 
+The repository is preparing **0.7.1 (unreleased)** for MoonBit `moonc >= 0.10.20`; the latest Mooncakes release remains **0.7.0**. Maintenance adds explicit opt-in for signed plaintext S3 endpoints and a real, isolated MinIO regression suite. The published 0.7.0 consumer was separately verified on 0.10.20. See [maintenance and reproduction](docs/MAINTENANCE.md).
+
 Early Mooncakes release (version `0.7.0`). The library reads and writes `bool`, signed/unsigned 8/16/32/64-bit integers, and `float32`/`float64` arrays in memory and on native filesystems, including elements, rectangular slices, missing-chunk fills and edge chunks. It supports raw chunks and gzip/zstd in both formats, plus zlib in v2 and a documented Blosc subset. Groups and attributes work in both formats. Native filesystem arrays can **read** v3 sharding-indexed stores; sharded writes remain unsupported. Native read-only HTTP and S3 adapters now hydrate selected ordinary chunks **or selected inner chunks of shards** into a temporary `MemoryStore`. A tile cursor lets applications process a large logical rectangle one bounded typed `read_region` at a time. Each tile is still buffered, so this is not a zero-copy or automatically streaming typed-array API. Unsupported dtypes/codecs, cloud writes and concurrent-writer snapshots remain outside the supported subset.
 
 Float32/float64 fill values also support the standard JSON strings `"NaN"`, `"Infinity"`, and `"-Infinity"`. Creating an array with any NaN writes the canonical `"NaN"` fill value; v3 payload-specific hexadecimal NaN fills are not supported.
@@ -42,7 +44,7 @@ Float32/float64 fill values also support the standard JSON strings `"NaN"`, `"In
 
 ## Install and try
 
-Requires a MoonBit toolchain with **`moonc >= 0.10.14`**. Check the compiler version with `moon version --all`; native filesystem/HTTP examples also require native-backend support.
+Published `0.7.0` requires **`moonc >= 0.10.14`** and has also been checked on `0.10.20`. Building the current repository requires **`moonc >= 0.10.20`**. Check the compiler version with `moon version --all`; native filesystem/HTTP examples also require native-backend support.
 
 Add the published module to a MoonBit project:
 
@@ -78,7 +80,7 @@ The local native examples create temporary stores or use memory only. `cmd/tile_
 
 ## Build and run
 
-Requires `moonc >= 0.10.14` (inspect `moon version --all`), with native support for filesystem and HTTP packages. CI checks native builds and tests on Linux, macOS and Windows, plus wasm-gc on Linux; release packaging and the older Python reverse tests run on Linux; new 3D/4D reverse tests run on all three native platforms. From this directory:
+Requires `moonc >= 0.10.20` (inspect `moon version --all`), with native support for filesystem and HTTP packages. CI checks native builds and tests on Linux, macOS and Windows, plus wasm-gc on Linux; release packaging, real MinIO integration and the older Python reverse tests run on Linux; N-D reverse tests and a registry-only 0.7.0 consumer run on all three native platforms. From this directory:
 
 ```sh
 moon check --target native --deny-warn

@@ -6,11 +6,11 @@ fn read_region_bytes(
   metadata : @metadata.ArrayMetadata,
   path : String,
   compression : @codec.Compression,
-  chunk_bytes : Int,
+  chunk_bytes : Int32,
   fill_element : Bytes,
-  element_size : Int,
-  origin : Array[Int],
-  extent : Array[Int],
+  element_size : Int32,
+  origin : Array[Int32],
+  extent : Array[Int32],
 ) -> Bytes? {
   if element_size <= 0 || fill_element.length() != element_size {
     return None
@@ -99,11 +99,11 @@ fn write_region_bytes(
   metadata : @metadata.ArrayMetadata,
   path : String,
   compression : @codec.Compression,
-  chunk_bytes : Int,
+  chunk_bytes : Int32,
   fill_element : Bytes,
-  element_size : Int,
-  origin : Array[Int],
-  extent : Array[Int],
+  element_size : Int32,
+  origin : Array[Int32],
+  extent : Array[Int32],
   values : Bytes,
 ) -> Bool {
   if element_size <= 0 || fill_element.length() != element_size {

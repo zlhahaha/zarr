@@ -12,7 +12,7 @@ test "span mapping agrees with element indexing for rank zero through four and C
       for _ in 0..<rank {
         count *= 3
       }
-      let actual : Array[(Int, Int)] = []
+      let actual : Array[(Int32, Int32)] = []
       assert_true(
         @chunk.copy_region_spans(
           source_origin,
@@ -95,7 +95,7 @@ test "asymmetric offset boxes and thin runs agree with a coordinate reference" {
       elements *= overlap_shape[axis]
     }
     for fortran in [false, true] {
-      let actual : Array[(Int, Int)] = []
+      let actual : Array[(Int32, Int32)] = []
       assert_true(
         @chunk.copy_region_spans(
           source_origin,

@@ -3,18 +3,18 @@
 /// only metadata and the chunks intersecting its requested rectangle.
 pub struct HttpStore {
   base_url : String
-  max_metadata_bytes : Int
-  max_chunk_bytes : Int
-  max_chunks : Int
-  max_cache_bytes : Int
-  max_cache_entries : Int
+  max_metadata_bytes : Int32
+  max_chunk_bytes : Int32
+  max_chunks : Int32
+  max_cache_bytes : Int32
+  max_cache_entries : Int32
   cache : Map[String, CacheEntry]
-  mut cache_bytes : Int
-  mut cache_entries : Int
+  mut cache_bytes : Int32
+  mut cache_entries : Int32
   mut tick : UInt64
   limits : @store.ReadLimits
-  max_hydration_bytes : Int
-  request_timeout_ms : Int
+  max_hydration_bytes : Int32
+  request_timeout_ms : Int32
   get_headers : ((String, String?, String?) -> Map[String, String]?)?
 }
 
@@ -27,14 +27,14 @@ pub struct CacheEntry {
 ///|
 pub fn HttpStore::new(
   base_url : String,
-  max_metadata_bytes? : Int = 1048576,
-  max_chunk_bytes? : Int = 67108864,
-  max_chunks? : Int = 1024,
-  max_cache_bytes? : Int = 67108864,
-  max_cache_entries? : Int = 4096,
-  read_limits? : @store.ReadLimits = @store.ReadLimits::defaults(),
-  max_hydration_bytes? : Int = 67108864,
-  request_timeout_ms? : Int = 30000,
+  max_metadata_bytes~ : Int32 = 1048576,
+  max_chunk_bytes~ : Int32 = 67108864,
+  max_chunks~ : Int32 = 1024,
+  max_cache_bytes~ : Int32 = 67108864,
+  max_cache_entries~ : Int32 = 4096,
+  read_limits~ : @store.ReadLimits = @store.ReadLimits::defaults(),
+  max_hydration_bytes~ : Int32 = 67108864,
+  request_timeout_ms~ : Int32 = 30000,
 ) -> HttpStore? {
   if !(base_url.has_prefix("http://") || base_url.has_prefix("https://")) ||
     base_url.contains("?") ||
@@ -147,7 +147,7 @@ fn HttpStore::next_tick(self : HttpStore) -> UInt64 {
 fn HttpStore::cached(
   self : HttpStore,
   key : String,
-  limit : Int,
+  limit : Int32,
 ) -> FetchResult? {
   guard self.cache.get(key) is Some(entry) else { return None }
   if entry.bytes.length() > limit {
@@ -196,7 +196,7 @@ fn HttpStore::cache_found(
 }
 
 ///|
-fn hex_digit(nibble : Int) -> Char {
+fn hex_digit(nibble : Int32) -> Char {
   (if nibble < 10 { 48 + nibble } else { 55 + nibble }).unsafe_to_char()
 }
 
@@ -246,7 +246,7 @@ fn HttpStore::key_url(self : HttpStore, key : String) -> String? {
 async fn HttpStore::fetch_uncached(
   self : HttpStore,
   key : String,
-  limit : Int,
+  limit : Int32,
 ) -> FetchResult {
   if self.cached(key, limit) is Some(result) {
     return result
@@ -294,7 +294,7 @@ async fn HttpStore::fetch_uncached(
 async fn HttpStore::fetch(
   self : HttpStore,
   key : String,
-  limit : Int,
+  limit : Int32,
 ) -> FetchResult {
   for attempt in 0..<2 {
     let result = @async.with_timeout_opt(self.request_timeout_ms, async fn() {
@@ -317,7 +317,7 @@ async fn HttpStore::fetch_range_once(
   self : HttpStore,
   key : String,
   range : String,
-  limit : Int,
+  limit : Int32,
   expected_etag : String?,
 ) -> RangeResult {
   guard self.key_url(key) is Some(url) else { return RangeFailed }
@@ -407,7 +407,7 @@ async fn HttpStore::fetch_range(
   self : HttpStore,
   key : String,
   range : String,
-  limit : Int,
+  limit : Int32,
   expected_etag : String?,
 ) -> RangeResult {
   for attempt in 0..<2 {
@@ -492,8 +492,8 @@ pub async fn HttpStore::open_array(
 pub async fn HttpStore::hydrate_region(
   self : HttpStore,
   path : String,
-  origin : Array[Int],
-  extent : Array[Int],
+  origin : Array[Int32],
+  extent : Array[Int32],
 ) -> @store.MemoryStore? {
   guard self.load_array(path) is Some((format, raw, metadata)) else {
     return None

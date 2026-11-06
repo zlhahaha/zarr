@@ -31,7 +31,7 @@ fn bits_to_i16(value : UInt16) -> Int16 {
 ///|
 pub async fn FileI16Array::read(
   self : FileI16Array,
-  indices : Array[Int],
+  indices : Array[Int32],
 ) -> Int16? {
   match self.bits.read(indices) {
     Some(value) => Some(bits_to_i16(value))
@@ -42,7 +42,7 @@ pub async fn FileI16Array::read(
 ///|
 pub async fn FileI16Array::write(
   self : FileI16Array,
-  indices : Array[Int],
+  indices : Array[Int32],
   value : Int16,
 ) -> Bool {
   self.bits.write(indices, i16_to_bits(value))
@@ -51,8 +51,8 @@ pub async fn FileI16Array::write(
 ///|
 pub async fn FileI16Array::read_region(
   self : FileI16Array,
-  origin : Array[Int],
-  extent : Array[Int],
+  origin : Array[Int32],
+  extent : Array[Int32],
 ) -> Array[Int16]? {
   guard self.bits.read_region(origin, extent) is Some(raw) else { return None }
   let result : Array[Int16] = []
@@ -65,8 +65,8 @@ pub async fn FileI16Array::read_region(
 ///|
 pub async fn FileI16Array::write_region(
   self : FileI16Array,
-  origin : Array[Int],
-  extent : Array[Int],
+  origin : Array[Int32],
+  extent : Array[Int32],
   values : Array[Int16],
 ) -> Bool {
   let raw : Array[UInt16] = []

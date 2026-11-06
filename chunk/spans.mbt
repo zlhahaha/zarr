@@ -1,5 +1,5 @@
 ///|
-fn box_strides(shape : Array[Int], fortran : Bool) -> Array[Int]? {
+fn box_strides(shape : Array[Int32], fortran : Bool) -> Array[Int32]? {
   let strides = Array::make(shape.length(), 0)
   let mut size = 1
   for step in 0..<shape.length() {
@@ -23,14 +23,14 @@ fn box_strides(shape : Array[Int], fortran : Bool) -> Array[Int]? {
 /// does not allocate/copy buffers or enforce ReadLimits; callers own both.
 /// Do not mutate the supplied geometry arrays from inside the callback.
 pub fn copy_region_spans(
-  source_origin : Array[Int],
-  source_shape : Array[Int],
-  destination_origin : Array[Int],
-  destination_shape : Array[Int],
-  overlap_origin : Array[Int],
-  overlap_shape : Array[Int],
-  copy : (Int, Int, Int, Int) -> Unit,
-  source_fortran? : Bool = false,
+  source_origin : Array[Int32],
+  source_shape : Array[Int32],
+  destination_origin : Array[Int32],
+  destination_shape : Array[Int32],
+  overlap_origin : Array[Int32],
+  overlap_shape : Array[Int32],
+  copy : (Int32, Int32, Int32, Int32) -> Unit,
+  source_fortran~ : Bool = false,
 ) -> Bool {
   let rank = overlap_shape.length()
   if source_origin.length() != rank ||

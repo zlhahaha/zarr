@@ -18,7 +18,7 @@ pub async fn FileStore::open_i8(
 }
 
 ///|
-fn i8_value(value : Byte) -> Int {
+fn i8_value(value : Byte) -> Int32 {
   let bits = value.to_int()
   if bits < 128 {
     bits
@@ -30,8 +30,8 @@ fn i8_value(value : Byte) -> Int {
 ///|
 pub async fn FileI8Array::read(
   self : FileI8Array,
-  indices : Array[Int],
-) -> Int? {
+  indices : Array[Int32],
+) -> Int32? {
   match self.bits.read(indices) {
     Some(value) => Some(i8_value(value))
     None => None
@@ -41,8 +41,8 @@ pub async fn FileI8Array::read(
 ///|
 pub async fn FileI8Array::write(
   self : FileI8Array,
-  indices : Array[Int],
-  value : Int,
+  indices : Array[Int32],
+  value : Int32,
 ) -> Bool {
   if value < -128 || value > 127 {
     return false
@@ -53,13 +53,13 @@ pub async fn FileI8Array::write(
 ///|
 pub async fn FileI8Array::read_region(
   self : FileI8Array,
-  origin : Array[Int],
-  extent : Array[Int],
-) -> Array[Int]? {
+  origin : Array[Int32],
+  extent : Array[Int32],
+) -> Array[Int32]? {
   guard self.bits.read_region(origin, extent) is Some(bytes) else {
     return None
   }
-  let values : Array[Int] = []
+  let values : Array[Int32] = []
   for value in bytes {
     values.push(i8_value(value))
   }
@@ -69,9 +69,9 @@ pub async fn FileI8Array::read_region(
 ///|
 pub async fn FileI8Array::write_region(
   self : FileI8Array,
-  origin : Array[Int],
-  extent : Array[Int],
-  values : Array[Int],
+  origin : Array[Int32],
+  extent : Array[Int32],
+  values : Array[Int32],
 ) -> Bool {
   let bytes : Array[Byte] = []
   for value in values {

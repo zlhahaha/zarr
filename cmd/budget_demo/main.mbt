@@ -1,4 +1,6 @@
 ///|
+// async@0.20.3 provides runtime cancellation shielding but no nocancel annotation.
+#warnings("-cancellable_defer")
 async fn main {
   guard @store.ReadLimits::new(
       max_chunk_bytes=4,
@@ -10,7 +12,10 @@ async fn main {
     abort("limits")
   }
   let dir = @async_fs.tmpdir(prefix="zarr-budget-demo")
-  defer @async_fs.rmdir(dir, recursive=true)
+  defer @async.protect_from_cancel(
+    () => @async_fs.rmdir(dir, recursive=true),
+    resume_on_cancel=true,
+  )
   guard @fs.FileStore::new(dir, read_limits=limits) is Some(store) else {
     abort("store")
   }

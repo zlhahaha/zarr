@@ -2,8 +2,8 @@
 /// Read a bounded C-order int64 rectangle across native filesystem chunks.
 pub async fn FileI64Array::read_region(
   self : FileI64Array,
-  origin : Array[Int],
-  extent : Array[Int],
+  origin : Array[Int32],
+  extent : Array[Int32],
 ) -> Array[Int64]? {
   guard @chunk.region_len(self.metadata, origin, extent) is Some(length) else {
     return None
@@ -66,8 +66,8 @@ pub async fn FileI64Array::read_region(
 /// Writes spanning chunks are not atomic.
 pub async fn FileI64Array::write_region(
   self : FileI64Array,
-  origin : Array[Int],
-  extent : Array[Int],
+  origin : Array[Int32],
+  extent : Array[Int32],
   values : Array[Int64],
 ) -> Bool {
   guard @chunk.region_len(self.metadata, origin, extent) is Some(length) else {

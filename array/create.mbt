@@ -1,5 +1,5 @@
 ///|
-fn dimensions_json(shape : Array[Int], positive : Bool) -> Json? {
+fn dimensions_json(shape : Array[Int32], positive : Bool) -> Json? {
   let values : Array[Json] = []
   for side in shape {
     if side < 0 || (positive && side == 0) {
@@ -13,8 +13,8 @@ fn dimensions_json(shape : Array[Int], positive : Bool) -> Json? {
 ///|
 fn numeric_metadata_json(
   format : @metadata.Format,
-  shape : Array[Int],
-  chunk_shape : Array[Int],
+  shape : Array[Int32],
+  chunk_shape : Array[Int32],
   v2_dtype : String,
   v3_dtype : String,
   fill_value : Json,
@@ -241,10 +241,10 @@ fn numeric_metadata_json(
 /// Build validated uint8 metadata for either Zarr format.
 pub fn u8_metadata_json(
   format : @metadata.Format,
-  shape : Array[Int],
-  chunk_shape : Array[Int],
+  shape : Array[Int32],
+  chunk_shape : Array[Int32],
   fill : Byte,
-  compression? : @codec.Compression = @codec.Raw,
+  compression~ : @codec.Compression = @codec.Raw,
 ) -> String? {
   numeric_metadata_json(
     format,
@@ -261,10 +261,10 @@ pub fn u8_metadata_json(
 ///|
 pub fn i8_metadata_json(
   format : @metadata.Format,
-  shape : Array[Int],
-  chunk_shape : Array[Int],
-  fill : Int,
-  compression? : @codec.Compression = @codec.Raw,
+  shape : Array[Int32],
+  chunk_shape : Array[Int32],
+  fill : Int32,
+  compression~ : @codec.Compression = @codec.Raw,
 ) -> String? {
   if fill < -128 || fill > 127 {
     return None
@@ -284,10 +284,10 @@ pub fn i8_metadata_json(
 ///|
 pub fn bool_metadata_json(
   format : @metadata.Format,
-  shape : Array[Int],
-  chunk_shape : Array[Int],
+  shape : Array[Int32],
+  chunk_shape : Array[Int32],
   fill : Bool,
-  compression? : @codec.Compression = @codec.Raw,
+  compression~ : @codec.Compression = @codec.Raw,
 ) -> String? {
   numeric_metadata_json(
     format,
@@ -304,11 +304,11 @@ pub fn bool_metadata_json(
 ///|
 pub fn u16_metadata_json(
   format : @metadata.Format,
-  shape : Array[Int],
-  chunk_shape : Array[Int],
+  shape : Array[Int32],
+  chunk_shape : Array[Int32],
   fill : UInt16,
-  big_endian? : Bool = false,
-  compression? : @codec.Compression = @codec.Raw,
+  big_endian~ : Bool = false,
+  compression~ : @codec.Compression = @codec.Raw,
 ) -> String? {
   numeric_metadata_json(
     format,
@@ -329,11 +329,11 @@ pub fn u16_metadata_json(
 ///|
 pub fn i16_metadata_json(
   format : @metadata.Format,
-  shape : Array[Int],
-  chunk_shape : Array[Int],
+  shape : Array[Int32],
+  chunk_shape : Array[Int32],
   fill : Int16,
-  big_endian? : Bool = false,
-  compression? : @codec.Compression = @codec.Raw,
+  big_endian~ : Bool = false,
+  compression~ : @codec.Compression = @codec.Raw,
 ) -> String? {
   numeric_metadata_json(
     format,
@@ -355,11 +355,11 @@ pub fn i16_metadata_json(
 /// Build validated float64 metadata, including Zarr's canonical non-finite fills.
 pub fn f64_metadata_json(
   format : @metadata.Format,
-  shape : Array[Int],
-  chunk_shape : Array[Int],
+  shape : Array[Int32],
+  chunk_shape : Array[Int32],
   fill : Double,
-  big_endian? : Bool = false,
-  compression? : @codec.Compression = @codec.Raw,
+  big_endian~ : Bool = false,
+  compression~ : @codec.Compression = @codec.Raw,
 ) -> String? {
   let fill_json = if fill.is_nan() {
     Json::string("NaN")
@@ -387,11 +387,11 @@ pub fn f64_metadata_json(
 ///|
 pub fn f32_metadata_json(
   format : @metadata.Format,
-  shape : Array[Int],
-  chunk_shape : Array[Int],
+  shape : Array[Int32],
+  chunk_shape : Array[Int32],
   fill : Float,
-  big_endian? : Bool = false,
-  compression? : @codec.Compression = @codec.Raw,
+  big_endian~ : Bool = false,
+  compression~ : @codec.Compression = @codec.Raw,
 ) -> String? {
   let fill_json = if fill.is_nan() {
     Json::string("NaN")
@@ -419,11 +419,11 @@ pub fn f32_metadata_json(
 ///|
 pub fn i32_metadata_json(
   format : @metadata.Format,
-  shape : Array[Int],
-  chunk_shape : Array[Int],
-  fill : Int,
-  big_endian? : Bool = false,
-  compression? : @codec.Compression = @codec.Raw,
+  shape : Array[Int32],
+  chunk_shape : Array[Int32],
+  fill : Int32,
+  big_endian~ : Bool = false,
+  compression~ : @codec.Compression = @codec.Raw,
 ) -> String? {
   numeric_metadata_json(
     format,
@@ -444,11 +444,11 @@ pub fn i32_metadata_json(
 ///|
 pub fn u32_metadata_json(
   format : @metadata.Format,
-  shape : Array[Int],
-  chunk_shape : Array[Int],
-  fill : UInt,
-  big_endian? : Bool = false,
-  compression? : @codec.Compression = @codec.Raw,
+  shape : Array[Int32],
+  chunk_shape : Array[Int32],
+  fill : UInt32,
+  big_endian~ : Bool = false,
+  compression~ : @codec.Compression = @codec.Raw,
 ) -> String? {
   numeric_metadata_json(
     format,
@@ -470,11 +470,11 @@ pub fn u32_metadata_json(
 /// Preserve the decimal representation so 64-bit fills never lose precision.
 pub fn i64_metadata_json(
   format : @metadata.Format,
-  shape : Array[Int],
-  chunk_shape : Array[Int],
+  shape : Array[Int32],
+  chunk_shape : Array[Int32],
   fill : Int64,
-  big_endian? : Bool = false,
-  compression? : @codec.Compression = @codec.Raw,
+  big_endian~ : Bool = false,
+  compression~ : @codec.Compression = @codec.Raw,
 ) -> String? {
   numeric_metadata_json(
     format,
@@ -495,11 +495,11 @@ pub fn i64_metadata_json(
 ///|
 pub fn u64_metadata_json(
   format : @metadata.Format,
-  shape : Array[Int],
-  chunk_shape : Array[Int],
+  shape : Array[Int32],
+  chunk_shape : Array[Int32],
   fill : UInt64,
-  big_endian? : Bool = false,
-  compression? : @codec.Compression = @codec.Raw,
+  big_endian~ : Bool = false,
+  compression~ : @codec.Compression = @codec.Raw,
 ) -> String? {
   numeric_metadata_json(
     format,
@@ -522,10 +522,10 @@ pub fn create_u8(
   store : @store.MemoryStore,
   format : @metadata.Format,
   path : String,
-  shape : Array[Int],
-  chunk_shape : Array[Int],
+  shape : Array[Int32],
+  chunk_shape : Array[Int32],
   fill : Byte,
-  compression? : @codec.Compression = @codec.Raw,
+  compression~ : @codec.Compression = @codec.Raw,
 ) -> U8Array? {
   if node_exists(store, path) {
     return None
@@ -545,10 +545,10 @@ pub fn create_i8(
   store : @store.MemoryStore,
   format : @metadata.Format,
   path : String,
-  shape : Array[Int],
-  chunk_shape : Array[Int],
-  fill : Int,
-  compression? : @codec.Compression = @codec.Raw,
+  shape : Array[Int32],
+  chunk_shape : Array[Int32],
+  fill : Int32,
+  compression~ : @codec.Compression = @codec.Raw,
 ) -> I8Array? {
   if node_exists(store, path) {
     return None
@@ -568,10 +568,10 @@ pub fn create_bool(
   store : @store.MemoryStore,
   format : @metadata.Format,
   path : String,
-  shape : Array[Int],
-  chunk_shape : Array[Int],
+  shape : Array[Int32],
+  chunk_shape : Array[Int32],
   fill : Bool,
-  compression? : @codec.Compression = @codec.Raw,
+  compression~ : @codec.Compression = @codec.Raw,
 ) -> BoolArray? {
   if node_exists(store, path) {
     return None
@@ -591,11 +591,11 @@ pub fn create_u16(
   store : @store.MemoryStore,
   format : @metadata.Format,
   path : String,
-  shape : Array[Int],
-  chunk_shape : Array[Int],
+  shape : Array[Int32],
+  chunk_shape : Array[Int32],
   fill : UInt16,
-  big_endian? : Bool = false,
-  compression? : @codec.Compression = @codec.Raw,
+  big_endian~ : Bool = false,
+  compression~ : @codec.Compression = @codec.Raw,
 ) -> U16Array? {
   if node_exists(store, path) {
     return None
@@ -622,11 +622,11 @@ pub fn create_i16(
   store : @store.MemoryStore,
   format : @metadata.Format,
   path : String,
-  shape : Array[Int],
-  chunk_shape : Array[Int],
+  shape : Array[Int32],
+  chunk_shape : Array[Int32],
   fill : Int16,
-  big_endian? : Bool = false,
-  compression? : @codec.Compression = @codec.Raw,
+  big_endian~ : Bool = false,
+  compression~ : @codec.Compression = @codec.Raw,
 ) -> I16Array? {
   if node_exists(store, path) {
     return None
@@ -653,11 +653,11 @@ pub fn create_f64(
   store : @store.MemoryStore,
   format : @metadata.Format,
   path : String,
-  shape : Array[Int],
-  chunk_shape : Array[Int],
+  shape : Array[Int32],
+  chunk_shape : Array[Int32],
   fill : Double,
-  big_endian? : Bool = false,
-  compression? : @codec.Compression = @codec.Raw,
+  big_endian~ : Bool = false,
+  compression~ : @codec.Compression = @codec.Raw,
 ) -> F64Array? {
   if node_exists(store, path) {
     return None
@@ -684,11 +684,11 @@ pub fn create_f32(
   store : @store.MemoryStore,
   format : @metadata.Format,
   path : String,
-  shape : Array[Int],
-  chunk_shape : Array[Int],
+  shape : Array[Int32],
+  chunk_shape : Array[Int32],
   fill : Float,
-  big_endian? : Bool = false,
-  compression? : @codec.Compression = @codec.Raw,
+  big_endian~ : Bool = false,
+  compression~ : @codec.Compression = @codec.Raw,
 ) -> F32Array? {
   if node_exists(store, path) {
     return None
@@ -715,11 +715,11 @@ pub fn create_i32(
   store : @store.MemoryStore,
   format : @metadata.Format,
   path : String,
-  shape : Array[Int],
-  chunk_shape : Array[Int],
-  fill : Int,
-  big_endian? : Bool = false,
-  compression? : @codec.Compression = @codec.Raw,
+  shape : Array[Int32],
+  chunk_shape : Array[Int32],
+  fill : Int32,
+  big_endian~ : Bool = false,
+  compression~ : @codec.Compression = @codec.Raw,
 ) -> I32Array? {
   if node_exists(store, path) {
     return None
@@ -746,11 +746,11 @@ pub fn create_u32(
   store : @store.MemoryStore,
   format : @metadata.Format,
   path : String,
-  shape : Array[Int],
-  chunk_shape : Array[Int],
-  fill : UInt,
-  big_endian? : Bool = false,
-  compression? : @codec.Compression = @codec.Raw,
+  shape : Array[Int32],
+  chunk_shape : Array[Int32],
+  fill : UInt32,
+  big_endian~ : Bool = false,
+  compression~ : @codec.Compression = @codec.Raw,
 ) -> U32Array? {
   if node_exists(store, path) {
     return None
@@ -777,11 +777,11 @@ pub fn create_i64(
   store : @store.MemoryStore,
   format : @metadata.Format,
   path : String,
-  shape : Array[Int],
-  chunk_shape : Array[Int],
+  shape : Array[Int32],
+  chunk_shape : Array[Int32],
   fill : Int64,
-  big_endian? : Bool = false,
-  compression? : @codec.Compression = @codec.Raw,
+  big_endian~ : Bool = false,
+  compression~ : @codec.Compression = @codec.Raw,
 ) -> I64Array? {
   if node_exists(store, path) {
     return None
@@ -808,11 +808,11 @@ pub fn create_u64(
   store : @store.MemoryStore,
   format : @metadata.Format,
   path : String,
-  shape : Array[Int],
-  chunk_shape : Array[Int],
+  shape : Array[Int32],
+  chunk_shape : Array[Int32],
   fill : UInt64,
-  big_endian? : Bool = false,
-  compression? : @codec.Compression = @codec.Raw,
+  big_endian~ : Bool = false,
+  compression~ : @codec.Compression = @codec.Raw,
 ) -> U64Array? {
   if node_exists(store, path) {
     return None

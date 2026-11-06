@@ -1,0 +1,11 @@
+import {
+  "zlhahaha/zarr/store/fs",
+  "zlhahaha/zarr/metadata",
+  "zlhahaha/zarr/codec",
+  "moonbitlang/async",
+  "moonbitlang/core/env",
+}
+
+pkgtype(kind: "executable")
+
+supported_targets = "native"

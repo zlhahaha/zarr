@@ -5,8 +5,8 @@ pub struct I32Array {
   store : @store.MemoryStore
   metadata : @metadata.ArrayMetadata
   path : String
-  fill : Int
-  chunk_bytes : Int
+  fill : Int32
+  chunk_bytes : Int32
   big_endian : Bool
   compression : @codec.Compression
 }
@@ -70,7 +70,7 @@ pub fn open_i32_bits_from_metadata(
 }
 
 ///|
-fn i32_bytes(value : Int, big_endian : Bool) -> Bytes {
+fn i32_bytes(value : Int32, big_endian : Bool) -> Bytes {
   let bits = value.reinterpret_as_uint()
   let result = Bytes::make(4, b'\x00').to_array()
   for i in 0..<4 {
@@ -91,7 +91,7 @@ fn I32Array::encoded_fill(self : I32Array) -> Bytes {
 }
 
 ///|
-pub fn I32Array::read(self : I32Array, indices : Array[Int]) -> Int? {
+pub fn I32Array::read(self : I32Array, indices : Array[Int32]) -> Int32? {
   guard @chunk.element_location(self.metadata, indices, self.path)
     is Some((key, offset)) else {
     return None
@@ -123,8 +123,8 @@ pub fn I32Array::read(self : I32Array, indices : Array[Int]) -> Int? {
 ///|
 pub fn I32Array::write(
   self : I32Array,
-  indices : Array[Int],
-  value : Int,
+  indices : Array[Int32],
+  value : Int32,
 ) -> Bool {
   guard @chunk.element_location(self.metadata, indices, self.path)
     is Some((key, offset)) else {
@@ -162,9 +162,9 @@ pub fn I32Array::write(
 /// Read a bounded N-dimensional rectangle in C order across chunk boundaries.
 pub fn I32Array::read_region(
   self : I32Array,
-  origin : Array[Int],
-  extent : Array[Int],
-) -> Array[Int]? {
+  origin : Array[Int32],
+  extent : Array[Int32],
+) -> Array[Int32]? {
   guard read_region_bytes(
       self.store,
       self.metadata,
@@ -179,7 +179,7 @@ pub fn I32Array::read_region(
     is Some(bytes) else {
     return None
   }
-  let result : Array[Int] = []
+  let result : Array[Int32] = []
   for linear in 0..<(bytes.length() / 4) {
     let value = bytes[linear * 4:linear * 4 + 4]
     if self.big_endian {
@@ -197,9 +197,9 @@ pub fn I32Array::read_region(
 /// Write a C-order rectangle. Writes spanning multiple chunks are not atomic.
 pub fn I32Array::write_region(
   self : I32Array,
-  origin : Array[Int],
-  extent : Array[Int],
-  values : Array[Int],
+  origin : Array[Int32],
+  extent : Array[Int32],
+  values : Array[Int32],
 ) -> Bool {
   guard @chunk.region_len(self.metadata, origin, extent) is Some(length) else {
     return false

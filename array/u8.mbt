@@ -5,7 +5,7 @@ pub struct U8Array {
   metadata : @metadata.ArrayMetadata
   path : String
   fill : Byte
-  chunk_len : Int
+  chunk_len : Int32
   compression : @codec.Compression
 }
 
@@ -64,13 +64,13 @@ pub fn open_u8_bits_from_metadata(
 }
 
 ///|
-fn U8Array::locate(self : U8Array, indices : Array[Int]) -> (String, Int)? {
+fn U8Array::locate(self : U8Array, indices : Array[Int32]) -> (String, Int32)? {
   @chunk.element_location(self.metadata, indices, self.path)
 }
 
 ///|
 /// Read one element. A missing chunk yields the metadata fill value.
-pub fn U8Array::read(self : U8Array, indices : Array[Int]) -> Byte? {
+pub fn U8Array::read(self : U8Array, indices : Array[Int32]) -> Byte? {
   guard self.locate(indices) is Some((key, offset)) else { return None }
   match self.store.get(key) {
     None => Some(self.fill)
@@ -93,7 +93,7 @@ pub fn U8Array::read(self : U8Array, indices : Array[Int]) -> Byte? {
 /// Write one element, materializing a full-sized chunk on first write.
 pub fn U8Array::write(
   self : U8Array,
-  indices : Array[Int],
+  indices : Array[Int32],
   value : Byte,
 ) -> Bool {
   guard self.locate(indices) is Some((key, offset)) else { return false }
@@ -127,8 +127,8 @@ pub fn U8Array::write(
 /// chunk boundaries without materializing the whole Zarr array.
 pub fn U8Array::read_region(
   self : U8Array,
-  origin : Array[Int],
-  extent : Array[Int],
+  origin : Array[Int32],
+  extent : Array[Int32],
 ) -> Bytes? {
   read_region_bytes(
     self.store,
@@ -148,8 +148,8 @@ pub fn U8Array::read_region(
 /// chunks is not atomic; an error in a later chunk may leave earlier writes.
 pub fn U8Array::write_region(
   self : U8Array,
-  origin : Array[Int],
-  extent : Array[Int],
+  origin : Array[Int32],
+  extent : Array[Int32],
   values : Bytes,
 ) -> Bool {
   write_region_bytes(

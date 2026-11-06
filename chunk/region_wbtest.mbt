@@ -1,13 +1,13 @@
 ///|
-fn next_small(seed : UInt, bound : Int) -> (UInt, Int) {
+fn next_small(seed : UInt32, bound : Int32) -> (UInt32, Int32) {
   let next = seed * 1664525U + 1013904223U
   (next, ((next >> 8) % bound.reinterpret_as_uint()).reinterpret_as_int())
 }
 
 ///|
 fn test_metadata(
-  shape : Array[Int],
-  chunk_shape : Array[Int],
+  shape : Array[Int32],
+  chunk_shape : Array[Int32],
 ) -> @metadata.ArrayMetadata {
   {
     format: @metadata.V3,
@@ -32,10 +32,10 @@ test "region chunks partition every bounded rectangle exactly once" {
     let (next, rank_offset) = next_small(seed, 3)
     seed = next
     let rank = rank_offset + 1
-    let shape : Array[Int] = []
-    let chunks : Array[Int] = []
-    let origin : Array[Int] = []
-    let extent : Array[Int] = []
+    let shape : Array[Int32] = []
+    let chunks : Array[Int32] = []
+    let origin : Array[Int32] = []
+    let extent : Array[Int32] = []
     for _ in 0..<rank {
       let (next, side_offset) = next_small(seed, 7)
       seed = next

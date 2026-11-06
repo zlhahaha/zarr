@@ -1,10 +1,11 @@
 ///|
 /// A bounded rectangle returned by RegionTileCursor. Tiles are C-ordered and
 /// do not contain values; pass each origin/extent to a typed read_region.
+#derive(Debug)
 pub(all) struct RegionTile {
-  origin : Array[Int]
-  extent : Array[Int]
-} derive(Debug)
+  origin : Array[Int32]
+  extent : Array[Int32]
+}
 
 ///|
 pub extend RegionTile with Debug::{to_repr}
@@ -14,10 +15,10 @@ pub extend RegionTile with Debug::{to_repr}
 /// the complete requested region, so even a region larger than Int.MAX can be
 /// traversed when each individual tile is bounded.
 pub struct RegionTileCursor {
-  origin : Array[Int]
-  extent : Array[Int]
-  tile_shape : Array[Int]
-  position : Array[Int]
+  origin : Array[Int32]
+  extent : Array[Int32]
+  tile_shape : Array[Int32]
+  position : Array[Int32]
   mut finished : Bool
 }
 
@@ -26,11 +27,11 @@ pub struct RegionTileCursor {
 /// regions produce no tiles; a rank-zero scalar produces one scalar tile.
 /// `max_tile_elements` bounds one yielded tile, not the entire traversal.
 pub fn RegionTileCursor::new(
-  shape : Array[Int],
-  origin : Array[Int],
-  extent : Array[Int],
-  tile_shape : Array[Int],
-  max_tile_elements? : Int = 8388608,
+  shape : Array[Int32],
+  origin : Array[Int32],
+  extent : Array[Int32],
+  tile_shape : Array[Int32],
+  max_tile_elements~ : Int32 = 8388608,
 ) -> RegionTileCursor? {
   let rank = shape.length()
   if origin.length() != rank ||
@@ -76,8 +77,8 @@ pub fn RegionTileCursor::next(self : RegionTileCursor) -> RegionTile? {
     return None
   }
   let rank = self.origin.length()
-  let tile_origin : Array[Int] = []
-  let tile_extent : Array[Int] = []
+  let tile_origin : Array[Int32] = []
+  let tile_extent : Array[Int32] = []
   for i in 0..<rank {
     let remaining = self.extent[i] - self.position[i]
     tile_origin.push(self.origin[i] + self.position[i])

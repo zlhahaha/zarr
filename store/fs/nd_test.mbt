@@ -1,5 +1,5 @@
 ///|
-fn nd_u16(indices : Array[Int]) -> UInt16 {
+fn nd_u16(indices : Array[Int32]) -> UInt16 {
   let x = indices[0]
   let y = indices[1]
   let z = indices[2]
@@ -11,7 +11,7 @@ fn nd_u16(indices : Array[Int]) -> UInt16 {
 }
 
 ///|
-fn nd_f32(indices : Array[Int]) -> Float {
+fn nd_f32(indices : Array[Int32]) -> Float {
   let t = indices[0]
   let y = indices[1]
   let z = indices[2]

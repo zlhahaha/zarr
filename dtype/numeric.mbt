@@ -12,7 +12,7 @@ pub fn u8_fill(value : Json) -> Byte? {
 }
 
 ///|
-pub fn i8_fill(value : Json) -> Int? {
+pub fn i8_fill(value : Json) -> Int32? {
   guard value is Number(n, ..) else { return None }
   if n < -128.0 || n > 127.0 {
     return None
@@ -83,7 +83,7 @@ pub fn f32_fill(value : Json) -> Float? {
 }
 
 ///|
-pub fn i32_fill(value : Json) -> Int? {
+pub fn i32_fill(value : Json) -> Int32? {
   guard value is Number(n, ..) else { return None }
   if n < -2147483648.0 || n > 2147483647.0 {
     return None
@@ -96,7 +96,7 @@ pub fn i32_fill(value : Json) -> Int? {
 }
 
 ///|
-pub fn u32_fill(value : Json) -> UInt? {
+pub fn u32_fill(value : Json) -> UInt32? {
   guard value is Number(n, ..) else { return None }
   if n < 0.0 || n > 4294967295.0 {
     return None

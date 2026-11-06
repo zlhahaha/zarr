@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — 0.7.1 maintenance
+
+- Verify source on `moonc 0.10.20`; migrate deprecated derive syntax and the random constructor, and apply the current formatter's `Int32` spelling. Preserve the pinned legacy async runtime's cancellation shielding; narrowly document its missing `nocancel` annotations instead of disabling project-wide strict warnings. Source builds now require 0.10.20; registry 0.7.0 remains independently tested on it.
+- Add `S3Store::new(..., allow_insecure_http=false)`. Explicit credentials with any `http://` endpoint, including localhost, are rejected before requests unless the caller opts in. Anonymous HTTP and HTTPS behavior are unchanged.
+- Add a reproducible registry-only consumer: native check/build, v2 gzip and v3 zstd 3D write/reopen/value checks, followed by independent Python verification.
+- Build a fixed official MinIO source release for real private-service tests. Validate ordinary chunks, start/end-index shards, missing fills, real 206 ranges/ETag conditions, invalid signatures/access keys, and injected transient/timeout cases. Add Linux native CI execution and a JSON evidence artifact. No production AWS, STS, role-policy or remote-write certification is implied.
+
 ## 0.7.0 — Bounded tile traversal and read-only remote shards
 
 - Add `chunk.RegionTileCursor` for incremental C-order N-D tile planning without allocating or counting the whole logical region. Each caller-requested typed tile still buffers its own result and obeys the existing `ReadLimits`; this is not an automatic streaming typed array or a total-memory cap.

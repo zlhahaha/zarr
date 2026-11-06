@@ -1,9 +1,10 @@
 ///|
 /// A key exists but exceeds its metadata or encoded-object input budget.
 /// This must not be mistaken for a missing chunk and its fill value.
+#derive(Debug)
 pub suberror ReadLimitExceeded {
   ReadLimitExceeded(String)
-} derive(Debug)
+}
 
 ///|
 pub extend ReadLimitExceeded with Debug::{to_repr}

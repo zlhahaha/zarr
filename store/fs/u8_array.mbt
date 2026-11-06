@@ -23,12 +23,12 @@ pub async fn FileStore::open_u8(
 ///|
 fn FileU8Array::chunk_coords(
   self : FileU8Array,
-  indices : Array[Int],
-) -> Array[Int]? {
+  indices : Array[Int32],
+) -> Array[Int32]? {
   if indices.length() != self.metadata.shape.length() {
     return None
   }
-  let coordinates : Array[Int] = []
+  let coordinates : Array[Int32] = []
   for i in 0..<indices.length() {
     let index = indices[i]
     if index < 0 || index >= self.metadata.shape[i] {
@@ -43,7 +43,7 @@ fn FileU8Array::chunk_coords(
 /// Read one element; missing chunks yield the metadata fill value.
 pub async fn FileU8Array::read(
   self : FileU8Array,
-  indices : Array[Int],
+  indices : Array[Int32],
 ) -> Byte? {
   guard self.chunk_coords(indices) is Some(coordinates) else { return None }
   let scratch = self.store.scratch()
@@ -65,7 +65,7 @@ pub async fn FileU8Array::read(
 /// Write one element, persisting its full encoded chunk to the filesystem.
 pub async fn FileU8Array::write(
   self : FileU8Array,
-  indices : Array[Int],
+  indices : Array[Int32],
   value : Byte,
 ) -> Bool {
   guard self.chunk_coords(indices) is Some(coordinates) else { return false }

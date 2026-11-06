@@ -24,7 +24,7 @@ pub fn open_u32_from_metadata(
 }
 
 ///|
-pub fn U32Array::read(self : U32Array, indices : Array[Int]) -> UInt? {
+pub fn U32Array::read(self : U32Array, indices : Array[Int32]) -> UInt32? {
   match self.bits.read(indices) {
     Some(value) => Some(value.reinterpret_as_uint())
     None => None
@@ -34,8 +34,8 @@ pub fn U32Array::read(self : U32Array, indices : Array[Int]) -> UInt? {
 ///|
 pub fn U32Array::write(
   self : U32Array,
-  indices : Array[Int],
-  value : UInt,
+  indices : Array[Int32],
+  value : UInt32,
 ) -> Bool {
   self.bits.write(indices, value.reinterpret_as_int())
 }
@@ -43,11 +43,11 @@ pub fn U32Array::write(
 ///|
 pub fn U32Array::read_region(
   self : U32Array,
-  origin : Array[Int],
-  extent : Array[Int],
-) -> Array[UInt]? {
+  origin : Array[Int32],
+  extent : Array[Int32],
+) -> Array[UInt32]? {
   guard self.bits.read_region(origin, extent) is Some(raw) else { return None }
-  let result : Array[UInt] = []
+  let result : Array[UInt32] = []
   for value in raw {
     result.push(value.reinterpret_as_uint())
   }
@@ -57,11 +57,11 @@ pub fn U32Array::read_region(
 ///|
 pub fn U32Array::write_region(
   self : U32Array,
-  origin : Array[Int],
-  extent : Array[Int],
-  values : Array[UInt],
+  origin : Array[Int32],
+  extent : Array[Int32],
+  values : Array[UInt32],
 ) -> Bool {
-  let raw : Array[Int] = []
+  let raw : Array[Int32] = []
   for value in values {
     raw.push(value.reinterpret_as_int())
   }

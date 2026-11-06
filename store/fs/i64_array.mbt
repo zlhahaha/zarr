@@ -22,12 +22,12 @@ pub async fn FileStore::open_i64(
 ///|
 fn FileI64Array::chunk_coords(
   self : FileI64Array,
-  indices : Array[Int],
-) -> Array[Int]? {
+  indices : Array[Int32],
+) -> Array[Int32]? {
   if indices.length() != self.metadata.shape.length() {
     return None
   }
-  let coordinates : Array[Int] = []
+  let coordinates : Array[Int32] = []
   for i in 0..<indices.length() {
     let index = indices[i]
     if index < 0 || index >= self.metadata.shape[i] {
@@ -41,7 +41,7 @@ fn FileI64Array::chunk_coords(
 ///|
 pub async fn FileI64Array::read(
   self : FileI64Array,
-  indices : Array[Int],
+  indices : Array[Int32],
 ) -> Int64? {
   guard self.chunk_coords(indices) is Some(coordinates) else { return None }
   let scratch = self.store.scratch()
@@ -62,7 +62,7 @@ pub async fn FileI64Array::read(
 ///|
 pub async fn FileI64Array::write(
   self : FileI64Array,
-  indices : Array[Int],
+  indices : Array[Int32],
   value : Int64,
 ) -> Bool {
   guard self.chunk_coords(indices) is Some(coordinates) else { return false }

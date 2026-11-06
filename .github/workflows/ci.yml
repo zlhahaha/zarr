@@ -85,6 +85,38 @@ jobs:
       - name: Install zarr-python test oracle
         if: matrix.target == 'native'
         run: python -m pip install zarr==3.4.0 numpy==2.5.3
+      - name: Verify published 0.7.0 with independent consumer
+        if: matrix.target == 'native'
+        run: python scripts/verify_published_consumer.py --output _build/published-consumer.json
+      - name: Upload published consumer verification
+        if: matrix.target == 'native'
+        uses: actions/upload-artifact@v4
+        with:
+          name: published-consumer-${{ matrix.os }}
+          path: _build/published-consumer.json
+          if-no-files-found: error
+          retention-days: 30
+      - name: Set up Go for pinned MinIO integration server
+        if: matrix.os == 'ubuntu-latest' && matrix.target == 'native'
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.2'
+          cache: false
+      - name: Verify authenticated reads with real MinIO
+        if: matrix.os == 'ubuntu-latest' && matrix.target == 'native'
+        shell: bash
+        run: |
+          python -m pip install -r scripts/requirements-remote.txt
+          GOBIN="$GITHUB_WORKSPACE/_build/tools-bin" go install github.com/minio/minio@RELEASE.2025-10-15T17-29-55Z
+          python scripts/verify_s3_minio.py --minio-bin _build/tools-bin/minio --output _build/minio-integration.json
+      - name: Upload authenticated MinIO test evidence
+        if: matrix.os == 'ubuntu-latest' && matrix.target == 'native'
+        uses: actions/upload-artifact@v4
+        with:
+          name: minio-integration
+          path: _build/minio-integration.json
+          if-no-files-found: error
+          retention-days: 30
       - name: Verify 3D/4D MoonBit writes with zarr-python
         if: matrix.target == 'native'
         run: |

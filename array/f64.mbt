@@ -6,7 +6,7 @@ pub struct F64Array {
   metadata : @metadata.ArrayMetadata
   path : String
   fill : Double
-  chunk_bytes : Int
+  chunk_bytes : Int32
   big_endian : Bool
   compression : @codec.Compression
 }
@@ -63,7 +63,7 @@ fn F64Array::encoded_fill(self : F64Array) -> Bytes {
 }
 
 ///|
-pub fn F64Array::read(self : F64Array, indices : Array[Int]) -> Double? {
+pub fn F64Array::read(self : F64Array, indices : Array[Int32]) -> Double? {
   guard @chunk.element_location(self.metadata, indices, self.path)
     is Some((key, offset)) else {
     return None
@@ -95,7 +95,7 @@ pub fn F64Array::read(self : F64Array, indices : Array[Int]) -> Double? {
 ///|
 pub fn F64Array::write(
   self : F64Array,
-  indices : Array[Int],
+  indices : Array[Int32],
   value : Double,
 ) -> Bool {
   guard @chunk.element_location(self.metadata, indices, self.path)
@@ -138,8 +138,8 @@ pub fn F64Array::write(
 /// Read a bounded N-dimensional rectangle in C order across chunk boundaries.
 pub fn F64Array::read_region(
   self : F64Array,
-  origin : Array[Int],
-  extent : Array[Int],
+  origin : Array[Int32],
+  extent : Array[Int32],
 ) -> Array[Double]? {
   let fill_element = if self.big_endian {
     self.fill.reinterpret_as_uint64().to_be_bytes()
@@ -178,8 +178,8 @@ pub fn F64Array::read_region(
 /// Write a C-order rectangle. Writes spanning multiple chunks are not atomic.
 pub fn F64Array::write_region(
   self : F64Array,
-  origin : Array[Int],
-  extent : Array[Int],
+  origin : Array[Int32],
+  extent : Array[Int32],
   values : Array[Double],
 ) -> Bool {
   guard @chunk.region_len(self.metadata, origin, extent) is Some(length) else {

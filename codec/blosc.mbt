@@ -1,6 +1,6 @@
 ///|
 /// Read a nonnegative little-endian 32-bit length without overflowing Int.
-fn blosc_i32(bytes : Bytes, at : Int) -> Int? {
+fn blosc_i32(bytes : Bytes, at : Int32) -> Int32? {
   if at < 0 ||
     bytes.length() < 4 ||
     at > bytes.length() - 4 ||
@@ -17,7 +17,7 @@ fn blosc_i32(bytes : Bytes, at : Int) -> Int? {
 
 ///|
 /// Decode one raw LZ4 block, enforcing its expected uncompressed size.
-fn blosc_lz4(input : Bytes, expected : Int) -> Bytes? {
+fn blosc_lz4(input : Bytes, expected : Int32) -> Bytes? {
   if expected < 0 {
     return None
   }
@@ -100,9 +100,9 @@ fn blosc_lz4(input : Bytes, expected : Int) -> Bytes? {
 ///|
 fn blosc_split(
   encoded : Bytes,
-  start : Int,
-  size : Int,
-  expected : Int,
+  start : Int32,
+  size : Int32,
+  expected : Int32,
   cname : String,
 ) -> Bytes? {
   if start < 0 || size < 0 || start > encoded.length() - size {
@@ -121,7 +121,7 @@ fn blosc_split(
 /// Undo Blosc's bit-plane transpose for groups of eight elements. C-Blosc
 /// leaves an entire internal block unchanged when its element count is not
 /// divisible by eight (rather than transforming only a prefix).
-fn blosc_bitunshuffle(input : Array[Byte], typesize : Int) -> Bytes? {
+fn blosc_bitunshuffle(input : Array[Byte], typesize : Int32) -> Bytes? {
   if typesize <= 0 || input.length() % typesize != 0 {
     return None
   }
@@ -149,7 +149,7 @@ fn blosc_bitunshuffle(input : Array[Byte], typesize : Int) -> Bytes? {
 ///|
 /// Decode the common Blosc1 chunk format (format byte 2) used by Zarr.
 /// Unsupported compressors are rejected before bytes reach the dtype layer.
-fn decode_blosc(encoded : Bytes, expected : Int, cname : String) -> Bytes? {
+fn decode_blosc(encoded : Bytes, expected : Int32, cname : String) -> Bytes? {
   if expected <= 0 || encoded.length() < 16 || encoded[0] != b'\x02' {
     return None
   }

@@ -96,6 +96,7 @@ async test "S3 path-style SigV4 reader hydrates selected shard ranges" {
         prefix="dataset",
         endpoint~,
         credentials~,
+        allow_insecure_http=true,
       )
       is Some(s3) else {
       fail("S3 store")

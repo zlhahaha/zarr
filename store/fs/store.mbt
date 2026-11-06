@@ -7,8 +7,8 @@ pub struct FileStore {
   v3_consolidated : Map[String, Json]?
   v3_root : Json?
   read_only : Bool
-  shard_index_cache_bytes : Int
-  shard_index_cache_entries : Int
+  shard_index_cache_bytes : Int32
+  shard_index_cache_entries : Int32
   shard_metrics : Ref[ShardReadStats]
   limits : @store.ReadLimits
 }
@@ -18,9 +18,9 @@ pub struct FileStore {
 /// 64 entries. Set either cap to zero to disable; negative caps are invalid.
 pub fn FileStore::new(
   root : String,
-  shard_index_cache_bytes? : Int = 16777216,
-  shard_index_cache_entries? : Int = 64,
-  read_limits? : @store.ReadLimits = @store.ReadLimits::defaults(),
+  shard_index_cache_bytes~ : Int32 = 16777216,
+  shard_index_cache_entries~ : Int32 = 64,
+  read_limits~ : @store.ReadLimits = @store.ReadLimits::defaults(),
 ) -> FileStore? {
   if root == "" || shard_index_cache_bytes < 0 || shard_index_cache_entries < 0 {
     None
@@ -44,7 +44,7 @@ pub fn FileStore::new(
 /// come from the filesystem; metadata comes only from `.zmetadata`.
 pub async fn FileStore::open_consolidated(
   root : String,
-  read_limits? : @store.ReadLimits = @store.ReadLimits::defaults(),
+  read_limits~ : @store.ReadLimits = @store.ReadLimits::defaults(),
 ) -> FileStore? {
   guard FileStore::new(root, read_limits~) is Some(plain) else { return None }
   guard plain.get(".zmetadata") is Some(bytes) else { return None }
@@ -74,7 +74,7 @@ pub async fn FileStore::open_consolidated(
 /// convention. Metadata comes only from the root index; chunks remain on disk.
 pub async fn FileStore::open_consolidated_v3(
   root : String,
-  read_limits? : @store.ReadLimits = @store.ReadLimits::defaults(),
+  read_limits~ : @store.ReadLimits = @store.ReadLimits::defaults(),
 ) -> FileStore? {
   guard FileStore::new(root, read_limits~) is Some(plain) else { return None }
   guard plain.get("zarr.json") is Some(bytes) else { return None }
@@ -363,7 +363,7 @@ pub async fn FileStore::open_array(
 pub async fn FileStore::get_chunk(
   self : FileStore,
   metadata : @metadata.ArrayMetadata,
-  coordinates : Array[Int],
+  coordinates : Array[Int32],
   path : String,
 ) -> Bytes? {
   if metadata.sharding is Some(_) {
@@ -379,7 +379,7 @@ pub async fn FileStore::get_chunk(
 pub async fn FileStore::put_chunk(
   self : FileStore,
   metadata : @metadata.ArrayMetadata,
-  coordinates : Array[Int],
+  coordinates : Array[Int32],
   path : String,
   encoded : Bytes,
 ) -> Bool {

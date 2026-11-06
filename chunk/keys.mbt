@@ -77,7 +77,7 @@ pub fn attributes_key(format : @metadata.Format, path : String) -> String? {
 /// rejected so callers cannot silently read/write a different chunk.
 pub fn chunk_key(
   metadata : @metadata.ArrayMetadata,
-  coordinates : Array[Int],
+  coordinates : Array[Int32],
   path : String,
 ) -> String? {
   chunk_key_with_shape(metadata, metadata.chunk_shape, coordinates, path)
@@ -87,7 +87,7 @@ pub fn chunk_key(
 /// Physical object key for an outer shard of a prepared sharded array.
 pub fn shard_key(
   metadata : @metadata.ArrayMetadata,
-  coordinates : Array[Int],
+  coordinates : Array[Int32],
   path : String,
 ) -> String? {
   guard metadata.sharding is Some(layout) else { return None }
@@ -97,8 +97,8 @@ pub fn shard_key(
 ///|
 fn chunk_key_with_shape(
   metadata : @metadata.ArrayMetadata,
-  grid_shape : Array[Int],
-  coordinates : Array[Int],
+  grid_shape : Array[Int32],
+  coordinates : Array[Int32],
   path : String,
 ) -> String? {
   if coordinates.length() != metadata.shape.length() ||
@@ -139,7 +139,7 @@ fn chunk_key_with_shape(
 
 ///|
 /// Number of elements in one full chunk, or None if the size overflows Int.
-pub fn chunk_element_count(metadata : @metadata.ArrayMetadata) -> Int? {
+pub fn chunk_element_count(metadata : @metadata.ArrayMetadata) -> Int32? {
   if metadata.shape.length() != metadata.chunk_shape.length() {
     return None
   }
@@ -159,15 +159,15 @@ pub fn chunk_element_count(metadata : @metadata.ArrayMetadata) -> Int? {
 /// codec is processed separately by a higher-level reader.
 pub fn element_location(
   metadata : @metadata.ArrayMetadata,
-  indices : Array[Int],
+  indices : Array[Int32],
   path : String,
-) -> (String, Int)? {
+) -> (String, Int32)? {
   guard chunk_element_count(metadata) is Some(_) else { return None }
   if indices.length() != metadata.shape.length() {
     return None
   }
-  let chunk_coords : Array[Int] = []
-  let local_coords : Array[Int] = []
+  let chunk_coords : Array[Int32] = []
+  let local_coords : Array[Int32] = []
   for i in 0..<indices.length() {
     let index = indices[i]
     if index < 0 || index >= metadata.shape[i] {

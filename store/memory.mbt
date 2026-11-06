@@ -8,7 +8,7 @@ pub struct MemoryStore {
 
 ///|
 pub fn MemoryStore::new(
-  read_limits? : ReadLimits = ReadLimits::defaults(),
+  read_limits~ : ReadLimits = ReadLimits::defaults(),
 ) -> MemoryStore {
   { entries: Map([]), limits: read_limits, }
 }
@@ -125,7 +125,7 @@ pub fn MemoryStore::open_array(
 pub fn MemoryStore::put_chunk(
   self : MemoryStore,
   metadata : @metadata.ArrayMetadata,
-  coordinates : Array[Int],
+  coordinates : Array[Int32],
   path : String,
   encoded : Bytes,
 ) -> Bool {
@@ -141,7 +141,7 @@ pub fn MemoryStore::put_chunk(
 pub fn MemoryStore::get_chunk(
   self : MemoryStore,
   metadata : @metadata.ArrayMetadata,
-  coordinates : Array[Int],
+  coordinates : Array[Int32],
   path : String,
 ) -> Bytes? {
   guard @chunk.chunk_key(metadata, coordinates, path) is Some(key) else {

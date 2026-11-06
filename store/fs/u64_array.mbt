@@ -20,7 +20,7 @@ pub async fn FileStore::open_u64(
 ///|
 pub async fn FileU64Array::read(
   self : FileU64Array,
-  indices : Array[Int],
+  indices : Array[Int32],
 ) -> UInt64? {
   match self.bits.read(indices) {
     Some(value) => Some(value.reinterpret_as_uint64())
@@ -31,7 +31,7 @@ pub async fn FileU64Array::read(
 ///|
 pub async fn FileU64Array::write(
   self : FileU64Array,
-  indices : Array[Int],
+  indices : Array[Int32],
   value : UInt64,
 ) -> Bool {
   self.bits.write(indices, value.reinterpret_as_int64())
@@ -40,8 +40,8 @@ pub async fn FileU64Array::write(
 ///|
 pub async fn FileU64Array::read_region(
   self : FileU64Array,
-  origin : Array[Int],
-  extent : Array[Int],
+  origin : Array[Int32],
+  extent : Array[Int32],
 ) -> Array[UInt64]? {
   guard self.bits.read_region(origin, extent) is Some(raw) else { return None }
   let result : Array[UInt64] = []
@@ -54,8 +54,8 @@ pub async fn FileU64Array::read_region(
 ///|
 pub async fn FileU64Array::write_region(
   self : FileU64Array,
-  origin : Array[Int],
-  extent : Array[Int],
+  origin : Array[Int32],
+  extent : Array[Int32],
   values : Array[UInt64],
 ) -> Bool {
   let raw : Array[Int64] = []

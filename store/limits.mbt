@@ -1,26 +1,26 @@
 ///|
 /// Input/work budgets, not a bound on total process or heap memory.
 pub struct ReadLimits {
-  metadata_bytes : Int
-  encoded_bytes : Int
-  decoded_bytes : Int
-  region_bytes : Int
-  region_elements : Int
-  chunks : Int
-  rank : Int
-  json_depth : Int
+  metadata_bytes : Int32
+  encoded_bytes : Int32
+  decoded_bytes : Int32
+  region_bytes : Int32
+  region_elements : Int32
+  chunks : Int32
+  rank : Int32
+  json_depth : Int32
 }
 
 ///|
 pub fn ReadLimits::new(
-  max_metadata_bytes? : Int = 1048576,
-  max_chunk_bytes? : Int = 67108864,
-  max_decoded_chunk_bytes? : Int = 67108864,
-  max_region_bytes? : Int = 67108864,
-  max_region_elements? : Int = 8388608,
-  max_chunks? : Int = 16384,
-  max_rank? : Int = 64,
-  max_json_depth? : Int = 64,
+  max_metadata_bytes~ : Int32 = 1048576,
+  max_chunk_bytes~ : Int32 = 67108864,
+  max_decoded_chunk_bytes~ : Int32 = 67108864,
+  max_region_bytes~ : Int32 = 67108864,
+  max_region_elements~ : Int32 = 8388608,
+  max_chunks~ : Int32 = 16384,
+  max_rank~ : Int32 = 64,
+  max_json_depth~ : Int32 = 64,
 ) -> ReadLimits? {
   if max_metadata_bytes <= 0 ||
     max_chunk_bytes <= 0 ||
@@ -59,17 +59,17 @@ pub fn ReadLimits::defaults() -> ReadLimits {
 }
 
 ///|
-pub fn ReadLimits::max_metadata_bytes(self : ReadLimits) -> Int {
+pub fn ReadLimits::max_metadata_bytes(self : ReadLimits) -> Int32 {
   self.metadata_bytes
 }
 
 ///|
-pub fn ReadLimits::max_chunk_bytes(self : ReadLimits) -> Int {
+pub fn ReadLimits::max_chunk_bytes(self : ReadLimits) -> Int32 {
   self.encoded_bytes
 }
 
 ///|
-pub fn ReadLimits::max_chunks(self : ReadLimits) -> Int {
+pub fn ReadLimits::max_chunks(self : ReadLimits) -> Int32 {
   self.chunks
 }
 
@@ -112,7 +112,7 @@ pub fn ReadLimits::allows_metadata(self : ReadLimits, bytes : Bytes) -> Bool {
 
 ///|
 /// Limits for metadata keys also apply to attributes and consolidated indexes.
-pub fn ReadLimits::key_limit(self : ReadLimits, key : String) -> Int {
+pub fn ReadLimits::key_limit(self : ReadLimits, key : String) -> Int32 {
   if key == ".zarray" ||
     key.has_suffix("/.zarray") ||
     key == ".zgroup" ||
@@ -130,7 +130,7 @@ pub fn ReadLimits::key_limit(self : ReadLimits, key : String) -> Int {
 }
 
 ///|
-fn element_bytes(metadata : @metadata.ArrayMetadata) -> Int? {
+fn element_bytes(metadata : @metadata.ArrayMetadata) -> Int32? {
   match metadata.data_type {
     "bool" | "|b1" | "uint8" | "int8" | "|u1" | "|i1" => Some(1)
     "uint16" | "int16" | "<u2" | ">u2" | "<i2" | ">i2" => Some(2)
@@ -177,8 +177,8 @@ pub fn ReadLimits::allows_array(
 pub fn ReadLimits::allows_region(
   self : ReadLimits,
   metadata : @metadata.ArrayMetadata,
-  origin : Array[Int],
-  extent : Array[Int],
+  origin : Array[Int32],
+  extent : Array[Int32],
 ) -> Bool {
   if !self.allows_array(metadata) {
     return false
@@ -199,8 +199,8 @@ pub fn ReadLimits::allows_region(
 ///|
 pub fn ReadLimits::allows_decode(
   self : ReadLimits,
-  encoded_bytes : Int,
-  decoded_bytes : Int,
+  encoded_bytes : Int32,
+  decoded_bytes : Int32,
 ) -> Bool {
   encoded_bytes >= 0 &&
   encoded_bytes <= self.encoded_bytes &&

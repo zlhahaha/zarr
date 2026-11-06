@@ -6,7 +6,7 @@ pub struct BoolArray {
   metadata : @metadata.ArrayMetadata
   path : String
   fill : Bool
-  chunk_len : Int
+  chunk_len : Int32
   compression : @codec.Compression
 }
 
@@ -48,7 +48,7 @@ fn bool_byte(value : Bool) -> Byte {
 }
 
 ///|
-pub fn BoolArray::read(self : BoolArray, indices : Array[Int]) -> Bool? {
+pub fn BoolArray::read(self : BoolArray, indices : Array[Int32]) -> Bool? {
   guard @chunk.element_location(self.metadata, indices, self.path)
     is Some((key, offset)) else {
     return None
@@ -73,7 +73,7 @@ pub fn BoolArray::read(self : BoolArray, indices : Array[Int]) -> Bool? {
 ///|
 pub fn BoolArray::write(
   self : BoolArray,
-  indices : Array[Int],
+  indices : Array[Int32],
   value : Bool,
 ) -> Bool {
   guard @chunk.element_location(self.metadata, indices, self.path)
@@ -109,8 +109,8 @@ pub fn BoolArray::write(
 /// Read a bounded rectangle in C order. Missing chunks use the fill value.
 pub fn BoolArray::read_region(
   self : BoolArray,
-  origin : Array[Int],
-  extent : Array[Int],
+  origin : Array[Int32],
+  extent : Array[Int32],
 ) -> Array[Bool]? {
   guard read_region_bytes(
       self.store,
@@ -137,8 +137,8 @@ pub fn BoolArray::read_region(
 /// Write a C-order rectangle. Cross-chunk writes are not atomic.
 pub fn BoolArray::write_region(
   self : BoolArray,
-  origin : Array[Int],
-  extent : Array[Int],
+  origin : Array[Int32],
+  extent : Array[Int32],
   values : Array[Bool],
 ) -> Bool {
   let bytes : Array[Byte] = []

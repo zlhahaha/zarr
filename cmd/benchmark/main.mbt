@@ -5,7 +5,7 @@ extern "C" fn time_ns() -> Int64 = "zarr_bench_time_ns"
 extern "C" fn peak_rss() -> Int64 = "zarr_bench_peak_rss"
 
 ///|
-fn integer(value : String) -> Int {
+fn integer(value : String) -> Int32 {
   let parsed = @json.parse(value) catch { _ => abort("integer argument") }
   guard parsed is Number(n, ..) else { abort("integer argument") }
   if n < 0.0 || n > 16384.0 || n != n.to_int().to_double() {

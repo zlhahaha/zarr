@@ -3,21 +3,27 @@
 /// compressor separately; v3 lists it after the bytes codec. BloscLz4 holds
 /// (clevel, shuffle mode 0/1/2, dtype byte width). Levels 1–9 currently use
 /// one fast LZ4 strategy; level 0 writes a Blosc memcpy frame.
+#derive(Debug)
 pub(all) enum Compression {
   Raw
-  Gzip(Int)
-  Zlib(Int)
-  Zstd(Int)
-  ZstdChecksum(Int)
-  BloscLz4(Int, Int, Int)
+  Gzip(Int32)
+  Zlib(Int32)
+  Zstd(Int32)
+  ZstdChecksum(Int32)
+  BloscLz4(Int32, Int32, Int32)
   BloscReadOnly(String)
-} derive(Debug)
+}
 
 ///|
 pub extend Compression with Debug::{to_repr}
 
 ///|
-fn level(value : Json?, default : Int, minimum : Int, maximum : Int) -> Int? {
+fn level(
+  value : Json?,
+  default : Int32,
+  minimum : Int32,
+  maximum : Int32,
+) -> Int32? {
   match value {
     None => Some(default)
     Some(Number(n, ..)) => {
@@ -33,7 +39,7 @@ fn level(value : Json?, default : Int, minimum : Int, maximum : Int) -> Int? {
 }
 
 ///|
-fn blosc_typesize(dtype : String) -> Int? {
+fn blosc_typesize(dtype : String) -> Int32? {
   match dtype {
     "|u1" | "|i1" | "|b1" | "uint8" | "int8" | "bool" => Some(1)
     "<u2" | ">u2" | "<i2" | ">i2" | "uint16" | "int16" => Some(2)
@@ -314,7 +320,7 @@ fn numeric_plan(
 pub fn decode_chunk(
   plan : Compression,
   encoded : Bytes,
-  expected_len : Int,
+  expected_len : Int32,
 ) -> Bytes? {
   if expected_len < 0 {
     return None
@@ -336,7 +342,7 @@ pub fn decode_chunk(
 }
 
 ///|
-fn decode_zstd(encoded : Bytes, expected_len : Int) -> Bytes? {
+fn decode_zstd(encoded : Bytes, expected_len : Int32) -> Bytes? {
   let bound = @zstd.decompress_bound(encoded) catch { _ => return None }
   if bound > expected_len.to_uint64() {
     return None
@@ -350,7 +356,7 @@ fn decode_zstd(encoded : Bytes, expected_len : Int) -> Bytes? {
 }
 
 ///|
-fn decode_gzip(encoded : Bytes, expected_len : Int) -> Bytes? {
+fn decode_gzip(encoded : Bytes, expected_len : Int32) -> Bytes? {
   let decoder = @gzip.Decoder()
   let scratch = FixedArray::make(32768, b'\x00')
   let output : Array[Byte] = []
@@ -384,7 +390,7 @@ fn decode_gzip(encoded : Bytes, expected_len : Int) -> Bytes? {
 }
 
 ///|
-fn decode_zlib(encoded : Bytes, expected_len : Int) -> Bytes? {
+fn decode_zlib(encoded : Bytes, expected_len : Int32) -> Bytes? {
   let decoder = @zlib.Decoder()
   let scratch = FixedArray::make(32768, b'\x00')
   let output : Array[Byte] = []

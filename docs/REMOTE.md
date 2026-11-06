@@ -71,6 +71,8 @@ guard image.read_region([0, 0, 0], [4, 4, 4]) is Some(values) else {
 
 For private buckets, construct `@s3.Credentials::new(access_key, secret_key, session_token=...)` from secrets supplied by your application, then pass `credentials=creds` to `S3Store::new`. Do not commit keys to source or print the credentials. This API does **not** search environment variables, assume an AWS profile, refresh expired session tokens or assume an instance-role provider. Recreate the store when credentials rotate. `endpoint="http://127.0.0.1:9000"` selects a path-style S3-compatible endpoint for local testing; use HTTPS for credentials outside a trusted local test environment. AWS regional default addresses are path-style and target general-purpose buckets; directory buckets and special endpoint types are not supported.
 
+**Unreleased 0.7.1 safety change:** `credentials=...` combined with any `http://` endpoint returns `None` unless `allow_insecure_http=true` is explicitly supplied. This includes loopback test servers. Use the flag only for an isolated trusted test endpoint; HTTPS remains the default for AWS. Published **0.7.0 does not have this option** and does not enforce this guard. The real-service test always creates disposable credentials and binds only to loopback.
+
 `HttpStore::open_array` and `S3Store::open_array` return validated metadata without downloading chunks. For v3 shards, `chunk_shape` describes the independently readable *inner* chunks, matching native `FileStore::open_array`. `hydrate_region` returns a temporary `MemoryStore`: when source data is sharded, its metadata is transformed into an ordinary inner-chunk view so existing typed APIs can decode selected chunks. It is **not** a faithful copy of the original sharded Zarr metadata and must not be uploaded as a replacement for the source. Mutating the returned memory store does not write remotely.
 
 ## Range requests, errors and limits
@@ -79,4 +81,21 @@ For v3 sharding-indexed arrays, HTTP/S3 downloads the fixed-size index at the be
 
 Default caps remain 1 MiB metadata, 64 MiB encoded/decoded chunk and logical region bytes, 8,388,608 region elements and 16,384 touched chunks through `ReadLimits`. HTTP/S3 additionally defaults to at most 1,024 touched chunks and 64 MiB cumulative encoded hydration bytes; shard index and payload bytes both count. `request_timeout_ms` defaults to 30,000 **per HTTP request**. GETs retry once after 50 ms only for transport failures, timeout, `429` and selected `5xx` responses; `403`, `412`, malformed Range and decode failures are not retried. There is no total-operation deadline or aggregate-RAM bound.
 
-Both remote adapters currently return `None` for transport, authentication, protocol, budget and decode failures; they do not yet expose a structured error type. A whole multi-chunk read is not a stable snapshot if objects change during the call, especially when ETags are absent. No object listing, write, presigned-query URL, CDN-specific behavior, bucket-region auto-discovery, credential-chain resolution or private AWS/MinIO end-to-end integration is claimed. The SigV4 signer passes AWS's published [GET Range test vector](https://docs.aws.amazon.com/AmazonS3/latest/developerguide/sig-v4-header-based-auth.html), local signed-request tests pass, and a public anonymous AWS object was read live; these are the verified boundaries of this early adapter.
+Both remote adapters currently return `None` for transport, authentication, protocol, budget and decode failures; they do not yet expose a structured error type. A whole multi-chunk read is not a stable snapshot if objects change during the call, especially when ETags are absent. No object listing, write, presigned-query URL, CDN-specific behavior, bucket-region auto-discovery or credential-chain resolution is claimed. The signer passes AWS's published [GET Range test vector](https://docs.aws.amazon.com/AmazonS3/latest/developerguide/sig-v4-header-based-auth.html); the unreleased maintenance branch also passes real private MinIO integration described below. These checks do not certify a production AWS account, STS session/role policies, TLS deployments or every S3-compatible service.
+
+## Reproduce private MinIO integration
+
+Install Go and Python 3.12+. MinIO's [official repository](https://github.com/minio/minio#source-only-distribution) now distributes community source; tests build the fixed `RELEASE.2025-10-15T17-29-55Z` release (Go module `v0.0.0-20251015172955-9e49d5e7a648`) rather than relying on a removed container image. This is an external, unmodified AGPLv3 **test server**, not code linked into or redistributed with this Apache-2.0 library. Its binary, data, logs and Go caches are excluded from publication.
+
+PowerShell, from the repository root:
+
+```powershell
+$env:GOBIN = Join-Path (Get-Location) "_build/tools-bin"
+go install github.com/minio/minio@RELEASE.2025-10-15T17-29-55Z
+python -m pip install -r scripts/requirements-remote.txt
+python scripts/verify_s3_minio.py --minio-bin _build/tools-bin/minio.exe --output _build/minio-integration.json
+```
+
+On Linux/macOS, use `GOBIN="$PWD/_build/tools-bin" go install ...` for the same version and pass `_build/tools-bin/minio` to the Python script. Go 1.26.2 was used for the recorded run and is selected in Linux native CI.
+
+The harness starts a real MinIO process bound to loopback with disposable random root credentials, uploads independently generated Python Zarr fixtures with boto3, and invokes `cmd/s3_integration`. An observing relay preserves signed headers and forwards successful requests to MinIO: the server verifies signatures and supplies actual Range/ETag responses. Only the retry/timeout cases inject a 503 or delay through that relay. All values, both index locations, CRC32C, edge/missing inner chunks, whole missing shards, invalid access keys/secrets (real 403), conditional payload requests and exact per-object retry counts are checked. Discovery probes `.zarray` and `zarr.json`, so a fully timed-out discovery makes **four requests: two per object**, not two in total. No personal AWS configuration is read. The process is stopped and its temporary directory removed in `finally`; test failures fail CI. A Windows 2026-11-06 run passed with **13 real 206 Range responses**. Linux native CI uploads its independent JSON evidence as `minio-integration`.
