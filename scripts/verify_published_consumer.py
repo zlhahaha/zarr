@@ -1,6 +1,7 @@
-"""Check an independent registry-only 0.7.0 consumer with the active toolchain."""
+"""Check the independent registry-only consumer with the active toolchain."""
 import argparse
 import json
+import re
 from pathlib import Path
 import subprocess
 import tempfile
@@ -16,6 +17,10 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
+    dependency = re.search(r'"zlhahaha/zarr@([^"\s]+)"', (CONSUMER / "moon.mod").read_text(encoding="utf-8"))
+    if dependency is None:
+        raise RuntimeError("consumer must pin an exact registry version")
+    version = dependency.group(1)
     scratch = PROJECT / "_build" / "published-consumer"
     scratch.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(dir=scratch) as directory:
@@ -31,7 +36,7 @@ def main():
             if command[1] == "run":
                 print(result.stdout.strip())
         manifest = (CONSUMER / ".mooncakes" / "zlhahaha" / "zarr" / "moon.mod").read_text(encoding="utf-8")
-        assert 'version = "0.7.0"' in manifest, "consumer did not install registry 0.7.0"
+        assert f'version = "{version}"' in manifest, "consumer did not install the pinned registry version"
         expected = np.full((3, 4, 5), 60000, dtype=np.uint16)
         expected[1:3, 1:3, 1:4] = np.arange(100, 112, dtype=np.uint16).reshape(2, 2, 3)
         for fmt in ("v2", "v3"):
@@ -45,7 +50,7 @@ def main():
             else:
                 assert metadata["codecs"][-1]["name"] == "zstd"
             print(f"independent Python verified registry {fmt}: all 60 values, compression and edge chunks")
-        report = {"package": "zlhahaha/zarr@0.7.0", "source": "registry dependency; no local path override",
+        report = {"package": f"zlhahaha/zarr@{version}", "source": "registry dependency; no local path override",
                   "toolchain": subprocess.check_output(["moon", "version", "--all"], text=True).strip(),
                   "zarr_python": zarr.__version__, "numpy": np.__version__,
                   "native_check_build_run": True, "python_v2_v3_values": True}

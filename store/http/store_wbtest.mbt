@@ -32,7 +32,9 @@ test "HTTP cache evicts least recently used entries within both caps" {
   remote.cache_found("empty", b"")
   assert_true(remote.cached("large", 5) is None)
   assert_true(remote.cached("empty", 0) is None)
-  assert_true(remote.cached("a", 1) is Some(Failed))
+  assert_true(
+    remote.cached("a", 1) is Some(Failed(@store.LimitExceeded("object", "a"))),
+  )
 }
 
 ///|

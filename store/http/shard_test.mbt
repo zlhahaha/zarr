@@ -145,16 +145,26 @@ async test "HTTP range hydration reads Python start/end shards" {
       fail("ignore store")
     }
     assert_true(ignore.hydrate_region("", [0], [2]) is None)
+    assert_true(
+      ignore.hydrate_region_result("", [0], [2]) is Err(@store.Protocol(_, _)),
+    )
     mode[0] = "bad-range"
     guard @http.HttpStore::new("\{root}/start") is Some(bad) else {
       fail("bad range store")
     }
     assert_true(bad.hydrate_region("", [0], [2]) is None)
+    assert_true(
+      bad.hydrate_region_result("", [0], [2]) is Err(@store.Protocol(_, _)),
+    )
     mode[0] = "deny"
     guard @http.HttpStore::new("\{root}/start") is Some(denied) else {
       fail("denied store")
     }
     assert_true(denied.hydrate_region("", [0], [2]) is None)
+    assert_true(
+      denied.hydrate_region_result("", [0], [2])
+      is Err(@store.Authentication(_, 403)),
+    )
     mode[0] = "conflict"
     guard @http.HttpStore::new("\{root}/start") is Some(conflict) else {
       fail("conflict store")

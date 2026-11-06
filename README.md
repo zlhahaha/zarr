@@ -6,9 +6,9 @@ A MoonBit implementation of the Zarr v2 and v3 storage formats for chunked N-dim
 
 ## Status
 
-The repository is preparing **0.7.1 (unreleased)** for MoonBit `moonc >= 0.10.20`; the latest Mooncakes release remains **0.7.0**. Maintenance adds explicit opt-in for signed plaintext S3 endpoints and a real, isolated MinIO regression suite. The published 0.7.0 consumer was separately verified on 0.10.20. See [maintenance and reproduction](docs/MAINTENANCE.md).
+Version **0.8.0** adds explicit hierarchy discovery in memory, native files and S3, plus structured HTTP/S3 errors through backward-compatible `_result` APIs. Signed S3 listings support bounded ListObjectsV2 pagination and Unicode names. Credentialed plaintext S3 endpoints require explicit opt-in. See [discovery and error handling](docs/DISCOVERY.md), [real MinIO checks](docs/REMOTE.md#reproduce-private-minio-integration) and [toolchain verification](docs/MAINTENANCE.md).
 
-Early Mooncakes release (version `0.7.0`). The library reads and writes `bool`, signed/unsigned 8/16/32/64-bit integers, and `float32`/`float64` arrays in memory and on native filesystems, including elements, rectangular slices, missing-chunk fills and edge chunks. It supports raw chunks and gzip/zstd in both formats, plus zlib in v2 and a documented Blosc subset. Groups and attributes work in both formats. Native filesystem arrays can **read** v3 sharding-indexed stores; sharded writes remain unsupported. Native read-only HTTP and S3 adapters now hydrate selected ordinary chunks **or selected inner chunks of shards** into a temporary `MemoryStore`. A tile cursor lets applications process a large logical rectangle one bounded typed `read_region` at a time. Each tile is still buffered, so this is not a zero-copy or automatically streaming typed-array API. Unsupported dtypes/codecs, cloud writes and concurrent-writer snapshots remain outside the supported subset.
+This is an early Mooncakes library. It reads and writes `bool`, signed/unsigned 8/16/32/64-bit integers, and `float32`/`float64` arrays in memory and on native filesystems, including elements, rectangular slices, missing-chunk fills and edge chunks. It supports raw chunks and gzip/zstd in both formats, plus zlib in v2 and a documented Blosc subset. Groups and attributes work in both formats. Native filesystem arrays can **read** v3 sharding-indexed stores; sharded writes remain unsupported. Native read-only HTTP and S3 adapters hydrate selected ordinary chunks **or selected inner chunks of shards** into a temporary `MemoryStore`. A tile cursor lets applications process a large logical rectangle one bounded typed `read_region` at a time. Each tile is still buffered. Unsupported dtypes/codecs, cloud writes and concurrent-writer snapshots remain outside the supported subset.
 
 Float32/float64 fill values also support the standard JSON strings `"NaN"`, `"Infinity"`, and `"-Infinity"`. Creating an array with any NaN writes the canonical `"NaN"` fill value; v3 payload-specific hexadecimal NaN fills are not supported.
 
@@ -41,15 +41,17 @@ Float32/float64 fill values also support the standard JSON strings `"NaN"`, `"In
 | HTTP read-only regional hydration | Native, bounded metadata/chunk downloads | Native, bounded ordinary or shard-index/payload byte-range downloads |
 | Sharding-indexed codec | Not a v2 codec | Native filesystem and HTTP/S3 read-only: start/end index, little/big-endian index, optional CRC32C, supported inner codecs; no writes |
 | S3-compatible object storage | Native, read-only regional hydration | Native, read-only ordinary/sharded regional hydration; anonymous or explicit SigV4 credentials |
+| Explicit group children and breadth-first traversal | Memory, native filesystem (including consolidated snapshots), S3 | Same; signed S3 pagination, bounded nodes/depth/entries |
+| Structured remote diagnostics | HTTP/S3 `_result` APIs; legacy optional APIs retained | Same; metadata, transport/authentication, budgets and shard/Range failures |
 
 ## Install and try
 
-Published `0.7.0` requires **`moonc >= 0.10.14`** and has also been checked on `0.10.20`. Building the current repository requires **`moonc >= 0.10.20`**. Check the compiler version with `moon version --all`; native filesystem/HTTP examples also require native-backend support.
+Requires **`moonc >= 0.10.20`**. Check the compiler version with `moon version --all`; native filesystem/HTTP/S3 examples also require native-backend support. Older 0.7.0 retains its documented 0.10.14 baseline.
 
 Add the published module to a MoonBit project:
 
 ```sh
-moon add zlhahaha/zarr@0.7.0
+moon add zlhahaha/zarr@0.8.0
 ```
 
 For native filesystem/HTTP examples that import `moonbitlang/async` or its subpackages, also add it as a **direct module dependency**:
@@ -67,6 +69,7 @@ git clone https://github.com/zlhahaha/zarr.git
 cd zarr
 moon update
 moon run --target wasm-gc cmd/main
+moon run --target wasm-gc cmd/discovery_demo
 moon run --target native cmd/native_demo
 moon run --target native cmd/v2_demo
 moon run --target native cmd/budget_demo
@@ -80,7 +83,7 @@ The local native examples create temporary stores or use memory only. `cmd/tile_
 
 ## Build and run
 
-Requires `moonc >= 0.10.20` (inspect `moon version --all`), with native support for filesystem and HTTP packages. CI checks native builds and tests on Linux, macOS and Windows, plus wasm-gc on Linux; release packaging, real MinIO integration and the older Python reverse tests run on Linux; N-D reverse tests and a registry-only 0.7.0 consumer run on all three native platforms. From this directory:
+Requires `moonc >= 0.10.20` (inspect `moon version --all`), with native support for filesystem and HTTP packages. CI checks native builds and tests on Linux, macOS and Windows, plus wasm-gc on Linux; release packaging, real MinIO integration and the older Python reverse tests run on Linux; N-D reverse tests and a registry-only released-package consumer run on all three native platforms. From this directory:
 
 ```sh
 moon check --target native --deny-warn
@@ -136,14 +139,15 @@ chunk/           Regular-grid indexing and metadata/chunk keys
 shard/           V3 sharding layout and bounded index validation
 dtype/           Numeric dtype and fill-value checks
 codec/           Codec-chain validation and bounded gzip/zlib/zstd decode
-store/           In-memory encoded-byte store
+store/           In-memory encoded-byte store and structured AccessError
 store/fs/        Native-only filesystem store
 store/http/      Native-only read-only HTTP regional hydration
 store/s3/        Native-only read-only S3-compatible adapter with SigV4
 array/           Typed array creation, element and region I/O
-hierarchy/       Group and attribute operations
+hierarchy/       Group/attribute operations and shared node discovery
 integration/     Cross-package tests
 cmd/main/        Portable in-memory v3 example
+cmd/discovery_demo/ Portable explicit hierarchy traversal and limits
 cmd/native_demo/ Native filesystem v3 example
 cmd/v2_demo/     Native filesystem v2 example
 cmd/budget_demo/ Native read-budget rejection and recovery example

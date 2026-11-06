@@ -55,6 +55,6 @@ async fn main {
   check_array("\{args[1]}/v2", @metadata.V2, @codec.Gzip(1))
   check_array("\{args[1]}/v3", @metadata.V3, @codec.Zstd(3))
   println(
-    "published zarr 0.7.0: v2/v3 compressed 3D writes, reopen, all values and missing fills verified",
+    "published Zarr: v2/v3 compressed 3D writes, reopen, all values and missing fills verified",
   )
 }

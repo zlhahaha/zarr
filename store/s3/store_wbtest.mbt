@@ -27,6 +27,36 @@ test "AWS published SigV4 GET Range vector" {
 }
 
 ///|
+test "SigV4 bucket listing matches independent botocore fixed-date vector" {
+  guard Credentials::new(
+      "AKIAIOSFODNN7EXAMPLE", "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+    )
+    is Some(credentials) else {
+    fail("credentials")
+  }
+  guard signature_headers(
+      credentials,
+      "us-east-1",
+      "https://examplebucket.s3.amazonaws.com/",
+      None,
+      None,
+      "20130524T000000Z",
+      query="max-keys=2&prefix=J",
+    )
+    is Some(headers) else {
+    fail("headers")
+  }
+  guard headers.get("Authorization") is Some(value) else {
+    fail("authorization")
+  }
+  assert_true(
+    value.has_suffix(
+      "Signature=34b48302e7b5fa45bde8084f4b7868a86f0a534bc59db6670ed5711ef69dc6f7",
+    ),
+  )
+}
+
+///|
 test "S3 address configuration validates bucket and path" {
   assert_true(S3Store::new("valid-bucket", "us-east-1") is Some(_))
   assert_true(S3Store::new("bad/bucket", "us-east-1") is None)

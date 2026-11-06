@@ -1,6 +1,6 @@
 # Compatibility and private-service maintenance
 
-The repository prepares **0.7.1 (unreleased)**. Mooncakes **0.7.0 remains the latest published release**; this maintenance task does not publish or overwrite a registry version.
+Version **0.8.0** combines current-toolchain maintenance with hierarchy discovery and structured remote diagnostics. The earlier 0.7.1 preparation was incorporated without a separate release. Publication is verified using an independent registry consumer; prior immutable versions remain available.
 
 ## Current stable toolchain
 
@@ -10,7 +10,7 @@ On 2026-11-06, the official stable archives supplied `moon 0.1.20261104` and `mo
 
 ## Independent published-package consumer
 
-`scripts/published_consumer/moon.mod` is a separate module that depends on **registry `zlhahaha/zarr@0.7.0`**, not a path override to this checkout. It directly declares `moonbitlang/async`, as required by the usage guide. From the repository root with the desired MoonBit toolchain active:
+`scripts/published_consumer/moon.mod` is a separate module that pins an exact **registry** Zarr release, not a path override to this checkout. Its JSON report records the verified version. Before 0.8.0 publication, the compatibility fixture checks 0.7.0; after release it is advanced to 0.8.0. It directly declares `moonbitlang/async`, as required by the usage guide. From the repository root with the desired MoonBit toolchain active:
 
 ```sh
 python -m pip install zarr==3.4.0 numpy==2.5.3
@@ -21,4 +21,4 @@ The runner performs strict native checking, building and execution, verifies the
 
 ## Real private MinIO reads
 
-The fixed upstream server, disposable credentials, exact cases, commands and scope are documented in [REMOTE.md](REMOTE.md#reproduce-private-minio-integration). On Windows, the source passed **133 native tests and 67 wasm-gc tests**, the registry consumer and real MinIO suite. Existing Python fixtures and reverse interop remain independent correctness gates; the source migration does not add a new codec or broaden unsupported format claims. Production AWS, STS/role authorization, TLS deployment and remote writes remain outside these verified results.
+The fixed upstream server, disposable credentials, exact cases, commands and scope are documented in [REMOTE.md](REMOTE.md#reproduce-private-minio-integration). The expanded suite validates real signed pagination and Unicode discovery as well as ordinary/sharded reads. The 0.8.0 source has **142 native tests and 70 wasm-gc tests**. The existing 51 Python read fixtures and 40 reverse stores remain independent format gates. Production AWS, STS/role authorization, TLS deployment and remote writes remain outside these verified results.

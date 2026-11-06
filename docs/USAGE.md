@@ -1,11 +1,11 @@
 # Using Zarr from MoonBit
 
-This library is an early Mooncakes release. Requires a MoonBit toolchain with **`moonc >= 0.10.14`**; inspect it with `moon version --all`. Filesystem, HTTP and S3 packages require the native backend. Add the published module to an existing MoonBit project:
+This library is an early Mooncakes release. Version 0.8.0 requires a MoonBit toolchain with **`moonc >= 0.10.20`**; inspect it with `moon version --all`. Filesystem, HTTP and S3 packages require the native backend. Add the module to an existing MoonBit project:
 
-The current repository prepares unreleased 0.7.1 and requires **0.10.20**. Commands below install published **0.7.0**, which is also checked on 0.10.20 by a separate registry-only consumer; see [maintenance verification](MAINTENANCE.md).
+See [hierarchy discovery and structured remote errors](DISCOVERY.md) for the new APIs, and [maintenance verification](MAINTENANCE.md) for compatibility checks. Older 0.7.0 retains its documented 0.10.14 baseline.
 
 ```sh
-moon add zlhahaha/zarr@0.7.0
+moon add zlhahaha/zarr@0.8.0
 ```
 
 For native examples importing `moonbitlang/async` or `moonbitlang/async/fs`, add a direct dependency as well:

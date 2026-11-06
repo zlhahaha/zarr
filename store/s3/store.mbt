@@ -109,6 +109,7 @@ fn signature_headers(
   range : String?,
   if_match : String?,
   stamp : String,
+  query~ : String = "",
 ) -> Map[String, String]? {
   if stamp.length() != 16 ||
     stamp[8:9] != "T" ||
@@ -154,7 +155,7 @@ fn signature_headers(
     names.write_string(";x-amz-security-token")
   }
   let signed = names.to_string()
-  let request = "GET\n\{path}\n\n\{canonical.to_string()}\n\{signed}\n\{empty_hash}"
+  let request = "GET\n\{path}\n\{query}\n\{canonical.to_string()}\n\{signed}\n\{empty_hash}"
   let request_hash = @crypto.bytes_to_hex_string(
     @crypto.sha256(@utf8.encode(request)[:]),
   )
@@ -186,6 +187,15 @@ fn signature_headers(
 /// shares strict object and shard-range validation with HttpStore.
 pub struct S3Store {
   http : @http.HttpStore
+  bucket_url : String
+  prefix : String
+  region : String
+  credentials : Credentials?
+  limits : @store.ReadLimits
+  request_timeout_ms : Int32
+  listing_page_size : Int32
+  max_listing_pages : Int32
+  max_listing_entries : Int32
 }
 
 ///|
@@ -213,8 +223,16 @@ pub fn S3Store::new(
   allow_insecure_http~ : Bool = false,
   read_limits~ : @store.ReadLimits = @store.ReadLimits::defaults(),
   request_timeout_ms~ : Int32 = 30000,
+  listing_page_size~ : Int32 = 1000,
+  max_listing_pages~ : Int32 = 32,
+  max_listing_entries~ : Int32 = 16384,
 ) -> S3Store? {
-  if !valid_label(bucket) || !valid_label(region) {
+  if !valid_label(bucket) ||
+    !valid_label(region) ||
+    listing_page_size <= 0 ||
+    listing_page_size > 1000 ||
+    max_listing_pages <= 0 ||
+    max_listing_entries <= 0 {
     return None
   }
   guard clean_prefix(prefix) is Some(prefix) else { return None }
@@ -251,7 +269,18 @@ pub fn S3Store::new(
         signature_headers(creds, region, url, range, if_match, stamp)
       })
   }
-  Some({ http, })
+  Some({
+    http,
+    bucket_url: base,
+    prefix,
+    region,
+    credentials,
+    limits: read_limits,
+    request_timeout_ms,
+    listing_page_size,
+    max_listing_pages,
+    max_listing_entries,
+  })
 }
 
 ///|
@@ -265,4 +294,30 @@ pub async fn S3Store::hydrate_region(
   extent : Array[Int32],
 ) -> @store.MemoryStore? {
   self.http.hydrate_region(path, origin, extent)
+}
+
+///|
+pub async fn S3Store::open_array_result(
+  self : S3Store,
+  path : String,
+) -> Result[@metadata.ArrayMetadata, @store.AccessError] {
+  self.http.open_array_result(path)
+}
+
+///|
+pub async fn S3Store::hydrate_region_result(
+  self : S3Store,
+  path : String,
+  origin : Array[Int32],
+  extent : Array[Int32],
+) -> Result[@store.MemoryStore, @store.AccessError] {
+  self.http.hydrate_region_result(path, origin, extent)
+}
+
+///|
+pub async fn S3Store::open_node_result(
+  self : S3Store,
+  path : String,
+) -> Result[@hierarchy.Node, @store.AccessError] {
+  self.http.open_node_result(path)
 }

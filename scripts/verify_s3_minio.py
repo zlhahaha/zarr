@@ -168,6 +168,17 @@ def main():
                             client.put_object(Bucket=bucket, Key=key, Body=path.read_bytes())
                 client.put_object(Bucket=bucket, Key="dataset/missing-shard/zarr.json",
                                   Body=(FIXTURES / "v3_shard_start_u8.zarr" / "zarr.json").read_bytes())
+                group = b'{"zarr_format":3,"node_type":"group","attributes":{}}'
+                for key in ("catalog/zarr.json", "catalog/nested/zarr.json"):
+                    client.put_object(Bucket=bucket, Key=key, Body=group)
+                for name, fixture in [("start", "v3_shard_start_u8"), ("end", "v3_shard_end_gzip_u16"),
+                                      ("μ & 图", "v3_shard_start_u8"), ("nested/cube", "v3_shard_start_u8")]:
+                    source = FIXTURES / (fixture + ".zarr")
+                    for path in source.rglob("*"):
+                        if path.is_file():
+                            client.put_object(Bucket=bucket, Key=f"catalog/{name}/{path.relative_to(source).as_posix()}",
+                                              Body=path.read_bytes())
+                client.put_object(Bucket=bucket, Key="catalog/unmarked/notes.txt", Body=b"not a node")
                 try:
                     with opener.open(endpoint + f"/{bucket}/dataset/ordinary/.zarray", timeout=5):
                         raise AssertionError("private fixture unexpectedly permits anonymous reads")
@@ -176,6 +187,9 @@ def main():
                 with relay(port) as (url, records):
                     run_case(url, "valid", base_env)
                     successful = list(records)
+                    listings = [r for r in successful if "list-type=2" in r["path"]]
+                    assert len(listings) >= 3 and all(r["status"] == 200 for r in listings)
+                    assert any("continuation-token=" in r["path"] for r in listings), "pagination not exercised"
                     ranges = [r for r in successful if r["range"] and r["status"] == 206]
                     assert any(r["range"].startswith("bytes=-") for r in ranges), "no suffix index read"
                     assert any(not r["range"].startswith("bytes=-") for r in ranges), "no prefix/payload read"
@@ -199,10 +213,9 @@ def main():
                     started = time.monotonic()
                     run_case(url, "timeout", base_env)
                     elapsed = time.monotonic() - started
-                    # Discovery probes both .zarray and zarr.json, each with
-                    # one retry. Count attempts per object, not per discovery.
+                    # Fail-fast Result discovery stops after the first failed object.
                     paths = {r["path"] for r in records}
-                    assert len(paths) == 2 and len(records) == 4
+                    assert len(paths) == 1 and len(records) == 2
                     assert all(sum(r["path"] == path for r in records) == 2 for path in paths)
                     assert elapsed < 15, "request timeout did not bound the test"
                 report = {"minio": version, "minio_module": MINIO_MODULE, "boto3": boto3.__version__,
@@ -213,7 +226,8 @@ def main():
                           "bad_secret_403": True, "unknown_key_403": True,
                           "anonymous_read_403": True,
                           "transient_attempts_per_object": 2, "timeout_attempts_per_object": 2,
-                          "timeout_discovery_requests": 4,
+                          "timeout_discovery_requests": 2,
+                          "signed_listing_requests": len(listings), "unicode_paths": True,
                           "scope": "isolated private MinIO; no production AWS or STS certification"}
                 if args.output:
                     args.output.parent.mkdir(parents=True, exist_ok=True)

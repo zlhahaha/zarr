@@ -70,11 +70,20 @@ pub fn HttpStore::new(
 /// Configure per-request headers for authenticated read-only endpoints.
 /// The callback receives the full URL, optional Range and optional If-Match.
 /// Returning None rejects the request before network I/O.
+/// Changing the provider starts a fresh cache so an earlier authorization
+/// context cannot bypass the new provider.
 pub fn HttpStore::with_get_headers(
   self : HttpStore,
   provider : (String, String?, String?) -> Map[String, String]?,
 ) -> HttpStore {
-  { ..self, get_headers: Some(provider), }
+  {
+    ..self,
+    get_headers: Some(provider),
+    cache: Map([]),
+    cache_bytes: 0,
+    cache_entries: 0,
+    tick: 0UL,
+  }
 }
 
 ///|
@@ -105,16 +114,25 @@ fn HttpStore::headers(
 priv enum FetchResult {
   Found(Bytes)
   Missing
-  Failed
-  Transient
+  Failed(@store.AccessError)
+  Transient(@store.AccessError)
 }
 
 ///|
 priv enum RangeResult {
   RangeFound(Bytes, Int64, String?)
   RangeMissing
-  RangeFailed
-  RangeTransient
+  RangeFailed(@store.AccessError)
+  RangeTransient(@store.AccessError)
+}
+
+///|
+fn response_error(key : String, status : Int32) -> @store.AccessError {
+  match status {
+    401 | 403 => @store.Authentication(key, status)
+    412 => @store.Conflict(key)
+    _ => @store.HttpStatus(key, status)
+  }
 }
 
 ///|
@@ -151,7 +169,7 @@ fn HttpStore::cached(
 ) -> FetchResult? {
   guard self.cache.get(key) is Some(entry) else { return None }
   if entry.bytes.length() > limit {
-    return Some(Failed)
+    return Some(Failed(@store.LimitExceeded("object", key)))
   }
   self.cache.set(key, { bytes: entry.bytes, access: self.next_tick(), })
   Some(Found(entry.bytes))
@@ -251,15 +269,19 @@ async fn HttpStore::fetch_uncached(
   if self.cached(key, limit) is Some(result) {
     return result
   }
-  guard self.key_url(key) is Some(url) else { return Failed }
-  guard self.headers(url, None, None) is Some(headers) else { return Failed }
+  guard self.key_url(key) is Some(url) else {
+    return Failed(@store.InvalidPath(key))
+  }
+  guard self.headers(url, None, None) is Some(headers) else {
+    return Failed(@store.HeaderRejected(key))
+  }
   let (response, client) = @client_http.get_stream(url, headers~) catch {
-    _ => return Transient
+    _ => return Transient(@store.Transport(key))
   }
   defer client.close()
   if response.headers.get("content-encoding") is Some(encoding) &&
     encoding.to_lower() != "identity" {
-    return Failed
+    return Failed(@store.Protocol(key, "content-encoding"))
   }
   match response.code {
     404 => Missing
@@ -267,7 +289,7 @@ async fn HttpStore::fetch_uncached(
       let output : Array[Byte] = []
       for ;; {
         let next = client.read_some(max_len=32768) catch {
-          _ => return Transient
+          _ => return Transient(@store.Transport(key))
         }
         match next {
           None => {
@@ -277,16 +299,16 @@ async fn HttpStore::fetch_uncached(
           }
           Some(bytes) => {
             if bytes.length() > limit - output.length() {
-              return Failed
+              return Failed(@store.LimitExceeded("object", key))
             }
             output.append(bytes.to_array()[:])
           }
         }
       }
-      Failed
+      Failed(@store.Protocol(key, "body"))
     }
-    429 | 500 | 502 | 503 | 504 => Transient
-    _ => Failed
+    429 | 500 | 502 | 503 | 504 => Transient(response_error(key, response.code))
+    _ => Failed(response_error(key, response.code))
   }
 }
 
@@ -303,11 +325,22 @@ async fn HttpStore::fetch(
     match result {
       Some(Found(value)) => return Found(value)
       Some(Missing) => return Missing
-      Some(Failed) => return Failed
-      Some(Transient) | None => if attempt == 0 { @async.sleep(50) }
+      Some(Failed(error)) => return Failed(error)
+      Some(Transient(error)) => {
+        if attempt == 1 {
+          return Failed(error)
+        }
+        @async.sleep(50)
+      }
+      None => {
+        if attempt == 1 {
+          return Failed(@store.Timeout(key))
+        }
+        @async.sleep(50)
+      }
     }
   }
-  Failed
+  Failed(@store.Transport(key))
 }
 
 ///|
@@ -320,17 +353,19 @@ async fn HttpStore::fetch_range_once(
   limit : Int32,
   expected_etag : String?,
 ) -> RangeResult {
-  guard self.key_url(key) is Some(url) else { return RangeFailed }
+  guard self.key_url(key) is Some(url) else {
+    return RangeFailed(@store.InvalidPath(key))
+  }
   guard self.headers(url, Some(range), expected_etag) is Some(headers) else {
-    return RangeFailed
+    return RangeFailed(@store.HeaderRejected(key))
   }
   let (response, client) = @client_http.get_stream(url, headers~) catch {
-    _ => return RangeTransient
+    _ => return RangeTransient(@store.Transport(key))
   }
   defer client.close()
   if response.headers.get("content-encoding") is Some(encoding) &&
     encoding.to_lower() != "identity" {
-    return RangeFailed
+    return RangeFailed(@store.Protocol(key, "content-encoding"))
   }
   if response.code == 404 {
     return RangeMissing
@@ -340,49 +375,57 @@ async fn HttpStore::fetch_range_once(
     response.code == 502 ||
     response.code == 503 ||
     response.code == 504 {
-    return RangeTransient
+    return RangeTransient(response_error(key, response.code))
   }
   if response.code != 206 {
-    return RangeFailed
+    return RangeFailed(
+      if response.code == 200 {
+        @store.Protocol(key, "server ignored Range")
+      } else {
+        response_error(key, response.code)
+      },
+    )
   }
   guard response.headers.get("content-range") is Some(raw_range) else {
-    return RangeFailed
+    return RangeFailed(@store.Protocol(key, "missing Content-Range"))
   }
   guard content_range(raw_range) is Some((first, last, total)) else {
-    return RangeFailed
+    return RangeFailed(@store.Protocol(key, "invalid Content-Range"))
   }
   let length = last - first + 1L
   if length <= 0L || length > limit.to_int64() {
-    return RangeFailed
+    return RangeFailed(@store.Protocol(key, "range length"))
   }
   if range.has_prefix("bytes=-") {
     let suffix = @string.parse_int64(range[7:]) catch {
-      _ => return RangeFailed
+      _ => return RangeFailed(@store.Protocol(key, "suffix range"))
     }
     if suffix != length || last != total - 1L {
-      return RangeFailed
+      return RangeFailed(@store.Protocol(key, "suffix range mismatch"))
     }
   } else {
-    guard range[6:].split_once("-") is Some((a, b)) else { return RangeFailed }
+    guard range[6:].split_once("-") is Some((a, b)) else {
+      return RangeFailed(@store.Protocol(key, "range"))
+    }
     let requested_first = @string.parse_int64(a) catch {
-      _ => return RangeFailed
+      _ => return RangeFailed(@store.Protocol(key, "range"))
     }
     let requested_last = @string.parse_int64(b) catch {
-      _ => return RangeFailed
+      _ => return RangeFailed(@store.Protocol(key, "range"))
     }
     if first != requested_first || last != requested_last {
-      return RangeFailed
+      return RangeFailed(@store.Protocol(key, "range mismatch"))
     }
   }
   let output : Array[Byte] = []
   for ;; {
     let next = client.read_some(max_len=32768) catch {
-      _ => return RangeTransient
+      _ => return RangeTransient(@store.Transport(key))
     }
     match next {
       None => {
         if output.length().to_int64() != length {
-          return RangeFailed
+          return RangeFailed(@store.Protocol(key, "truncated range"))
         }
         return RangeFound(
           Bytes::from_array(output),
@@ -393,13 +436,13 @@ async fn HttpStore::fetch_range_once(
       Some(bytes) => {
         if bytes.length() > limit - output.length() ||
           bytes.length().to_int64() > length - output.length().to_int64() {
-          return RangeFailed
+          return RangeFailed(@store.Protocol(key, "oversized range"))
         }
         output.append(bytes.to_array()[:])
       }
     }
   }
-  RangeFailed
+  RangeFailed(@store.Protocol(key, "body"))
 }
 
 ///|
@@ -418,59 +461,120 @@ async fn HttpStore::fetch_range(
       Some(RangeFound(bytes, total, etag)) =>
         return RangeFound(bytes, total, etag)
       Some(RangeMissing) => return RangeMissing
-      Some(RangeFailed) => return RangeFailed
-      Some(RangeTransient) | None => if attempt == 0 { @async.sleep(50) }
+      Some(RangeFailed(error)) => return RangeFailed(error)
+      Some(RangeTransient(error)) => {
+        if attempt == 1 {
+          return RangeFailed(error)
+        }
+        @async.sleep(50)
+      }
+      None => {
+        if attempt == 1 {
+          return RangeFailed(@store.Timeout(key))
+        }
+        @async.sleep(50)
+      }
     }
   }
-  RangeFailed
+  RangeFailed(@store.Transport(key))
 }
 
 ///|
-async fn HttpStore::load_array(
+async fn HttpStore::object_result(
+  self : HttpStore,
+  key : String,
+  limit : Int32,
+) -> Result[Bytes?, @store.AccessError] {
+  match self.fetch(key, limit) {
+    Found(bytes) => Ok(Some(bytes))
+    Missing => Ok(None)
+    Failed(error) | Transient(error) => Err(error)
+  }
+}
+
+///|
+async fn HttpStore::node_document_result(
   self : HttpStore,
   path : String,
-) -> (@metadata.Format, String, @metadata.ArrayMetadata)? {
-  guard @chunk.array_metadata_key(@metadata.V2, path) is Some(v2_key) else {
-    return None
+) -> Result[(@hierarchy.Node, String), @store.AccessError] {
+  if !@hierarchy.discovery_path(path) {
+    return Err(@store.InvalidPath(path))
   }
-  guard @chunk.array_metadata_key(@metadata.V3, path) is Some(v3_key) else {
-    return None
-  }
-  let metadata_limit = if self.max_metadata_bytes <
-    self.limits.max_metadata_bytes() {
+  let prefix = if path == "" { "" } else { "\{path}/" }
+  let limit = if self.max_metadata_bytes < self.limits.max_metadata_bytes() {
     self.max_metadata_bytes
   } else {
     self.limits.max_metadata_bytes()
   }
-  let v2 = self.fetch(v2_key, metadata_limit)
-  let v3 = self.fetch(v3_key, metadata_limit)
-  let (format, bytes) = match (v2, v3) {
-    (Found(bytes), Missing) => (@metadata.V2, bytes)
-    (Missing, Found(bytes)) => (@metadata.V3, bytes)
-    _ => return None
+  let v2_array = match self.object_result("\{prefix}.zarray", limit) {
+    Ok(value) => value
+    Err(error) => return Err(error)
   }
-  if format == @metadata.V2 {
-    guard @chunk.group_metadata_key(format, path) is Some(group_key) else {
-      return None
-    }
-    match self.fetch(group_key, metadata_limit) {
-      Missing => ()
-      _ => return None
-    }
+  let v2_group = match self.object_result("\{prefix}.zgroup", limit) {
+    Ok(value) => value
+    Err(error) => return Err(error)
   }
-  if !self.limits.allows_metadata(bytes) {
-    return None
+  let v3 = match self.object_result("\{prefix}zarr.json", limit) {
+    Ok(value) => value
+    Err(error) => return Err(error)
   }
-  let raw = @utf8.decode(bytes[:]) catch { _ => return None }
-  guard @metadata.parse_array_metadata(raw) is Some(outer) else { return None }
-  if outer.format != format {
-    return None
+  let node = match
+    @hierarchy.classify_node(path, v2_array, v2_group, v3, self.limits) {
+    Ok(Some(node)) => node
+    Ok(None) => return Err(@store.NotFound(path))
+    Err(error) => return Err(error)
   }
-  guard @shard.prepare(outer) is Some(metadata) else { return None }
+  let bytes = if node.format == @metadata.V3 {
+    v3
+  } else if node.kind == @hierarchy.ArrayNode {
+    v2_array
+  } else {
+    v2_group
+  }
+  guard bytes is Some(bytes) else { return Err(@store.InvalidMetadata(path)) }
+  let raw = @utf8.decode(bytes[:]) catch {
+    _ => return Err(@store.InvalidMetadata(path))
+  }
+  Ok((node, raw))
+}
+
+///|
+/// Discover one explicit group/array metadata node, preserving failure causes.
+pub async fn HttpStore::open_node_result(
+  self : HttpStore,
+  path : String,
+) -> Result[@hierarchy.Node, @store.AccessError] {
+  match self.node_document_result(path) {
+    Ok((node, _)) => Ok(node)
+    Err(error) => Err(error)
+  }
+}
+
+///|
+async fn HttpStore::load_array_result(
+  self : HttpStore,
+  path : String,
+) -> Result[
+  (@metadata.Format, String, @metadata.ArrayMetadata),
+  @store.AccessError,
+] {
+  let (node, raw) = match self.node_document_result(path) {
+    Ok(value) => value
+    Err(error) => return Err(error)
+  }
+  if node.kind != @hierarchy.ArrayNode {
+    return Err(@store.NotArray(path))
+  }
+  guard @metadata.parse_array_metadata(raw) is Some(outer) else {
+    return Err(@store.InvalidMetadata(path))
+  }
+  guard @shard.prepare(outer) is Some(metadata) else {
+    return Err(@store.UnsupportedMetadata(path))
+  }
   if !self.limits.allows_array(metadata) {
-    return None
+    return Err(@store.LimitExceeded("array", path))
   }
-  Some((format, raw, metadata))
+  Ok((node.format, raw, metadata))
 }
 
 ///|
@@ -481,8 +585,24 @@ pub async fn HttpStore::open_array(
   self : HttpStore,
   path : String,
 ) -> @metadata.ArrayMetadata? {
-  guard self.load_array(path) is Some((_, _, metadata)) else { return None }
-  Some(metadata)
+  guard @chunk.normalized_path(path, @metadata.V2) is Some(path) else {
+    return None
+  }
+  match self.open_array_result(path) {
+    Ok(metadata) => Some(metadata)
+    Err(_) => None
+  }
+}
+
+///|
+pub async fn HttpStore::open_array_result(
+  self : HttpStore,
+  path : String,
+) -> Result[@metadata.ArrayMetadata, @store.AccessError] {
+  match self.load_array_result(path) {
+    Ok((_, _, metadata)) => Ok(metadata)
+    Err(error) => Err(error)
+  }
 }
 
 ///|
@@ -495,39 +615,60 @@ pub async fn HttpStore::hydrate_region(
   origin : Array[Int32],
   extent : Array[Int32],
 ) -> @store.MemoryStore? {
-  guard self.load_array(path) is Some((format, raw, metadata)) else {
+  guard @chunk.normalized_path(path, @metadata.V2) is Some(path) else {
     return None
   }
-  if !self.limits.allows_region(metadata, origin, extent) {
-    return None
+  match self.hydrate_region_result(path, origin, extent) {
+    Ok(scratch) => Some(scratch)
+    Err(_) => None
+  }
+}
+
+///|
+/// Hydrate encoded bytes with per-call diagnostics. This does not decode the
+/// selected codec payloads; typed array decoding remains a separate operation.
+pub async fn HttpStore::hydrate_region_result(
+  self : HttpStore,
+  path : String,
+  origin : Array[Int32],
+  extent : Array[Int32],
+) -> Result[@store.MemoryStore, @store.AccessError] {
+  let (format, raw, metadata) = match self.load_array_result(path) {
+    Ok(value) => value
+    Err(error) => return Err(error)
   }
   guard @chunk.region_len(metadata, origin, extent) is Some(length) else {
-    return None
+    return Err(@store.InvalidRegion(path))
+  }
+  if !self.limits.allows_region(metadata, origin, extent) {
+    return Err(@store.LimitExceeded("region", path))
   }
   let scratch = @store.MemoryStore::new(read_limits=self.limits)
   let scratch_raw = if metadata.sharding is Some(_) {
-    guard @shard.inner_metadata_json(raw) is Some(inner) else { return None }
+    guard @shard.inner_metadata_json(raw) is Some(inner) else {
+      return Err(@store.UnsupportedMetadata(path))
+    }
     inner
   } else {
     raw
   }
   if !scratch.put_array_metadata(format, path, scratch_raw) {
-    return None
+    return Err(@store.InvalidMetadata(path))
   }
   if length == 0 {
-    return Some(scratch)
+    return Ok(scratch)
   }
   let mut count = 1
   for i in 0..<origin.length() {
     let side = metadata.chunk_shape[i]
     if side <= 0 {
-      return None
+      return Err(@store.InvalidMetadata(path))
     }
     let first = origin[i] / side
     let last = (origin[i] + extent[i] - 1) / side
     let span = last - first + 1
     if count > self.max_chunks / span {
-      return None
+      return Err(@store.LimitExceeded("chunks", path))
     }
     count *= span
   }
@@ -538,7 +679,7 @@ pub async fn HttpStore::hydrate_region(
       max_chunks=self.limits.max_chunks(),
     )
     is Some(pieces) else {
-    return None
+    return Err(@store.LimitExceeded("chunks", path))
   }
   let chunk_limit = if self.max_chunk_bytes < self.limits.max_chunk_bytes() {
     self.max_chunk_bytes
@@ -554,10 +695,10 @@ pub async fn HttpStore::hydrate_region(
     let fetched = if metadata.sharding is Some(layout) {
       guard @shard.coordinates(metadata, piece.coordinates)
         is Some((outer_coords, within)) else {
-        return None
+        return Err(@store.InvalidShard(path))
       }
       guard @chunk.shard_key(metadata, outer_coords, path) is Some(key) else {
-        return None
+        return Err(@store.InvalidPath(path))
       }
       if absent_shards.get(key) is Some(_) {
         Missing
@@ -566,7 +707,7 @@ pub async fn HttpStore::hydrate_region(
           Some(index) => index
           None => {
             if layout.index_size > self.max_hydration_bytes - hydrated {
-              return None
+              return Err(@store.LimitExceeded("hydration", key))
             }
             let range = if layout.index_at_start {
               "bytes=0-\{layout.index_size - 1}"
@@ -578,12 +719,12 @@ pub async fn HttpStore::hydrate_region(
                 absent_shards[key] = true
                 continue
               }
-              RangeFailed | RangeTransient => return None
+              RangeFailed(error) | RangeTransient(error) => return Err(error)
               RangeFound(bytes, size, etag) => {
                 hydrated += bytes.length()
                 guard @shard.validate_index(layout, bytes, size)
                   is Some(validated) else {
-                  return None
+                  return Err(@store.InvalidShard(key))
                 }
                 indices[key] = validated
                 shard_sizes[key] = size
@@ -597,10 +738,10 @@ pub async fn HttpStore::hydrate_region(
         }
         match index.entry(within) {
           @shard.Absent => Missing
-          @shard.Invalid => Failed
+          @shard.Invalid => Failed(@store.InvalidShard(key))
           @shard.Data(at, size) => {
             if size > chunk_limit || size > self.max_hydration_bytes - hydrated {
-              return None
+              return Err(@store.LimitExceeded("hydration", key))
             }
             let last = at + size.to_int64() - 1L
             match
@@ -612,34 +753,35 @@ pub async fn HttpStore::hydrate_region(
               ) {
               RangeFound(bytes, total, _) => {
                 if shard_sizes.get(key) != Some(total) {
-                  return None
+                  return Err(@store.Conflict(key))
                 }
                 Found(bytes)
               }
-              RangeMissing | RangeFailed | RangeTransient => Failed
+              RangeMissing => Failed(@store.Conflict(key))
+              RangeFailed(error) | RangeTransient(error) => Failed(error)
             }
           }
         }
       }
     } else {
       guard @chunk.chunk_key(metadata, piece.coordinates, path) is Some(key) else {
-        return None
+        return Err(@store.InvalidPath(path))
       }
       self.fetch(key, chunk_limit)
     }
     match fetched {
       Found(chunk) => {
         if chunk.length() > self.max_hydration_bytes - hydrated {
-          return None
+          return Err(@store.LimitExceeded("hydration", path))
         }
         hydrated += chunk.length()
         if !scratch.put_chunk(metadata, piece.coordinates, path, chunk) {
-          return None
+          return Err(@store.InvalidMetadata(path))
         }
       }
       Missing => ()
-      Failed | Transient => return None
+      Failed(error) | Transient(error) => return Err(error)
     }
   }
-  Some(scratch)
+  Ok(scratch)
 }

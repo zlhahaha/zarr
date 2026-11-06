@@ -1,11 +1,15 @@
 # Changelog
 
-## Unreleased — 0.7.1 maintenance
+## 0.8.0 — Discoverable hierarchies and remote diagnostics
+
+- Add explicit, metadata-validated children and breadth-first traversal in memory, native files and S3, including consolidated filesystem snapshots. Bound nodes/depth/entries, require explicit groups, ignore chunk directories/unmarked prefixes, and report malformed/conflicting metadata rather than silently omitting it. Preserve legal v2 reserved-looking names and lexical order across backends.
+- Add signed ListObjectsV2 delimiter pagination, URI-encoded Unicode names, opaque tokens and permission errors. Reject malformed XML, DTD/external-entity input, out-of-prefix entries, repeated tokens and over-budget pages. Verify query signing against independent botocore and real MinIO; add portable `cmd/discovery_demo`.
+- Add `store.AccessError`, HTTP/S3 `open_array_result`, `hydrate_region_result`, `open_node_result` and backend discovery result APIs. Preserve specific authentication/status/timeout/transport/protocol/budget/metadata failures per call, fail fast on failed marker probes, and retain legacy optional methods/path normalization. Hydration returns encoded bytes; typed payload decoding remains separate. Changing an HTTP header provider now starts a fresh cache.
 
 - Verify source on `moonc 0.10.20`; migrate deprecated derive syntax and the random constructor, and apply the current formatter's `Int32` spelling. Preserve the pinned legacy async runtime's cancellation shielding; narrowly document its missing `nocancel` annotations instead of disabling project-wide strict warnings. Source builds now require 0.10.20; registry 0.7.0 remains independently tested on it.
 - Add `S3Store::new(..., allow_insecure_http=false)`. Explicit credentials with any `http://` endpoint, including localhost, are rejected before requests unless the caller opts in. Anonymous HTTP and HTTPS behavior are unchanged.
 - Add a reproducible registry-only consumer: native check/build, v2 gzip and v3 zstd 3D write/reopen/value checks, followed by independent Python verification.
-- Build a fixed official MinIO source release for real private-service tests. Validate ordinary chunks, start/end-index shards, missing fills, real 206 ranges/ETag conditions, invalid signatures/access keys, and injected transient/timeout cases. Add Linux native CI execution and a JSON evidence artifact. No production AWS, STS, role-policy or remote-write certification is implied.
+- Build a fixed official MinIO source release for real private-service tests. Validate ordinary chunks, start/end-index shards, missing fills, real 206 ranges/ETag conditions, invalid signatures/access keys, signed multi-page hierarchy discovery, Unicode names and injected transient/timeout cases. Add Linux native CI execution and a JSON evidence artifact. No production AWS, STS, role-policy or remote-write certification is implied. The earlier 0.7.1 maintenance preparation was incorporated here without a separate publication.
 
 ## 0.7.0 — Bounded tile traversal and read-only remote shards
 

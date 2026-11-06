@@ -38,6 +38,38 @@ pub fn MemoryStore::delete(self : MemoryStore, key : String) -> Unit {
 }
 
 ///|
+/// Bounded metadata-key inventory for hierarchy discovery. Raw chunk keys
+/// are ignored; returned keys are sorted. This scans the in-memory map.
+pub fn MemoryStore::list_metadata_keys(
+  self : MemoryStore,
+  prefix~ : String = "",
+  max_keys~ : Int32 = 65536,
+) -> Result[Array[String], AccessError] {
+  if max_keys <= 0 {
+    return Err(LimitExceeded("metadata keys", prefix))
+  }
+  let keys : Array[String] = []
+  for key, _ in self.entries {
+    if key.has_prefix(prefix) &&
+      (
+        key == ".zarray" ||
+        key == ".zgroup" ||
+        key == "zarr.json" ||
+        key.has_suffix("/.zarray") ||
+        key.has_suffix("/.zgroup") ||
+        key.has_suffix("/zarr.json")
+      ) {
+      if keys.length() >= max_keys {
+        return Err(LimitExceeded("metadata keys", prefix))
+      }
+      keys.push(key)
+    }
+  }
+  keys.sort_by((a, b) => a[:].lexical_compare(b))
+  Ok(keys)
+}
+
+///|
 /// Store already-valid v2/v3 array metadata under its prescribed key.
 pub fn MemoryStore::put_array_metadata(
   self : MemoryStore,

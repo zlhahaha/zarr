@@ -30,8 +30,10 @@ async fn main {
     abort("invalid test endpoint")
   }
   if scenario == "denied" || scenario == "timeout" {
-    if remote.open_array("ordinary") is Some(_) {
-      abort("expected failed authenticated request")
+    match remote.open_array_result("ordinary") {
+      Err(@store.Authentication(_, 403)) if scenario == "denied" => ()
+      Err(@store.Timeout(_)) if scenario == "timeout" => ()
+      _ => abort("expected precise authenticated request failure")
     }
     println("S3 integration: \{scenario} rejected")
     return
@@ -99,7 +101,73 @@ async fn main {
   if remote.open_array("missing-array") is Some(_) {
     abort("missing metadata must not open")
   }
+  guard @s3.S3Store::new(
+      required_env("ZARR_S3_BUCKET"),
+      "us-east-1",
+      endpoint=required_env("ZARR_S3_ENDPOINT"),
+      prefix="catalog",
+      credentials~,
+      allow_insecure_http=true,
+      listing_page_size=2,
+    )
+    is Some(catalog) else {
+    abort("catalog store")
+  }
+  let children = match catalog.list_children_result("") {
+    Ok(nodes) => nodes
+    Err(_) => abort("catalog listing failed")
+  }
+  if children.map(node => node.path) != ["end", "nested", "start", "μ & 图"] {
+    for node in children {
+      println("observed catalog child: \{node.path}")
+    }
+    abort("catalog children")
+  }
+  let nodes = match catalog.walk_result("") {
+    Ok(nodes) => nodes
+    Err(_) => abort("catalog traversal")
+  }
+  if nodes.map(node => node.path) !=
+    ["end", "nested", "start", "μ & 图", "nested/cube"] {
+    abort("catalog walk order")
+  }
+  if !(catalog.walk_result("", max_nodes=4) is Err(@store.LimitExceeded(_, _))) ||
+    !(catalog.walk_result("", max_depth=1) is Err(@store.LimitExceeded(_, _))) ||
+    !(catalog.list_children_result("start") is Err(@store.NotGroup("start"))) ||
+    !(catalog.open_array_result("nested") is Err(@store.NotArray("nested"))) {
+    abort("catalog limits and kinds")
+  }
+  guard @s3.S3Store::new(
+      required_env("ZARR_S3_BUCKET"),
+      "us-east-1",
+      endpoint=required_env("ZARR_S3_ENDPOINT"),
+      prefix="catalog",
+      credentials~,
+      allow_insecure_http=true,
+      listing_page_size=2,
+      max_listing_pages=1,
+    )
+    is Some(limited) else {
+    abort("limited catalog")
+  }
+  if !(limited.list_children_result("")
+    is Err(@store.LimitExceeded("listing pages", ""))) {
+    abort("pagination budget")
+  }
+  guard catalog.hydrate_region_result("μ & 图", [0], [9]) is Ok(unicode_cache) else {
+    abort("Unicode signed path")
+  }
+  guard @array.open_u8(unicode_cache, "μ & 图") is Some(unicode_array) else {
+    abort("Unicode array")
+  }
+  if unicode_array.read_region([0], [9]) !=
+    Some(b"\x05\x0b\x05\x05\x05\x05\x16\x05\x21") {
+    abort("Unicode values")
+  }
   println(
     "S3 integration: ordinary gzip, start/end shards, all values and missing fills verified",
+  )
+  println(
+    "S3 discovery: signed pagination, Unicode paths, explicit groups and traversal limits verified",
   )
 }

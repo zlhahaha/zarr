@@ -1,6 +1,7 @@
 import {
   "zlhahaha/zarr/store/s3",
   "zlhahaha/zarr/array",
+  "zlhahaha/zarr/store",
   "moonbitlang/async",
   "moonbitlang/core/env",
 }
