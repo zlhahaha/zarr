@@ -5,6 +5,9 @@ import {
   "zlhahaha/zarr/hierarchy",
   "zlhahaha/zarr/metadata",
   "zlhahaha/zarr/codec",
+  "zlhahaha/zarr/scan",
+  "zlhahaha/zarr/scan/async" @reader,
+  "zlhahaha/zarr/scan/remote" @scan_remote,
   "moonbitlang/async",
   "moonbitlang/core/env",
 }

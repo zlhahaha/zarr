@@ -61,7 +61,8 @@ def main():
                   "toolchain": subprocess.check_output(["moon", "version", "--all"], text=True).strip(),
                   "zarr_python": zarr.__version__, "numpy": np.__version__,
                   "native_check_build_run": True, "python_v2_v3_values": True,
-                  "discovery_and_structured_errors": True, "python_group_hierarchy": True}
+                  "discovery_and_structured_errors": True, "python_group_hierarchy": True,
+                  "portable_native_typed_scans": True}
         if args.output:
             args.output.parent.mkdir(parents=True, exist_ok=True)
             args.output.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")

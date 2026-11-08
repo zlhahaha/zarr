@@ -1,6 +1,6 @@
 # Compatibility and private-service maintenance
 
-The 0.9.0 source gate expands to **157 native / 78 wasm-gc tests**, typed pull-reader lifecycle/remote tests and automatic signed sharded scans against real MinIO (25 actual Range responses in the recorded Windows run). Hash-pinned real-data statistics and RSS reproduction are in [REAL_DATA_BENCHMARK.md](REAL_DATA_BENCHMARK.md). Until the release/consumer acknowledgement is recorded, the independent registry fixture below remains on the already published 0.8.0.
+Published 0.9.0 expands the source gate to **157 native / 78 wasm-gc tests**, typed pull-reader lifecycle/remote tests and automatic signed sharded scans against real MinIO (25 actual Range responses in the recorded Windows run). Hash-pinned real-data statistics and RSS reproduction are in [REAL_DATA_BENCHMARK.md](REAL_DATA_BENCHMARK.md). Four-platform source CI and the independent registry 0.9.0 consumer passed; exact publication evidence is in [HANDOFF.md](../HANDOFF.md).
 
 Version **0.8.0** combines current-toolchain maintenance with hierarchy discovery and structured remote diagnostics. The earlier 0.7.1 preparation was incorporated without a separate release. Publication is verified using an independent registry consumer; prior immutable versions remain available.
 
@@ -12,7 +12,7 @@ On 2026-11-06, the official stable archives supplied `moon 0.1.20261104` and `mo
 
 ## Independent published-package consumer
 
-`scripts/published_consumer/moon.mod` is a separate module pinned to **registry `zlhahaha/zarr@0.8.0`**, not a path override to this checkout. Its JSON report records the verified version. The pre-release compatibility fixture also checked 0.7.0; the current consumer downloaded and verified 0.8.0 after publication. It directly declares `moonbitlang/async`, as required by the usage guide. From the repository root with the desired MoonBit toolchain active:
+`scripts/published_consumer/moon.mod` is a separate module pinned to **registry `zlhahaha/zarr@0.9.0`**, not a path override to this checkout. Its JSON report records the verified version. Earlier fixtures independently checked 0.7.0 and 0.8.0; the current consumer downloaded and verified 0.9.0 after publication. It directly declares `moonbitlang/async`, as required by the usage guide. From the repository root with the desired MoonBit toolchain active:
 
 ```sh
 python -m pip install zarr==3.4.0 numpy==2.5.3
@@ -20,6 +20,8 @@ python scripts/verify_published_consumer.py --output _build/published-consumer.j
 ```
 
 The runner performs strict native checking, building and execution, verifies the installed dependency manifest, writes two independent 3D v2/gzip and v3/zstd stores, reopens and verifies every value and missing fill, then independently checks all values/chunks/compression using Python. The 0.8.0 consumer additionally validates node descriptors, traversal/budget errors and S3 result APIs without external network I/O, and Python independently opens its group hierarchy. Temporary output is removed after verification. CI runs this consumer on all three native platforms. The fixture's source is test-only and excluded from the library source archive.
+
+The 0.9.0 fixture also imports the new scan packages from the registry, checks every filesystem tile coordinate/value, portable early close and the automatic remote source API. The filesystem scan is checked against the independently validated complete array. It does not turn the registry consumer into a live public-data test; that remains optional.
 
 ## Real private MinIO reads
 
