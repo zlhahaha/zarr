@@ -16,11 +16,17 @@ fn main {
   if image.read_region([0, 0], [16384, 16384]) is Some(_) {
     abort("whole-region limit was not enforced")
   }
-  guard @chunk.RegionTileCursor::new(
+  guard @scan.Reader::new(
       [16384, 16384],
       [0, 0],
       [16384, 16384],
       [1024, 1024],
+      tile => {
+        match image.read_region(tile.origin, tile.extent) {
+          Some(bytes) => Ok(bytes.to_array())
+          None => Err(@store.InvalidRegion("large"))
+        }
+      },
       max_tile_elements=1048576,
     )
     is Some(tiles) else {
@@ -29,9 +35,11 @@ fn main {
   let mut count = 0
   let mut sum = 0L
   let mut tile_count = 0
-  while tiles.next() is Some(tile) {
-    guard image.read_region(tile.origin, tile.extent) is Some(values) else {
-      abort("bounded tile read")
+  while true {
+    let values = match tiles.next() {
+      Ok(Some(tile)) => tile.values
+      Ok(None) => break
+      Err(_) => abort("bounded tile read")
     }
     if values.length() != 1048576 {
       abort("tile shape")

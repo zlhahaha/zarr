@@ -2,6 +2,8 @@ import {
   "zlhahaha/zarr/store/fs",
   "zlhahaha/zarr/metadata",
   "zlhahaha/zarr/codec",
+  "zlhahaha/zarr/scan/async" @reader,
+  "zlhahaha/zarr/store",
   "moonbitlang/async/fs" @async_fs,
   "moonbitlang/async",
 }

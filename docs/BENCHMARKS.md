@@ -1,5 +1,7 @@
 # Native read latency and peak memory
 
+For the separate real 3D OME-Zarr histogram workload, HTTP request counters and repeated-scan RSS measurements, see [REAL_DATA_BENCHMARK.md](REAL_DATA_BENCHMARK.md). The synthetic baseline below retains its original workload/version scope.
+
 This benchmark measures ordinary multi-chunk rectangular reads and v3 sharding-indexed reads. It is a reproducible synthetic workload, **not evidence that large-scale scientific workloads or terabyte arrays have been fully performance-validated**. No speed or RSS threshold is enforced in CI.
 
 Version `0.4.0` adds [read resource budgets](RESOURCE_LIMITS.md); `0.5.0` adds [single-key filesystem write safety](WRITE_SAFETY.md). The documented benchmark selections fit the default budgets. The historical table measures `0.3.0`; the new section below measures a clean `0.5.0` baseline and optimized `0.6.0` implementation. Do not relabel the historical samples. Later hardening is verified separately by regression tests and the existing cross-platform read benchmark smoke profile; this benchmark does not measure write throughput or the overhead of staging/replacement. Policy caps are not substitutes for OS peak-memory measurements.

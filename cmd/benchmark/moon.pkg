@@ -1,4 +1,5 @@
 import {
+  "zlhahaha/zarr/cmd/metrics",
   "zlhahaha/zarr/store/fs",
   "moonbitlang/async",
   "moonbitlang/core/env",
@@ -8,7 +9,3 @@ import {
 pkgtype(kind: "executable")
 
 supported_targets = "native"
-
-options(
-  "native-stub": [ "metrics.c" ],
-)

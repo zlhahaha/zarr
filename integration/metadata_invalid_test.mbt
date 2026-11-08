@@ -22,6 +22,34 @@ test "v2 metadata rejects malformed dimensions and encoding fields" {
 }
 
 ///|
+test "seed 8675309: dimension mutations and truncated metadata fail closed" {
+  let mut state = 8675309U
+  for _ in 0..<120 {
+    state = state * 1664525U + 1013904223U
+    let side = 1 + ((state >> 8) % 10000U).reinterpret_as_int()
+    let raw = "{\"zarr_format\":2,\"shape\":[\{side}],\"chunks\":[2],\"dtype\":\"|u1\",\"compressor\":null,\"fill_value\":0,\"order\":\"C\",\"filters\":null}"
+    assert_true(@metadata.parse_array_metadata(raw) is Some(_))
+    for shape in ["[-\{side}]", "[\{side}.5]", "[2147483648]", "[\{side},1]"] {
+      assert_true(
+        @metadata.parse_array_metadata(
+          raw.replace_all(old="\"shape\":[\{side}]", new="\"shape\":\{shape}"),
+        )
+        is None,
+      )
+    }
+    assert_true(
+      @metadata.parse_array_metadata(
+        raw.replace_all(old="\"chunks\":[2]", new="\"chunks\":[0]"),
+      )
+      is None,
+    )
+    for end in [0, raw.length() / 2, raw.length() - 1] {
+      assert_true(@metadata.parse_array_metadata(raw[:end].to_owned()) is None)
+    }
+  }
+}
+
+///|
 test "v3 metadata rejects malformed grids and key encodings" {
   let v3_0 =
     #|{"zarr_format":3,"node_type":"group","shape":[4],"data_type":"uint8","chunk_grid":{"name":"regular","configuration":{"chunk_shape":[2]}},"chunk_key_encoding":{"name":"default"},"fill_value":0,"codecs":[{"name":"bytes"}]}

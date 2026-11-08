@@ -1,11 +1,13 @@
 # Using Zarr from MoonBit
 
-This library is an early Mooncakes release. Version 0.8.0 requires a MoonBit toolchain with **`moonc >= 0.10.20`**; inspect it with `moon version --all`. Filesystem, HTTP and S3 packages require the native backend. Add the module to an existing MoonBit project:
+This library is an early Mooncakes release. Version 0.9.0 requires a MoonBit toolchain with **`moonc >= 0.10.20`**; inspect it with `moon version --all`. Filesystem, HTTP and S3 packages require the native backend. Add the module to an existing MoonBit project:
 
 See [hierarchy discovery and structured remote errors](DISCOVERY.md) for the new APIs, and [maintenance verification](MAINTENANCE.md) for compatibility checks. Older 0.7.0 retains its documented 0.10.14 baseline.
 
+For sequential processing without collecting a complete selection, use the [typed tile readers](SCANNING.md). The [real-data histogram benchmark](REAL_DATA_BENCHMARK.md) includes independent Python validation and peak-memory measurements.
+
 ```sh
-moon add zlhahaha/zarr@0.8.0
+moon add zlhahaha/zarr@0.9.0
 ```
 
 For native examples importing `moonbitlang/async` or `moonbitlang/async/fs`, add a direct dependency as well:

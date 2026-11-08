@@ -143,7 +143,7 @@ def run(args):
         cwd=PROJECT, text=True).splitlines())
     source_paths.update(p.relative_to(PROJECT).as_posix() for p in (PROJECT / "cmd/benchmark").iterdir())
     for name in sorted(source_paths):
-        if name.endswith((".mbt", ".c")):
+        if name.endswith((".mbt", ".c")) and (PROJECT / name).is_file():
             source_digest.update(name.encode())
             source_digest.update((PROJECT / name).read_bytes())
     report = dict(schema_version=1, timestamp=datetime.now(timezone.utc).isoformat(),

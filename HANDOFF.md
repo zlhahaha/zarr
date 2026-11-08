@@ -2,6 +2,16 @@
 
 This file records verified progress and the next implementation priorities. Update it after each meaningful change; `docs/ROADMAP.md` remains the detailed phase plan. Do not add the contest proposal here: it is kept outside this repository.
 
+## Current priority queue — 2026-11-09
+
+- User approved the proposed P1 batch: property/malformed-input tests, high-level pull-based typed tile readers and a real-data statistical example/benchmark. All three are implemented; final source/release gates are in progress. Prepare one combined 0.9.0 release after verification rather than separate tiny publications. No sharded writes, remote writes, ndarray math or contest submission belongs to this batch.
+- Current local tests: native 157/157, wasm-gc 78/78 on moonc 0.10.20. Fixed seeds cover 400 tile plans, 96 dense-model ND write cases, 48 codec inputs, 120 metadata mutations, 32 CRC index mutation cases, 512 index interval checks and 160 escaped S3 keys plus XML truncations. This is deterministic property/mutation regression, not exhaustive fuzzing.
+- `scan.Reader[T]` is portable; `scan/async.Reader[T]` is native and accepts filesystem/custom callbacks. `scan/remote.Source` wraps HTTP/S3 with automatic hydration and typed uint8/uint16/float32 decoding plus a generic decoder. One tile per pull, no prefetch/collection, validated result count, copied descriptors, sticky errors and early close; async concurrency, callback exceptions and cancellation are tested. A callback exception/cancellation propagates, then leaves a terminal controlled Io error. Individual tiles still buffer data and no aggregate-RAM cap is claimed.
+- Updated memory, native-file and public OME-Zarr examples pass. Expanded real private MinIO passed locally: 25 actual Range responses and 16 signed listing requests, including automatic signed sharded scans. Recorded `_build/minio-integration-090.json` is ignored; temporary credentials/server only.
+- Real-data harness pins metadata and eight compressed objects by SHA-256, independently checks a 128³ histogram and coordinate-weighted checksum with Python, and compares 32³/64³ tiles and repeated 64³ passes. First local three-trial run passed; final measurements must use a stable source commit and be linked in docs. Files remain in ignored `_build`; no raw data redistribution. The loopback replay does not measure WAN/cloud throughput. Optional `Real data scan` workflow is manual to keep default CI independent of public-data availability.
+- Strict checks/builds for native and wasm-gc, interface/format, source archive, native+wasm tile demos, native filesystem N-D demo, real public S3 128³ example, synthetic benchmark smoke (7 modes × 2 trials) and all eight new reverse N-D stores passed locally. Existing reverse output stores were preserved. Next: record stable-source real measurements, push GitHub, verify CI, then immutable publication/independent registry consumer. Until publication is recorded below, 0.9.0 is preparation only and registry consumers must stay on 0.8.0.
+- After this batch, no identified P0 remains. P2 candidates (await another user instruction): local sharded write, then remote writes. Historical queues below are release history, not current instructions.
+
 ## Published 0.2.0 baseline (2026-09-27)
 
 - Module: `zlhahaha/zarr`, Apache-2.0. Version `0.2.0` with read-only Zarr v3 sharding-indexed support was published on Mooncakes on 2026-09-27; `moon view zlhahaha/zarr --versions` lists both `0.2.0` and `0.1.0`.
@@ -28,7 +38,7 @@ This file records verified progress and the next implementation priorities. Upda
 - The guide's unchanged `catch` helper was compiled and exercised for successful metadata reads, an absent key (`None`), and reading a directory as a file (caught `OSError`). Native 85/85 and wasm-gc 49/49 repository tests, both target checks/builds, all three repository examples, `moon info`, `moon fmt`, and `moon fmt --check` passed.
 - Documentation-only maintenance: no library API changes, new Mooncakes publication, or contest submission. Published `0.2.0` is immutable; these corrected documents belong to the repository until a future explicitly requested release.
 
-## Priority queue
+## Historical priority queue (through 0.6.0)
 
 The P0 Blosc LZ4 write and read-resource-budget milestones, P1 sharding-indexed reads, P1 synthetic benchmark/cache baseline and single-key filesystem write safety are complete. `0.6.0` is published on Mooncakes and its independent consumer verification passed, including the requested N-D interoperability and read-optimization milestones; release evidence is recorded below. Do not start unrelated priorities.
 

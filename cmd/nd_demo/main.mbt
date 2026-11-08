@@ -55,6 +55,35 @@ async fn main {
     saved_features.read([2, 4, 6, 3]) != Some(-1.5F) {
     abort("N-D values or missing fills differ")
   }
+  guard @reader.Reader::new([5, 7, 9], [1, 1, 1], [4, 3, 8], [3, 2, 3], tile => {
+      match saved_volume.read_region(tile.origin, tile.extent) {
+        Some(values) => Ok(values)
+        None => Err(@store.InvalidRegion("volume"))
+      }
+    })
+    is Some(reader) else {
+    abort("native tile reader")
+  }
+  let mut scanned = 0
+  while true {
+    let tile = match reader.next() {
+      Ok(Some(tile)) => tile
+      Ok(None) => break
+      Err(_) => abort("native tile failure")
+    }
+    for i in 0..<tile.values.length() {
+      let z = tile.origin[2] + i % tile.extent[2]
+      let y = tile.origin[1] + i / tile.extent[2] % tile.extent[1]
+      let x = tile.origin[0] + i / (tile.extent[2] * tile.extent[1])
+      if tile.values[i].to_int() != ((x - 1) * 3 + y - 1) * 8 + z - 1 + 100 {
+        abort("native tile coordinates")
+      }
+      scanned += 1
+    }
+  }
+  if scanned != 96 {
+    abort("native tile count")
+  }
   @async_fs.rmdir(dir, recursive=true)
   println(
     "Zarr N-D: 3D volume (96 values), 4D features (72 values), reopen and fills verified",

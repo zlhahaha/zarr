@@ -1,0 +1,30 @@
+name: Real data scan
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  real-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install MoonBit
+        shell: bash
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install independent decoder
+        run: python -m pip install zarr==3.4.0 numpy==2.5.3
+      - name: Update dependencies
+        run: moon update
+      - name: Measure pinned real data through tile reader
+        run: python scripts/benchmark_real_scan.py --download --quick --trials 2 --output _build/real-scan-ci.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: real-data-scan
+          path: _build/real-scan-ci.json
+          if-no-files-found: error
+          retention-days: 30

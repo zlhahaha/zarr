@@ -1,4 +1,4 @@
-/* OS high-water memory and monotonic time for the benchmark executable only.
+/* OS high-water memory and monotonic time for benchmark executables only.
  * Original instrumentation; not part of the Zarr library implementation. */
 #if defined(__APPLE__)
 /* Darwin hides non-POSIX rusage fields under strict POSIX feature selection. */

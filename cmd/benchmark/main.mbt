@@ -1,10 +1,4 @@
 ///|
-extern "C" fn time_ns() -> Int64 = "zarr_bench_time_ns"
-
-///|
-extern "C" fn peak_rss() -> Int64 = "zarr_bench_peak_rss"
-
-///|
 fn integer(value : String) -> Int32 {
   let parsed = @json.parse(value) catch { _ => abort("integer argument") }
   guard parsed is Number(n, ..) else { abort("integer argument") }
@@ -34,11 +28,11 @@ async fn main {
     abort("store")
   }
   guard store.open_u16("") is Some(array) else { abort("open uint16") }
-  let start = time_ns()
+  let start = @metrics.time_ns()
   guard array.read_region([row, column], [side, side]) is Some(values) else {
     abort("read region")
   }
-  let elapsed = time_ns() - start
+  let elapsed = @metrics.time_ns() - start
   if values.length() != side * side {
     abort("result length")
   }
@@ -53,7 +47,7 @@ async fn main {
       checksum += value.to_int().to_int64()
     }
   }
-  let memory = peak_rss()
+  let memory = @metrics.peak_rss()
   let stats = store.shard_read_stats()
   if start < 0L || elapsed <= 0L || memory <= 0L {
     abort("OS metrics unavailable")

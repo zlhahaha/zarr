@@ -57,6 +57,23 @@ async fn main {
   if ordinary.read_region([0], [3]) != Some(b"\x05\x05\x09") {
     abort("ordinary gzip values or missing-chunk fill")
   }
+  guard @remote.Source::s3(remote).open_u8("start", [0], [9], [3]) is Ok(reader) else {
+    abort("signed sharded tile reader")
+  }
+  let collected : Array[Byte] = []
+  while true {
+    match reader.next() {
+      Ok(Some(tile)) =>
+        for value in tile.values {
+          collected.push(value)
+        }
+      Ok(None) => break
+      Err(_) => abort("signed sharded tile decode")
+    }
+  }
+  if Bytes::from_array(collected[:]) != b"\x05\x0b\x05\x05\x05\x05\x16\x05\x21" {
+    abort("signed sharded tile values")
+  }
   guard remote.hydrate_region("start", [0], [9]) is Some(cache) else {
     abort("start-index hydration")
   }

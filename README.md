@@ -6,7 +6,9 @@ A MoonBit implementation of the Zarr v2 and v3 storage formats for chunked N-dim
 
 ## Status
 
-Version **0.8.0** adds explicit hierarchy discovery in memory, native files and S3, plus structured HTTP/S3 errors through backward-compatible `_result` APIs. Signed S3 listings support bounded ListObjectsV2 pagination and Unicode names. Credentialed plaintext S3 endpoints require explicit opt-in. See [discovery and error handling](docs/DISCOVERY.md), [real MinIO checks](docs/REMOTE.md#reproduce-private-minio-integration) and [toolchain verification](docs/MAINTENANCE.md).
+Version **0.9.0** adds pull-based typed tile readers for memory, native files and HTTP/S3, including automatic remote hydration/decoding, explicit errors and early stop. Seeded property/mutation tests strengthen N-D geometry, overlapping writes, codecs, metadata, shard indexes and S3 parsing. A hash-pinned real 3D OME-Zarr histogram benchmark checks Python results, requests, latency and process peak RSS. See [tile readers](docs/SCANNING.md) and [real-data reproduction](docs/REAL_DATA_BENCHMARK.md).
+
+Version 0.8.0 established explicit hierarchy discovery in memory, native files and S3, structured HTTP/S3 `_result` errors, bounded signed S3 pagination, Unicode names and opt-in for credentialed plaintext endpoints. See [discovery and error handling](docs/DISCOVERY.md), [real MinIO checks](docs/REMOTE.md#reproduce-private-minio-integration) and [toolchain verification](docs/MAINTENANCE.md).
 
 This is an early Mooncakes library. It reads and writes `bool`, signed/unsigned 8/16/32/64-bit integers, and `float32`/`float64` arrays in memory and on native filesystems, including elements, rectangular slices, missing-chunk fills and edge chunks. It supports raw chunks and gzip/zstd in both formats, plus zlib in v2 and a documented Blosc subset. Groups and attributes work in both formats. Native filesystem arrays can **read** v3 sharding-indexed stores; sharded writes remain unsupported. Native read-only HTTP and S3 adapters hydrate selected ordinary chunks **or selected inner chunks of shards** into a temporary `MemoryStore`. A tile cursor lets applications process a large logical rectangle one bounded typed `read_region` at a time. Each tile is still buffered. Unsupported dtypes/codecs, cloud writes and concurrent-writer snapshots remain outside the supported subset.
 
@@ -51,7 +53,7 @@ Requires **`moonc >= 0.10.20`**. Check the compiler version with `moon version -
 Add the published module to a MoonBit project:
 
 ```sh
-moon add zlhahaha/zarr@0.8.0
+moon add zlhahaha/zarr@0.9.0
 ```
 
 For native filesystem/HTTP examples that import `moonbitlang/async` or its subpackages, also add it as a **direct module dependency**:
@@ -145,6 +147,9 @@ store/http/      Native-only read-only HTTP regional hydration
 store/s3/        Native-only read-only S3-compatible adapter with SigV4
 array/           Typed array creation, element and region I/O
 hierarchy/       Group/attribute operations and shared node discovery
+scan/            Portable typed tile reader (no prefetch or result collection)
+scan/async/      Native async reader for filesystem/custom sources
+scan/remote/     Automatic HTTP/S3 typed tile hydration and decode
 integration/     Cross-package tests
 cmd/main/        Portable in-memory v3 example
 cmd/discovery_demo/ Portable explicit hierarchy traversal and limits
@@ -156,6 +161,8 @@ cmd/nd_interop/  N-D reverse interoperability generator
 cmd/tile_demo/   Full logical 256 MiB scan using bounded tile reads
 cmd/real_bonsai/ Optional live public OME-Zarr AWS read example
 cmd/benchmark/   Native read latency and OS peak-memory instrumentation
+cmd/scan_benchmark/ Real 3D HTTP tile histogram and memory measurements
+cmd/metrics/     Shared native OS benchmark instrumentation
 scripts/         Independent data generation, interoperability and benchmarks
 ```
 

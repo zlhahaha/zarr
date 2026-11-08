@@ -4,6 +4,8 @@ Version `0.7.0` adds an incremental N-dimensional tile planner and native, read-
 
 Version **0.8.0** adds structured `_result` errors and explicit hierarchy discovery, including signed S3 delimiter pagination. See [DISCOVERY.md](DISCOVERY.md) for APIs, limits, required permissions and runnable examples.
 
+Version **0.9.0** adds [typed pull readers](SCANNING.md): `scan/remote.Source::http` / `Source::s3` combine hydration and decoding automatically, with early stop and explicit failures. Tile results remain individually buffered. The [real 3D benchmark](REAL_DATA_BENCHMARK.md) verifies histogram/coordinate checksums and measures process peak RSS using hash-pinned real encoded objects over loopback HTTP.
+
 ## Process a large logical rectangle in bounded tiles
 
 `chunk.RegionTileCursor::new(shape, origin, extent, tile_shape, max_tile_elements=...)` validates bounds without computing or allocating the full region. Each `next()` yields a C-order `RegionTile { origin, extent }`. Pass each tile to the appropriate typed `read_region`; process/discard its result before advancing. Tile shapes need not align with chunk boundaries, although alignment usually avoids redundant decode work. An empty selection yields no tiles and a rank-zero scalar yields one tile.
@@ -20,7 +22,7 @@ Expected output: `Zarr tiled scan: 256 MiB logical array, 256 tiles, checksum=26
 
 ## Read a public real dataset from S3
 
-The optional `cmd/real_bonsai` example reads the public [OME-Zarr OpenSciVis](https://github.com/InsightSoftwareConsortium/OMEZarrOpenSciVisDatasets) 3D microscopy array `s3://ome-zarr-scivis/v0.4/64x0/bonsai.ome.zarr/scale0/bonsai`. Its v2 metadata declares shape `[256,256,256]`, chunks `[64,64,64]`, `uint8`, `/` chunk keys and Zstd compression. The example discovers metadata through `S3Store::open_array`, plans eight `[4,4,4]` tiles, hydrates and decodes one at a time, then checks 512 voxels, checksum `20736` and first value `40`:
+The optional `cmd/real_bonsai` example reads the public [OME-Zarr OpenSciVis](https://github.com/InsightSoftwareConsortium/OMEZarrOpenSciVisDatasets) 3D bonsai CT array `s3://ome-zarr-scivis/v0.4/64x0/bonsai.ome.zarr/scale0/bonsai`. Its v2 metadata declares shape `[256,256,256]`, chunks `[64,64,64]`, `uint8`, `/` chunk keys and Zstd compression. Since 0.9.0 the example uses `scan/remote.Source::s3(...).open_u8`, which plans eight `[4,4,4]` tiles and hydrates/decodes each pull automatically, then checks 512 voxels, checksum `20736` and first value `40`:
 
 ```sh
 moon run --target native cmd/real_bonsai
@@ -46,7 +48,7 @@ Expected values: `262144 20736 40`. Live data and availability are maintained by
 
 ## Native S3-compatible adapter
 
-Import `zlhahaha/zarr/store/s3` as `@s3`, `zlhahaha/zarr/array` as `@array`, and `moonbitlang/async` directly in your native executable package. After `moon add zlhahaha/zarr@0.8.0`, also run `moon add moonbitlang/async@0.20.3` because your package imports it directly.
+Import `zlhahaha/zarr/store/s3` as `@s3`, `zlhahaha/zarr/array` as `@array`, and `moonbitlang/async` directly in your native executable package. After `moon add zlhahaha/zarr@0.9.0`, also run `moon add moonbitlang/async@0.20.3` because your package imports it directly.
 
 ```moonbit
 guard @s3.S3Store::new(
@@ -86,6 +88,8 @@ Default caps remain 1 MiB metadata, 64 MiB encoded/decoded chunk and logical reg
 HTTP/S3 `open_array_result` and `hydrate_region_result` return `Result[..., store.AccessError]`, distinguishing transport/authentication/status/timeout, metadata, shard/Range and budget failures. Their legacy optional counterparts still return `None` on failure. Hydration validates encoded bytes; subsequent typed payload decoding remains a separate `Option` operation. Changing an HTTP header provider starts a fresh cache. A whole multi-chunk read is not a stable snapshot if objects change during the call, especially when ETags are absent. S3 supports bounded child discovery using ListObjectsV2; ordinary HTTP has no arbitrary directory listing. No writes, presigned-query URL, CDN-specific behavior, bucket-region auto-discovery or credential-chain resolution is claimed. Signing passes AWS's [GET Range vector](https://docs.aws.amazon.com/AmazonS3/latest/developerguide/sig-v4-header-based-auth.html), an independent botocore fixed-query vector and real private MinIO tests. These checks do not certify production AWS accounts, STS session/role policies, TLS deployments or every S3-compatible service.
 
 ## Reproduce private MinIO integration
+
+The 0.9.0 harness additionally consumes the signed start-index shard through `scan/remote.Source::s3(...).open_u8`, validating tile concatenation for this 1D selection and all fill/data values. The recorded Windows run observed 25 Range responses and 16 signed listing requests; the 0.8.0 counts below remain historical.
 
 Install Go and Python 3.12+. MinIO's [official repository](https://github.com/minio/minio#source-only-distribution) now distributes community source; tests build the fixed `RELEASE.2025-10-15T17-29-55Z` release (Go module `v0.0.0-20251015172955-9e49d5e7a648`) rather than relying on a removed container image. This is an external, unmodified AGPLv3 **test server**, not code linked into or redistributed with this Apache-2.0 library. Its binary, data, logs and Go caches are excluded from publication.
 

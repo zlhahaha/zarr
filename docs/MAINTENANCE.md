@@ -1,5 +1,7 @@
 # Compatibility and private-service maintenance
 
+The 0.9.0 source gate expands to **157 native / 78 wasm-gc tests**, typed pull-reader lifecycle/remote tests and automatic signed sharded scans against real MinIO (25 actual Range responses in the recorded Windows run). Hash-pinned real-data statistics and RSS reproduction are in [REAL_DATA_BENCHMARK.md](REAL_DATA_BENCHMARK.md). Until the release/consumer acknowledgement is recorded, the independent registry fixture below remains on the already published 0.8.0.
+
 Version **0.8.0** combines current-toolchain maintenance with hierarchy discovery and structured remote diagnostics. The earlier 0.7.1 preparation was incorporated without a separate release. Publication is verified using an independent registry consumer; prior immutable versions remain available.
 
 ## Current stable toolchain

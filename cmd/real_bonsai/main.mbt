@@ -1,5 +1,5 @@
 ///|
-/// Public, real 3D OME-Zarr microscopy data; no credentials or large download.
+/// Public, real 3D OME-Zarr bonsai CT data; no credentials or large download.
 async fn main {
   let args = @env.args()
   if args.length() > 2 || (args.length() == 2 && args[1] != "--volume") {
@@ -22,32 +22,25 @@ async fn main {
   }
   let extent = if volume { [128, 128, 128] } else { [8, 8, 8] }
   let tile_shape = if volume { [64, 64, 64] } else { [4, 4, 4] }
-  guard @chunk.RegionTileCursor::new(
-      metadata.shape,
+  guard @remote.Source::s3(remote).open_u8(
+      "scale0/bonsai",
       [0, 0, 0],
       extent,
       tile_shape,
       max_tile_elements=if volume { 262144 } else { 64 },
     )
-    is Some(tiles) else {
+    is Ok(tiles) else {
     abort("tile planning failed")
   }
   let mut sum = 0L
   let mut count = 0
   let mut first = -1
   let mut tile_count = 0
-  while tiles.next() is Some(tile) {
-    guard remote.hydrate_region("scale0/bonsai", tile.origin, tile.extent)
-      is Some(cache) else {
-      abort("public OME-Zarr hydration failed")
-    }
-    guard @array.open_u8(cache, "scale0/bonsai") is Some(image) else {
-      abort("public OME-Zarr uint8 metadata unsupported")
-    }
-    guard image.read_region(tile.origin, tile.extent) is Some(values) else {
-      abort(
-        "public OME-Zarr decode failed at \{tile.origin[0]},\{tile.origin[1]},\{tile.origin[2]}",
-      )
+  while true {
+    let values = match tiles.next() {
+      Ok(Some(tile)) => tile.values
+      Ok(None) => break
+      Err(_) => abort("public OME-Zarr tile read/decode failed")
     }
     if first < 0 {
       first = values[0].to_int()

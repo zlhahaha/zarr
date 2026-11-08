@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.0 — Pull-based typed scans and real-data verification
+
+- Add portable `scan.Reader[T]`, native `scan/async.Reader[T]` and `scan/remote.Source` for sequential typed tiles with coordinates, explicit failure, count validation, early close and no prefetch/total-result collection. Async reentry is rejected; exceptions/cancellation propagate and leave a terminal reader. HTTP/S3 conveniences decode uint8/uint16/float32 automatically, with a generic decoder for other current dtypes. Existing region APIs remain available.
+- Add reproducible seeded geometry/dense-model/codec/metadata/index/URI/XML property and mutation tests, plus reader lifecycle, native exception/cancellation and live-server typed-error regressions. Seeds are fixed for CI reproduction; this is not exhaustive coverage-guided fuzzing.
+- Add a hash-pinned real 128³ OME-Zarr histogram benchmark, independent Python histogram/coordinate checksum oracle, request/byte counters and fresh-process native peak-RSS measurements. Replays exact public encoded objects over loopback with cache disabled; no WAN throughput or portable aggregate-memory guarantee is inferred. Raw dataset objects are not redistributed. Add an opt-in real-data workflow.
+- Update memory, filesystem and live S3 examples to use the high-level readers; real MinIO tests exercise automatic signed sharded scans. Share unchanged OS measurement routines in `cmd/metrics` between benchmark executables.
+
 ## 0.8.0 — Discoverable hierarchies and remote diagnostics
 
 - Add explicit, metadata-validated children and breadth-first traversal in memory, native files and S3, including consolidated filesystem snapshots. Bound nodes/depth/entries, require explicit groups, ignore chunk directories/unmarked prefixes, and report malformed/conflicting metadata rather than silently omitting it. Preserve legal v2 reserved-looking names and lexical order across backends.

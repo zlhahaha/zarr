@@ -1,0 +1,12 @@
+import {
+  "zlhahaha/zarr/cmd/metrics",
+  "zlhahaha/zarr/store/http",
+  "zlhahaha/zarr/scan/remote",
+  "moonbitlang/async",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+}
+
+pkgtype(kind: "executable")
+
+supported_targets = "native"
