@@ -27,4 +27,16 @@ The encoded object cache is disabled. A tile side of 32 revisits compressed chun
 
 Measured memory is a process high-water mark, not a portable cap. Three trials and this small 3D subset cannot establish memory bounds, whole-array throughput, WAN/cloud latency, production S3 behavior or performance on other codecs/shards/dtypes. This complements the larger synthetic local-file workloads in [BENCHMARKS.md](BENCHMARKS.md).
 
-Recorded measurements are added after the source gate; historical 0.5.0–0.6.0 speedup claims retain their original workload and version scope.
+## Recorded Windows native run
+
+Source commit [`881c58c`](https://github.com/zlhahaha/zarr/commit/881c58c487cabd01d2e14afcfd34fdd171557527), moonc 0.10.20, three fresh processes per case; [complete raw report](benchmarks/windows-real-scan-20261109.json). Each case passed the independent histogram and coordinate-weighted checksum checks.
+
+| Tile | Passes | Median elapsed | Max reader peak RSS | Payload GETs | All GETs |
+|---|---:|---:|---:|---:|---:|
+| 32³ | 1 | 579.94 ms | 8.09 MiB | 64 | 259 |
+| 64³ | 1 | 88.16 ms | 8.15 MiB | 8 | 35 |
+| 64³ | 8 | 740.04 ms | 8.25 MiB | 64 | 280 |
+
+Alignment reduces payload refetch/decode work in this cache-disabled case. Each hydration still probes array metadata; all-GET counts include those probes and absent metadata markers. The reader does not pin a metadata snapshot or eliminate repeated probes. This is a useful future optimization boundary, not a claim that every scan is optimal.
+
+The repeated case processed eight times the logical values with a similar measured high-water mark; that observation is limited to these runs and does not prove bounded memory for arbitrary datasets or scan duration. Historical 0.5.0–0.6.0 speedup claims retain their original workload and version scope.
