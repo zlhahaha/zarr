@@ -8,6 +8,8 @@
 /cmd/int64_interop/
 /cmd/int8_interop/
 /cmd/s3_integration/
+/cmd/shard_interop/
+/examples/
 /fs/
 *_test.mbt
 *_wbtest.mbt

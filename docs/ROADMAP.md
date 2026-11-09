@@ -1,5 +1,11 @@
 # Zarr implementation roadmap
 
+## 0.10.0 usefulness batch
+
+Native complete-shard creation/replacement for uint8/uint16/float32, pinned HTTP/S3 metadata sessions with explicit fresh refresh, and an independent crop/normalize/shard volume application are implemented. Python verifies every output value across local/HTTP v2/v3/sharded inputs and authenticated private MinIO input. Ten additional MoonBit shard stores round-trip through Python. See [SHARD_WRITES.md](SHARD_WRITES.md), [SCANNING.md](SCANNING.md) and [the application](../examples/volume_pipeline/README.md).
+
+Next work should follow concrete user workloads: partial-shard updates require a separately specified concurrency/safety policy; remote writes require authorization and conditional-object semantics. Other typed shard writers, ndarray adapters and broader deployment validation can be added when a consumer needs them. Historical phases below describe their original scope; references to unsupported sharded writes apply to versions before 0.10.0.
+
 The name “Zarr” means the library targets both Zarr storage format 2 and 3. It does **not** imply that all format extensions/codecs or the entire zarr-python API are implemented. Every phase has a testable exit gate; README support claims must follow passing gates.
 
 ## Stage 0 — Project foundation (local and remote gates passed)

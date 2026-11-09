@@ -637,13 +637,6 @@ pub async fn HttpStore::hydrate_region_result(
     Ok(value) => value
     Err(error) => return Err(error)
   }
-  guard @chunk.region_len(metadata, origin, extent) is Some(length) else {
-    return Err(@store.InvalidRegion(path))
-  }
-  if !self.limits.allows_region(metadata, origin, extent) {
-    return Err(@store.LimitExceeded("region", path))
-  }
-  let scratch = @store.MemoryStore::new(read_limits=self.limits)
   let scratch_raw = if metadata.sharding is Some(_) {
     guard @shard.inner_metadata_json(raw) is Some(inner) else {
       return Err(@store.UnsupportedMetadata(path))
@@ -652,6 +645,26 @@ pub async fn HttpStore::hydrate_region_result(
   } else {
     raw
   }
+  self.hydrate_prepared(path, origin, extent, format, scratch_raw, metadata)
+}
+
+///|
+async fn HttpStore::hydrate_prepared(
+  self : HttpStore,
+  path : String,
+  origin : Array[Int32],
+  extent : Array[Int32],
+  format : @metadata.Format,
+  scratch_raw : String,
+  metadata : @metadata.ArrayMetadata,
+) -> Result[@store.MemoryStore, @store.AccessError] {
+  guard @chunk.region_len(metadata, origin, extent) is Some(length) else {
+    return Err(@store.InvalidRegion(path))
+  }
+  if !self.limits.allows_region(metadata, origin, extent) {
+    return Err(@store.LimitExceeded("region", path))
+  }
+  let scratch = @store.MemoryStore::new(read_limits=self.limits)
   if !scratch.put_array_metadata(format, path, scratch_raw) {
     return Err(@store.InvalidMetadata(path))
   }

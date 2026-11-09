@@ -1,5 +1,9 @@
 # Tiled and remote Zarr reads
 
+Since **0.10.0**, remote typed readers open an explicitly pinned metadata session and avoid repeated per-tile marker probes. HTTP/S3 `open_array_session_result` exposes the same reusable session; `refresh` returns a new session with an empty independent object cache. Existing readers retain their original metadata/plan. This does not provide a snapshot across changing object data. See [session/cache semantics](SCANNING.md#pinned-metadata-and-refresh). Native [complete shard writes](SHARD_WRITES.md) can export processed local results; HTTP/S3 storage remains read-only.
+
+The [independent volume application](../examples/volume_pipeline/README.md) demonstrates local/HTTP/authenticated private MinIO uint8 crop → float32 normalization → local Zstd v3 shards. Python verifies every output value and summary. The MinIO reproduction below now runs this application in addition to transport/signature/listing regressions. No production AWS certification is implied.
+
 Version `0.7.0` adds an incremental N-dimensional tile planner and native, read-only HTTP/S3 hydration of ordinary and supported Zarr v3 sharded arrays. The same typed `read_region` methods decode every downloaded tile. These APIs do not perform remote writes or automatically expose a streaming typed array.
 
 Version **0.8.0** adds structured `_result` errors and explicit hierarchy discovery, including signed S3 delimiter pagination. See [DISCOVERY.md](DISCOVERY.md) for APIs, limits, required permissions and runnable examples.
@@ -48,7 +52,7 @@ Expected values: `262144 20736 40`. Live data and availability are maintained by
 
 ## Native S3-compatible adapter
 
-Import `zlhahaha/zarr/store/s3` as `@s3`, `zlhahaha/zarr/array` as `@array`, and `moonbitlang/async` directly in your native executable package. After `moon add zlhahaha/zarr@0.9.0`, also run `moon add moonbitlang/async@0.20.3` because your package imports it directly.
+Import `zlhahaha/zarr/store/s3` as `@s3`, `zlhahaha/zarr/array` as `@array`, and `moonbitlang/async` directly in your native executable package. After `moon add zlhahaha/zarr@0.10.0`, also run `moon add moonbitlang/async@0.20.3` because your package imports it directly.
 
 ```moonbit
 guard @s3.S3Store::new(

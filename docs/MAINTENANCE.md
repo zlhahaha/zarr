@@ -1,6 +1,6 @@
 # Compatibility and private-service maintenance
 
-Published 0.9.0 expands the source gate to **157 native / 78 wasm-gc tests**, typed pull-reader lifecycle/remote tests and automatic signed sharded scans against real MinIO (25 actual Range responses in the recorded Windows run). Hash-pinned real-data statistics and RSS reproduction are in [REAL_DATA_BENCHMARK.md](REAL_DATA_BENCHMARK.md). Four-platform source CI and the independent registry 0.9.0 consumer passed; exact publication evidence is in [HANDOFF.md](../HANDOFF.md).
+Version 0.10.0 has **162 native / 79 wasm-gc tests**, ten additional Python-verified shard stores and an independent volume application checked against local/HTTP/private S3 inputs. CI covers checks, builds, tests, reverse interoperability, application source workspace reproduction and real MinIO. The source and registry gates are separate: `scripts/verify_volume_pipeline.py --source` explicitly tests this checkout before publication; the default verifies the manifest's pinned Mooncakes dependency after publication. See [the application](../examples/volume_pipeline/README.md), [real-data request/RSS reproduction](REAL_DATA_BENCHMARK.md) and [HANDOFF.md](../HANDOFF.md) for actual completed release evidence.
 
 Version **0.8.0** combines current-toolchain maintenance with hierarchy discovery and structured remote diagnostics. The earlier 0.7.1 preparation was incorporated without a separate release. Publication is verified using an independent registry consumer; prior immutable versions remain available.
 

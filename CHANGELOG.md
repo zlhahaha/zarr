@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.10.0 — Complete-shard writes and volume processing
+
+- Add native `create_sharded_u8/u16/f32` and explicit typed `write_shard` for complete C-order, edge-clipped v3 shards. Preserve start/end indexes, index endian/CRC32C, supported inner compression, missing fills and existing single-key staged replacement. Invalid input or encoded budget rejection leaves an old shard untouched. Partial-shard element/region writes, other typed shard writers and remote writes remain unsupported.
+- Add portable encoded `shard.encode` and validated `shard.metadata_json`. Full shard encoding is buffered and resource limits are not aggregate-RAM guarantees.
+- Add HTTP `ArraySession`, HTTP/S3 `open_array_session_result` and fresh-session `refresh`. Remote typed scans pin validated metadata at open and skip per-tile metadata probes. Sessions own isolated caches by default; refresh returns a new session without mutating existing readers. No object-data snapshot is promised.
+- Add an independent application module for local/HTTP/authenticated S3 3D uint8 ROI → normalized float32 → v3 Zstd shards, with histogram/provenance and Python every-value verification. It is maintained here and is not evidence of external adoption. Source workspace tests and registry tests explicitly distinguish dependency resolution.
+- Add ten Python-verified MoonBit shard stores (eight index variants, 2D uint16, 3D float32), three foreign partial-update readbacks, scalar/empty/budget/replacement regressions and native CI gates. Real MinIO additionally verifies the complete volume pipeline against private 3D sharded input.
+
 ## 0.9.0 — Pull-based typed scans and real-data verification
 
 - Add portable `scan.Reader[T]`, native `scan/async.Reader[T]` and `scan/remote.Source` for sequential typed tiles with coordinates, explicit failure, count validation, early close and no prefetch/total-result collection. Async reentry is rejected; exceptions/cancellation propagate and leave a terminal reader. HTTP/S3 conveniences decode uint8/uint16/float32 automatically, with a generic decoder for other current dtypes. Existing region APIs remain available.

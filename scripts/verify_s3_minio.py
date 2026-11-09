@@ -15,6 +15,7 @@ from pathlib import Path
 import secrets
 import socket
 import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -218,6 +219,18 @@ def main():
                     assert len(paths) == 1 and len(records) == 2
                     assert all(sum(r["path"] == path for r in records) == 2 for path in paths)
                     assert elapsed < 15, "request timeout did not bound the test"
+                # Independent application: real private S3 3D shard reads,
+                # crop/normalize, local sharded output, full Python comparison.
+                pipeline_env = dict(os.environ, ZARR_ACCESS_KEY=access, ZARR_SECRET_KEY=secret,
+                                    ZARR_ENDPOINT=endpoint, ZARR_ALLOW_INSECURE_HTTP="true",
+                                    ZARR_REGION="us-east-1")
+                with relay(port) as (url, pipeline_records):
+                    pipeline_env["ZARR_ENDPOINT"] = url
+                    subprocess.run([sys.executable, str(PROJECT / "scripts/verify_volume_pipeline.py"),
+                                    "--source", "--s3-endpoint", endpoint, "--s3-bucket", bucket,
+                                    "--output", str(PROJECT / "_build/volume-pipeline-minio.json")],
+                                   cwd=PROJECT, env=pipeline_env, check=True, timeout=600)
+                    assert any(r["status"] == 206 and r["range"] for r in pipeline_records)
                 report = {"minio": version, "minio_module": MINIO_MODULE, "boto3": boto3.__version__,
                           "source_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=PROJECT, text=True).strip(),
                           "tracked_changes": subprocess.check_output(["git", "status", "--porcelain"], cwd=PROJECT, text=True).splitlines(),
@@ -228,6 +241,7 @@ def main():
                           "transient_attempts_per_object": 2, "timeout_attempts_per_object": 2,
                           "timeout_discovery_requests": 2,
                           "signed_listing_requests": len(listings), "unicode_paths": True,
+                          "independent_sharded_volume_pipeline": True,
                           "scope": "isolated private MinIO; no production AWS or STS certification"}
                 if args.output:
                     args.output.parent.mkdir(parents=True, exist_ok=True)

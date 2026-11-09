@@ -1,31 +1,17 @@
 ///|
 /// Read-only remote source; uses the existing transport budgets and cache.
 pub struct Source {
-  open : async (String) -> Result[@metadata.ArrayMetadata, @store.AccessError]
-  hydrate : async (String, Array[Int32], Array[Int32]) -> Result[
-    @store.MemoryStore,
-    @store.AccessError,
-  ]
+  open : async (String) -> Result[@http.ArraySession, @store.AccessError]
 }
 
 ///|
 pub fn Source::http(store : @http.HttpStore) -> Source {
-  {
-    open: path => store.open_array_result(path),
-    hydrate: (path, origin, extent) => {
-      store.hydrate_region_result(path, origin, extent)
-    },
-  }
+  { open: path => store.open_array_session_result(path), }
 }
 
 ///|
 pub fn Source::s3(store : @s3.S3Store) -> Source {
-  {
-    open: path => store.open_array_result(path),
-    hydrate: (path, origin, extent) => {
-      store.hydrate_region_result(path, origin, extent)
-    },
-  }
+  { open: path => store.open_array_session_result(path), }
 }
 
 ///|
@@ -40,12 +26,13 @@ pub async fn[T] Source::open(
   decode : (@store.MemoryStore, String, @chunk.RegionTile) -> Array[T]?,
   max_tile_elements~ : Int32 = 8388608,
 ) -> Result[@reader.Reader[T], @store.AccessError] {
-  let metadata = match (self.open)(path) {
+  let session = match (self.open)(path) {
     Err(error) => return Err(error)
-    Ok(metadata) => metadata
+    Ok(session) => session
   }
+  let metadata = session.metadata()
   let read : async (@chunk.RegionTile) -> Result[Array[T], @store.AccessError] = tile => {
-    let memory = match (self.hydrate)(path, tile.origin, tile.extent) {
+    let memory = match session.hydrate_region_result(tile.origin, tile.extent) {
       Err(error) => return Err(error)
       Ok(memory) => memory
     }

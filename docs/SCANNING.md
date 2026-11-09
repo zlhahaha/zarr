@@ -12,7 +12,7 @@ Existing element/region APIs and the coordinate-only planner remain available. N
 
 ## Automatic HTTP and S3 reads
 
-For a fresh native executable, install `zlhahaha/zarr@0.9.0` and a direct `moonbitlang/async@0.20.3` dependency. Its `moon.pkg` is:
+For a fresh native executable, install `zlhahaha/zarr@0.10.0` and a direct `moonbitlang/async@0.20.3` dependency. Its `moon.pkg` is:
 
 ```moonbit
 import {
@@ -60,7 +60,17 @@ For HTTP, construct `http.HttpStore::new(base_url, ...)` and wrap it with `Sourc
 
 Built-in `Source::open_u8`, `open_u16` and `open_f32` cover image intensities, volumes and feature tensors. Generic `Source::open` accepts a decoder `(MemoryStore, String, RegionTile) -> Array[T]?` for other existing numeric dtypes; open the typed memory view and read its tile inside that callback. `open_u8` converts the existing `Bytes` region result into `Array[Byte]` for the common typed interface; that conversion can allocate a copy.
 
-`open` fetches validated shape metadata and constructs a plan. It does not fetch payloads; dtype/codec/payload decoding is checked when a tile is pulled. A wrong dtype or malformed decoded payload yields `Protocol(path, "typed tile decode rejected")`, rather than a missing-fill result. Transport, authentication and hydration errors preserve the existing `AccessError`. An empty selection never invokes the decoder. The scan is not a snapshot across changing remote metadata/objects.
+`open` fetches validated shape metadata and constructs a plan. Since 0.10.0 it pins that metadata once per reader, without re-probing it on each tile. It does not fetch payloads; dtype/codec/payload decoding is checked when a tile is pulled. A wrong dtype or malformed decoded payload yields `Protocol(path, "typed tile decode rejected")`, rather than a missing-fill result. Transport, authentication and hydration errors preserve the existing `AccessError`. An empty selection never invokes the decoder. The scan is not a snapshot across changing remote objects.
+
+## Pinned metadata and refresh
+
+`HttpStore::open_array_session_result(path, fresh=true)` and the matching S3 method return `http.ArraySession`. `session.metadata()` returns a defensive copy of the validated prepared metadata (inner chunk geometry for shards). `session.hydrate_region_result(origin, extent)` reuses the pinned document and applies the existing transport, Range/ETag checks and per-call resource budgets.
+
+The default session starts with an **independent empty encoded-object cache**, configured with the original store's size/entry limits, authentication and timeout. Each `Source::open` creates such a session, so separate readers do not share warm object caches. `fresh=false` explicitly reuses the original store's cache and may reuse cached documents. Multiple sessions/caches can accumulate memory; this is not a global RAM cap.
+
+`session.refresh()` returns a **new** session, fetching metadata through a new empty cache. Replace your session or reopen a `Source` reader to see a changed shape/dtype. Existing readers keep their original plan and metadata. Failed refresh leaves the old session untouched. Whole-object cache entries have no TTL; indexes are still only reused within one hydration, and ETag conditions only bind the corresponding shard payload to its index when the server supplies an ETag. Thus pinned metadata is not a consistent snapshot of a concurrently changing dataset. Use stable/versioned objects while scanning. Legacy `store.hydrate_region_result` remains available with its previous per-call discovery semantics.
+
+The [volume processing application](../examples/volume_pipeline/README.md) exercises this path across eight tiles with only three metadata probes, including HTTP shard Range reads and private MinIO S3 input. See [real-data request measurements](REAL_DATA_BENCHMARK.md) for cache-disabled repeated-scan counts.
 
 ## Memory and filesystem callbacks
 

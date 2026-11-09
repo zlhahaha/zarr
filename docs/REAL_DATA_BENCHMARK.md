@@ -27,7 +27,7 @@ The encoded object cache is disabled. A tile side of 32 revisits compressed chun
 
 Measured memory is a process high-water mark, not a portable cap. Three trials and this small 3D subset cannot establish memory bounds, whole-array throughput, WAN/cloud latency, production S3 behavior or performance on other codecs/shards/dtypes. This complements the larger synthetic local-file workloads in [BENCHMARKS.md](BENCHMARKS.md).
 
-## Recorded Windows native run
+## Recorded Windows native 0.9.0 baseline
 
 Source commit [`881c58c`](https://github.com/zlhahaha/zarr/commit/881c58c487cabd01d2e14afcfd34fdd171557527), moonc 0.10.20, three fresh processes per case; [complete raw report](benchmarks/windows-real-scan-20261109.json). Each case passed the independent histogram and coordinate-weighted checksum checks.
 
@@ -37,6 +37,6 @@ Source commit [`881c58c`](https://github.com/zlhahaha/zarr/commit/881c58c487cabd
 | 64³ | 1 | 88.16 ms | 8.15 MiB | 8 | 35 |
 | 64³ | 8 | 740.04 ms | 8.25 MiB | 64 | 280 |
 
-Alignment reduces payload refetch/decode work in this cache-disabled case. Each hydration still probes array metadata; all-GET counts include those probes and absent metadata markers. The reader does not pin a metadata snapshot or eliminate repeated probes. This is a useful future optimization boundary, not a claim that every scan is optimal.
+Alignment reduces payload refetch/decode work in this cache-disabled case. In this historical 0.9.0 run each hydration still probes array metadata; all-GET counts include those probes and absent metadata markers. Since 0.10.0, readers pin metadata once per opened scan instead. The harness now asserts exactly three metadata probes per pass and retains the same independent value checks and cache-disabled data path.
 
 The repeated case processed eight times the logical values with a similar measured high-water mark; that observation is limited to these runs and does not prove bounded memory for arbitrary datasets or scan duration. Historical 0.5.0–0.6.0 speedup claims retain their original workload and version scope.

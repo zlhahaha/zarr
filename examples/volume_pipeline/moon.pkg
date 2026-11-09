@@ -1,0 +1,17 @@
+import {
+  "zlhahaha/zarr/store/fs",
+  "zlhahaha/zarr/store/http",
+  "zlhahaha/zarr/store/s3",
+  "zlhahaha/zarr/store",
+  "zlhahaha/zarr/scan/async" @reader,
+  "zlhahaha/zarr/scan/remote",
+  "zlhahaha/zarr/metadata",
+  "zlhahaha/zarr/codec",
+  "moonbitlang/async",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+}
+
+pkgtype(kind: "executable")
+
+supported_targets = "native"

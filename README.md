@@ -6,13 +6,13 @@ A MoonBit implementation of the Zarr v2 and v3 storage formats for chunked N-dim
 
 ## Status
 
-Version **0.9.0** adds pull-based typed tile readers for memory, native files and HTTP/S3, including automatic remote hydration/decoding, explicit errors and early stop. Seeded property/mutation tests strengthen N-D geometry, overlapping writes, codecs, metadata, shard indexes and S3 parsing. A hash-pinned real 3D OME-Zarr histogram benchmark checks Python results, requests, latency and process peak RSS. See [tile readers](docs/SCANNING.md) and [real-data reproduction](docs/REAL_DATA_BENCHMARK.md).
+Version **0.10.0** adds native complete-shard writes for uint8/uint16/float32 and pinned remote metadata sessions with explicit refresh. An [independent volume application](examples/volume_pipeline/README.md) crops local/HTTP/S3 uint8 data, normalizes it to float32, and writes compressed v3 shards for imaging, model-input preparation and scientific data exchange. Python checks every output value. See [shard writes](docs/SHARD_WRITES.md), [typed readers and session semantics](docs/SCANNING.md) and [real-data reproduction](docs/REAL_DATA_BENCHMARK.md).
 
-The source passes **157 native / 78 wasm-gc tests**. In the recorded three-trial Windows real-data run, a chunk-aligned 128³ histogram scan took 88.16 ms median with 8.15 MiB maximum reader peak RSS; eight passes took 740.04 ms with 8.25 MiB peak. These replay exact real compressed objects over loopback HTTP with cache disabled, excluding public download/WAN time. They are workload-specific observations, not general cloud throughput or portable memory guarantees.
+The source passes **162 native / 79 wasm-gc tests**, alongside Python interoperability and real private MinIO checks. The recorded 0.9.0 Windows real-data baseline measures a chunk-aligned 128³ histogram at 88.16 ms median / 8.15 MiB maximum reader peak RSS. Version 0.10.0 removes per-tile metadata probes: an eight-tile scan makes 3 metadata GETs rather than 27. These checks replay exact real compressed objects over loopback, excluding WAN time; they do not establish general cloud throughput or portable memory bounds.
 
 Version 0.8.0 established explicit hierarchy discovery in memory, native files and S3, structured HTTP/S3 `_result` errors, bounded signed S3 pagination, Unicode names and opt-in for credentialed plaintext endpoints. See [discovery and error handling](docs/DISCOVERY.md), [real MinIO checks](docs/REMOTE.md#reproduce-private-minio-integration) and [toolchain verification](docs/MAINTENANCE.md).
 
-This is an early Mooncakes library. It reads and writes `bool`, signed/unsigned 8/16/32/64-bit integers, and `float32`/`float64` arrays in memory and on native filesystems, including elements, rectangular slices, missing-chunk fills and edge chunks. It supports raw chunks and gzip/zstd in both formats, plus zlib in v2 and a documented Blosc subset. Groups and attributes work in both formats. Native filesystem arrays can **read** v3 sharding-indexed stores; sharded writes remain unsupported. Native read-only HTTP and S3 adapters hydrate selected ordinary chunks **or selected inner chunks of shards** into a temporary `MemoryStore`. A tile cursor lets applications process a large logical rectangle one bounded typed `read_region` at a time. Each tile is still buffered. Unsupported dtypes/codecs, cloud writes and concurrent-writer snapshots remain outside the supported subset.
+This is an early Mooncakes library. It reads and writes `bool`, signed/unsigned 8/16/32/64-bit integers, and `float32`/`float64` ordinary arrays in memory and on native filesystems, including elements, rectangular slices, missing-chunk fills and edge chunks. It supports raw chunks and gzip/zstd in both formats, plus zlib in v2 and a documented Blosc subset. Groups and attributes work in both formats. Native filesystem arrays read supported v3 sharding-indexed stores; uint8/uint16/float32 additionally support explicit **whole-shard** creation/replacement. Partial-shard `write`/`write_region` remain rejected. Native read-only HTTP and S3 adapters hydrate selected ordinary chunks **or selected inner chunks of shards** into a temporary `MemoryStore`. Typed readers process one tile at a time; each tile and shard write still buffers data. Unsupported dtypes/codecs, cloud writes and concurrent-writer snapshots remain outside the supported subset.
 
 Float32/float64 fill values also support the standard JSON strings `"NaN"`, `"Infinity"`, and `"-Infinity"`. Creating an array with any NaN writes the canonical `"NaN"` fill value; v3 payload-specific hexadecimal NaN fills are not supported.
 
@@ -43,7 +43,7 @@ Float32/float64 fill values also support the standard JSON strings `"NaN"`, `"In
 | Groups, ancestors and attributes | Memory and native filesystem (`.zgroup`/`.zattrs`) | Memory and native filesystem (`zarr.json`) |
 | Consolidated metadata | Read-only native `.zmetadata` snapshot | Read-only native inline root `zarr.json` snapshot (zarr-python convention) |
 | HTTP read-only regional hydration | Native, bounded metadata/chunk downloads | Native, bounded ordinary or shard-index/payload byte-range downloads |
-| Sharding-indexed codec | Not a v2 codec | Native filesystem and HTTP/S3 read-only: start/end index, little/big-endian index, optional CRC32C, supported inner codecs; no writes |
+| Sharding-indexed codec | Not a v2 codec | Native filesystem and HTTP/S3 reads; native whole-shard writes for uint8/uint16/float32; start/end index, index endian and optional CRC32C; no partial-shard or remote writes |
 | S3-compatible object storage | Native, read-only regional hydration | Native, read-only ordinary/sharded regional hydration; anonymous or explicit SigV4 credentials |
 | Explicit group children and breadth-first traversal | Memory, native filesystem (including consolidated snapshots), S3 | Same; signed S3 pagination, bounded nodes/depth/entries |
 | Structured remote diagnostics | HTTP/S3 `_result` APIs; legacy optional APIs retained | Same; metadata, transport/authentication, budgets and shard/Range failures |
@@ -55,7 +55,7 @@ Requires **`moonc >= 0.10.20`**. Check the compiler version with `moon version -
 Add the published module to a MoonBit project:
 
 ```sh
-moon add zlhahaha/zarr@0.9.0
+moon add zlhahaha/zarr@0.10.0
 ```
 
 For native filesystem/HTTP examples that import `moonbitlang/async` or its subpackages, also add it as a **direct module dependency**:
@@ -109,7 +109,7 @@ Typed operations return `None`/`false` for validation or decoding failures, but 
 
 ## Interoperability tests
 
-Native tests read **51 committed stores** generated by zarr-python 3.4.0; Python verifies **40 MoonBit-written stores** in reverse. New coverage explicitly checks 3D `uint16` image volumes and 4D `float32` time/space/feature tensors, v2 C/F order, little/big endian, raw/gzip/zlib/zstd, missing and non-divisible edge chunks, non-aligned regions and persistence after an existing-chunk overwrite. Two new N-D fixtures also test start/end-index v3 shards, bringing shard layouts to six. The N-D reverse checks run on Linux/macOS/Windows native; portable N-D memory tests also run on wasm-gc. See [coverage and reproducible commands](docs/INTEROPERABILITY.md) and [fixture inventory](integration/fixtures/zarr-python/README.md). Existing checks include booleans, signed bytes, full-range integers, non-finite fills, Blosc, nested groups and consolidated metadata. This is format interoperability, not an ML framework or a guarantee for every scientific-data convention.
+Native tests read **51 committed stores** generated by zarr-python 3.4.0; Python verifies **50 MoonBit-written stores** in reverse. New coverage explicitly checks 3D `uint16` image volumes and 4D `float32` time/space/feature tensors, v2 C/F order, little/big endian, raw/gzip/zlib/zstd, missing and non-divisible edge chunks, non-aligned regions and persistence after an existing-chunk overwrite. Two new N-D fixtures also test start/end-index v3 shards, bringing shard layouts to six. The N-D reverse checks run on Linux/macOS/Windows native; portable N-D memory tests also run on wasm-gc. See [coverage and reproducible commands](docs/INTEROPERABILITY.md) and [fixture inventory](integration/fixtures/zarr-python/README.md). Existing checks include booleans, signed bytes, full-range integers, non-finite fills, Blosc, nested groups and consolidated metadata. This is format interoperability, not an ML framework or a guarantee for every scientific-data convention.
 
 ## Read performance and memory
 
@@ -140,7 +140,7 @@ Both formats share a storage-neutral array API, but retain their distinct metada
 ```text
 metadata/        Parse and validate v2/v3 array and group documents
 chunk/           Regular-grid indexing and metadata/chunk keys
-shard/           V3 sharding layout and bounded index validation
+shard/           V3 sharding layout, bounded indexes and encoded packing
 dtype/           Numeric dtype and fill-value checks
 codec/           Codec-chain validation and bounded gzip/zlib/zstd decode
 store/           In-memory encoded-byte store and structured AccessError

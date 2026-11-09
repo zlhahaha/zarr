@@ -109,7 +109,10 @@ def run(args):
                 assert sample["tiles"] == (128 // side) ** 3 * passes
                 payloads = [r for r in records if r["status"] == 200 and r["key"] != "/.zarray"]
                 assert len(payloads) == sample["tiles"], "cache is disabled; one object per aligned/subchunk tile"
-                sample.update(requests=len(records), payload_requests=len(payloads), transferred_bytes=sum(r["bytes"] for r in records))
+                metadata_requests = len(records) - len(payloads)
+                assert metadata_requests == 3 * passes, "pinned session must probe metadata only once per scan"
+                sample.update(requests=len(records), metadata_requests=metadata_requests,
+                              payload_requests=len(payloads), transferred_bytes=sum(r["bytes"] for r in records))
                 samples.append(sample)
             cases.append({"tile_side": side, "passes": passes, "samples": samples,
                           "median_ms": statistics.median(s["elapsed_ns"] for s in samples) / 1e6,

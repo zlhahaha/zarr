@@ -87,6 +87,15 @@ jobs:
       - name: Install zarr-python test oracle
         if: matrix.target == 'native'
         run: python -m pip install zarr==3.4.0 numpy==2.5.3
+      - name: Verify complete-shard writes and foreign partial updates
+        if: matrix.target == 'native'
+        run: |
+          moon run --target native cmd/shard_interop _build/shard-ci
+          python scripts/verify_shard_roundtrip.py _build/shard-ci
+          moon run --target native cmd/shard_interop _build/shard-ci verify
+      - name: Verify independent volume application against source
+        if: matrix.target == 'native'
+        run: python scripts/verify_volume_pipeline.py --source --output _build/volume-pipeline-source.json
       - name: Verify released package with independent consumer
         if: matrix.target == 'native'
         run: python scripts/verify_published_consumer.py --output _build/published-consumer.json

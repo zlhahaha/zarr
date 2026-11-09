@@ -2,7 +2,15 @@
 
 This file records verified progress and the next implementation priorities. Update it after each meaningful change; `docs/ROADMAP.md` remains the detailed phase plan. Do not add the contest proposal here: it is kept outside this repository.
 
-## Current priority queue — 2026-11-09
+## Current batch — 0.10.0 preparation, 2026-11-09
+
+- User approved the next usefulness batch: an independent volume-processing consumer, native complete-shard writes, and reusable remote metadata. Implementation is local; publication/registry verification are still pending. Do not describe this as external adoption or a mandatory dependency for all MoonBit users.
+- Implemented native uint8/uint16/float32 `create_sharded_*` + `write_shard`, portable encoded shard packer/metadata wrapper, exact edge clipping, staged whole-key replacement and budget rejection preserving old bytes. Partial-shard updates and cloud writes remain unsupported. Ten MoonBit stores passed Python every-value checks; three Python partial updates were read back by MoonBit. Scalar/zero-extent behavior also passes.
+- HTTP/S3 metadata sessions pin documents and isolate encoded caches by default; `refresh` returns a new independent session. Remote readers use one session per scan. Live regression proves three metadata probes across repeated hydration, defensive copies, refresh invalidation and preservation of the old cached view. Metadata pinning is not an object-data snapshot.
+- `examples/volume_pipeline` is an independent module pinned to registry 0.10.0. Before publication, explicit temporary source workspace verification passed all six local/HTTP v2/v3/sharded paths, each 10710 float32 values/eight output shards, histogram, provenance, overwrite rejection, invalid ROI and wrong dtype. Real private MinIO additionally passed a seventh authenticated 3D sharded source path and all existing signature/Range/listing/timeout/retry tests. Reports remain ignored under `_build/volume-pipeline-*.json` and `_build/minio-integration-0100.json`.
+- Current native 162/162 and wasm-gc 79/79, both strict checks/builds, interface/format and source archive validation pass on moonc 0.10.20. Source/API review confirms explicit typed full-shard writers and sessions, with legacy partial-shard rejection retained. New real-data request/RSS measurement, GitHub CI, formal release and registry verification follow; do not claim them completed yet.
+
+## Completed 0.9.0 batch — 2026-11-09
 
 - User approved the proposed P1 batch: property/malformed-input tests, high-level pull-based typed tile readers and a real-data statistical example/benchmark. All three are complete and published together as 0.9.0; independent registry verification passed. No sharded writes, remote writes, ndarray math or contest submission belongs to this batch.
 - Current local tests: native 157/157, wasm-gc 78/78 on moonc 0.10.20. Fixed seeds cover 400 tile plans, 96 dense-model ND write cases, 48 codec inputs, 120 metadata mutations, 32 CRC index mutation cases, 512 index interval checks and 160 escaped S3 keys plus XML truncations. This is deterministic property/mutation regression, not exhaustive fuzzing.

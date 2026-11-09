@@ -305,6 +305,15 @@ pub async fn S3Store::open_array_result(
 }
 
 ///|
+pub async fn S3Store::open_array_session_result(
+  self : S3Store,
+  path : String,
+  fresh~ : Bool = true,
+) -> Result[@http.ArraySession, @store.AccessError] {
+  self.http.open_array_session_result(path, fresh~)
+}
+
+///|
 pub async fn S3Store::hydrate_region_result(
   self : S3Store,
   path : String,

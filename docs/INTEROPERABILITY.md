@@ -1,5 +1,9 @@
 # N-dimensional interoperability
 
+Version **0.10.0** adds ten MoonBit-written shard stores to the previous 40 reverse stores, for **50 reverse stores** alongside the unchanged 51 Python-generated read fixtures. Python verifies all values, eight index location/endian/checksum variants, 2D uint16/Zstd and 3D float32/gzip; it partially updates three stores and MoonBit reads those changes back. These gates run on every native CI platform. See [reproduction](SHARD_WRITES.md#independent-verification).
+
+The independent [volume application](../examples/volume_pipeline/README.md) additionally processes nonaligned 3D uint8 ROIs into float32 shards. Python verifies all 10710 values per case, histogram/provenance, eight edge-clipped output shards and rejection without overwriting output. Six cases cover local/HTTP v2/v3/sharded inputs; real private MinIO adds signed S3 sharded input. It is a separate module maintained in this repository, not an external adoption claim. Source workspace verification and postpublication registry verification are explicitly distinct.
+
 Version `0.6.0` adds explicit independent 3D image-volume and 4D time/space/feature-tensor checks. These are storage-format tests, not a tensor-computation engine, image format reader, ML framework integration, or a claim of real-dataset adoption.
 
 ## Coverage

@@ -1,6 +1,6 @@
 # Filesystem single-key write safety
 
-Version `0.5.0` changes the native `FileStore::put` implementation. It also protects every ordinary chunk, array/group metadata and attributes written through that method. No caller opt-in or signature change is required. Memory stores are unchanged; HTTP/consolidated views remain read-only and sharded writes remain unsupported.
+Version `0.5.0` changes the native `FileStore::put` implementation. It also protects every ordinary chunk, array/group metadata and attributes written through that method. No caller opt-in or signature change is required. Since 0.10.0, explicit [complete shard writes](SHARD_WRITES.md) use the same staged replacement path for each shard object. Memory stores are unchanged; HTTP/consolidated views remain read-only. Partial-shard updates remain unsupported.
 
 ## Replacement protocol
 
