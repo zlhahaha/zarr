@@ -8,7 +8,7 @@ A MoonBit implementation of the Zarr v2 and v3 storage formats for chunked N-dim
 
 Version **0.10.0** adds native complete-shard writes for uint8/uint16/float32 and pinned remote metadata sessions with explicit refresh. An [independent volume application](examples/volume_pipeline/README.md) crops local/HTTP/S3 uint8 data, normalizes it to float32, and writes compressed v3 shards for imaging, model-input preparation and scientific data exchange. Python checks every output value. See [shard writes](docs/SHARD_WRITES.md), [typed readers and session semantics](docs/SCANNING.md) and [real-data reproduction](docs/REAL_DATA_BENCHMARK.md).
 
-The source passes **162 native / 79 wasm-gc tests**, alongside Python interoperability and real private MinIO checks. The recorded 0.9.0 Windows real-data baseline measures a chunk-aligned 128³ histogram at 88.16 ms median / 8.15 MiB maximum reader peak RSS. Version 0.10.0 removes per-tile metadata probes: an eight-tile scan makes 3 metadata GETs rather than 27. These checks replay exact real compressed objects over loopback, excluding WAN time; they do not establish general cloud throughput or portable memory bounds.
+The source passes **162 native / 79 wasm-gc tests**, alongside Python interoperability and real private MinIO checks. In the recorded 0.10.0 Windows real-data run, a chunk-aligned 128³ histogram took **71.65 ms median / 8.16 MiB maximum reader peak RSS**. Total GETs fell from 35 to 11, including just 3 metadata probes across eight tiles. This is a later nonpaired run against the historical 0.9.0 baseline, replaying exact real compressed objects over loopback; request elimination is counted directly, but no general cloud speedup or portable memory bound is claimed.
 
 Version 0.8.0 established explicit hierarchy discovery in memory, native files and S3, structured HTTP/S3 `_result` errors, bounded signed S3 pagination, Unicode names and opt-in for credentialed plaintext endpoints. See [discovery and error handling](docs/DISCOVERY.md), [real MinIO checks](docs/REMOTE.md#reproduce-private-minio-integration) and [toolchain verification](docs/MAINTENANCE.md).
 
@@ -160,12 +160,14 @@ cmd/v2_demo/     Native filesystem v2 example
 cmd/budget_demo/ Native read-budget rejection and recovery example
 cmd/nd_demo/     Native 3D image / 4D feature-tensor example
 cmd/nd_interop/  N-D reverse interoperability generator
+cmd/shard_interop/ Complete-shard reverse interoperability generator
 cmd/tile_demo/   Full logical 256 MiB scan using bounded tile reads
 cmd/real_bonsai/ Optional live public OME-Zarr AWS read example
 cmd/benchmark/   Native read latency and OS peak-memory instrumentation
 cmd/scan_benchmark/ Real 3D HTTP tile histogram and memory measurements
 cmd/metrics/     Shared native OS benchmark instrumentation
 scripts/         Independent data generation, interoperability and benchmarks
+examples/volume_pipeline/ Independent crop/normalize/shard application module
 ```
 
 The public array functions live in `zlhahaha/zarr/array`; `MemoryStore` lives in `zlhahaha/zarr/store`, and format constants in `zlhahaha/zarr/metadata`. For example, `@array.create_u8(store, @metadata.V3, "samples", [4], [2], b'\x00', compression=@codec.Zstd(3))` creates a compressed v3 array without hand-writing metadata JSON. On native, `FileStore::create_u8` accepts the same `compression` option. gzip/zlib output is bounded while decoding; zstd frames are preflight-checked against the declared chunk size using the dependency's frame-size bound. Thus, valid zstd frames without a known content size may be rejected if the conservative bound exceeds the chunk size. See [the roadmap](docs/ROADMAP.md) for the staged interoperability targets.

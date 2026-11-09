@@ -40,3 +40,17 @@ Source commit [`881c58c`](https://github.com/zlhahaha/zarr/commit/881c58c487cabd
 Alignment reduces payload refetch/decode work in this cache-disabled case. In this historical 0.9.0 run each hydration still probes array metadata; all-GET counts include those probes and absent metadata markers. Since 0.10.0, readers pin metadata once per opened scan instead. The harness now asserts exactly three metadata probes per pass and retains the same independent value checks and cache-disabled data path.
 
 The repeated case processed eight times the logical values with a similar measured high-water mark; that observation is limited to these runs and does not prove bounded memory for arbitrary datasets or scan duration. Historical 0.5.0–0.6.0 speedup claims retain their original workload and version scope.
+
+## 0.10.0 pinned-session run
+
+Source [`95a9ceb`](https://github.com/zlhahaha/zarr/commit/95a9ceb0e7401f4a25bef0f9d6776d01f2fbfe06), same pinned data/toolchain, three fresh processes per case; [complete raw report](benchmarks/windows-real-scan-0100-20261109.json). All independent histograms and coordinate checks passed with object caching disabled.
+
+| Tile | Passes | Median elapsed | Max reader peak RSS | Payload GETs | Metadata GETs | All GETs |
+|---|---:|---:|---:|---:|---:|---:|
+| 32³ | 1 | 469.10 ms | 8.06 MiB | 64 | 3 | 67 |
+| 64³ | 1 | 71.65 ms | 8.16 MiB | 8 | 3 | 11 |
+| 64³ | 8 | 571.46 ms | 8.26 MiB | 64 | 24 | 88 |
+
+Total GET counts fall from 259/35/280 in the historical run to 67/11/88, while payload GETs remain 64/8/64. Each pass opens a new reader/session, hence three metadata probes per pass (including absent markers), with no per-tile metadata probes. The independent application test checks the same behavior for ordinary and sharded HTTP input. Shard index caching across tile hydrations has not been added.
+
+These timings were measured in a later nonalternating run, not a paired statistical speed comparison against 0.9.0. Request elimination is directly counted; no universal throughput multiplier or memory reduction is claimed. Dataset, loopback/WAN and memory caveats above continue to apply.
