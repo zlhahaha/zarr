@@ -96,6 +96,17 @@ jobs:
       - name: Verify independent volume application against source
         if: matrix.target == 'native'
         run: python scripts/verify_volume_pipeline.py --source --output _build/volume-pipeline-source.json
+      - name: Verify volume application with published dependency
+        if: matrix.target == 'native'
+        run: python scripts/verify_volume_pipeline.py --output _build/volume-pipeline-registry.json
+      - name: Upload volume application verification
+        if: matrix.target == 'native'
+        uses: actions/upload-artifact@v4
+        with:
+          name: volume-pipeline-${{ matrix.os }}
+          path: _build/volume-pipeline-*.json
+          if-no-files-found: error
+          retention-days: 30
       - name: Verify released package with independent consumer
         if: matrix.target == 'native'
         run: python scripts/verify_published_consumer.py --output _build/published-consumer.json

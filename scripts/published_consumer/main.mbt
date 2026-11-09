@@ -146,4 +146,31 @@ async fn main {
   println(
     "published portable/native typed scans, early close and automatic source verified",
   )
+  guard @fs.FileStore::new("\{args[1]}/shards") is Some(shards) else {
+    abort("published shard store")
+  }
+  guard shards.create_sharded_u8(
+      "",
+      [5],
+      [2],
+      [4],
+      b'\x07',
+      compression=@codec.Gzip(1),
+      index_at_start=true,
+    )
+    is Some(array) else {
+    abort("published shard create")
+  }
+  if !array.write_shard([0], b"\x01\x02\x03\x04") ||
+    !array.write_shard([1], b"\x09") {
+    abort("published shard writes")
+  }
+  if array.read_region([0], [5]) != Some(b"\x01\x02\x03\x04\x09") {
+    abort("published shard values")
+  }
+  if !(remote.open_array_session_result("../blocked")
+    is Err(@store.InvalidPath(_))) {
+    abort("published session diagnostics")
+  }
+  println("published complete-shard writes and metadata-session API verified")
 }

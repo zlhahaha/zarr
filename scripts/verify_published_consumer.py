@@ -17,6 +17,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
+    assert not any((parent / name).exists() for parent in [CONSUMER, *CONSUMER.parents]
+                   for name in ("moon.work", "moon.work.json")), "registry check forbids ancestor workspace overrides"
     dependency = re.search(r'"zlhahaha/zarr@([^"\s]+)"', (CONSUMER / "moon.mod").read_text(encoding="utf-8"))
     if dependency is None:
         raise RuntimeError("consumer must pin an exact registry version")
@@ -57,12 +59,16 @@ def main():
         assert sorted(group.array_keys()) == ["b"]
         np.testing.assert_array_equal(group["b"][:], np.array([7], dtype=np.uint8))
         print("independent Python verified published group hierarchy")
+        shards = zarr.open_array(str(root / "shards"), mode="r")
+        np.testing.assert_array_equal(shards[:], np.array([1, 2, 3, 4, 9], dtype=np.uint8))
+        assert shards.chunks == (2,) and shards.shards == (4,)
         report = {"package": f"zlhahaha/zarr@{version}", "source": "registry dependency; no local path override",
                   "toolchain": subprocess.check_output(["moon", "version", "--all"], text=True).strip(),
                   "zarr_python": zarr.__version__, "numpy": np.__version__,
                   "native_check_build_run": True, "python_v2_v3_values": True,
                   "discovery_and_structured_errors": True, "python_group_hierarchy": True,
-                  "portable_native_typed_scans": True}
+                  "portable_native_typed_scans": True, "complete_shard_writes": True,
+                  "metadata_session_api": True}
         if args.output:
             args.output.parent.mkdir(parents=True, exist_ok=True)
             args.output.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")

@@ -30,6 +30,8 @@ APP = PROJECT / "examples/volume_pipeline"
 def source_workspace(enabled):
     manifest = PROJECT / "moon.work"
     if not enabled:
+        assert not any((parent / name).exists() for parent in [APP, *APP.parents]
+                       for name in ("moon.work", "moon.work.json")), "registry check forbids ancestor workspace overrides"
         yield
         return
     # Workspace discovery starts at a module, so place this at the module root.
