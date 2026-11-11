@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — Application reliability and reproducible real-data workflow
+
+- Add example-level incomplete/complete output markers, exclusive output directories, fixed-layout completion checks and regression checks for late read/write failure, termination and damaged products. These do not add transactions or resume to the library.
+- Connect the fixed real CT manifest to ROI normalization, v3 shard output and independent every-value verification. Add an optional native RGBA/PNG preview in separate modules to isolate dependency versions.
+- Add same-task alternating Python-reference measurements with stage timings, requests and OS process peak RSS; keep public-data checks opt-in. Preserve the existing library API and dependencies. Exclude raw benchmark reports from Mooncakes archives; they remain in the GitHub checkout.
+
 ## 0.10.0 — Complete-shard writes and volume processing
 
 - Add native `create_sharded_u8/u16/f32` and explicit typed `write_shard` for complete C-order, edge-clipped v3 shards. Preserve start/end indexes, index endian/CRC32C, supported inner compression, missing fills and existing single-key staged replacement. Invalid input or encoded budget rejection leaves an old shard untouched. Partial-shard element/region writes, other typed shard writers and remote writes remain unsupported.

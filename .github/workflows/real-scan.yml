@@ -22,9 +22,26 @@ jobs:
         run: moon update
       - name: Measure pinned real data through tile reader
         run: python scripts/benchmark_real_scan.py --download --quick --trials 2 --output _build/real-scan-ci.json
+      - name: Verify real CT conversion against checkout
+        run: python scripts/verify_real_volume_pipeline.py --source --trials 1 --output _build/real-volume-source-ci.json
+      - name: Verify real CT conversion with published dependency
+        run: python scripts/verify_real_volume_pipeline.py --trials 1 --output _build/real-volume-registry-ci.json
+      - name: Compare complete conversion tasks (paired smoke)
+        run: python scripts/benchmark_volume_pipeline.py --trials 1 --output _build/paired-volume-ci.json
+      - name: Build and independently verify PNG showcase
+        run: python scripts/demo_volume_pipeline.py --output-dir _build/ct-showcase-ci
       - uses: actions/upload-artifact@v4
         with:
           name: real-data-scan
-          path: _build/real-scan-ci.json
+          path: |
+            _build/real-scan-ci.json
+            _build/real-volume-*-ci.json
+            _build/real-volume-*-ci-artifacts/*.json
+            _build/real-volume-*-ci-artifacts/*.log
+            _build/paired-volume-ci.json
+            _build/paired-volume-ci-artifacts/*.json
+            _build/paired-volume-ci-artifacts/*.log
+            _build/ct-showcase-ci/showcase.json
+            _build/ct-showcase-ci/verification.json
           if-no-files-found: error
           retention-days: 30

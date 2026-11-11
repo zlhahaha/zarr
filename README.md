@@ -50,6 +50,23 @@ Float32/float64 fill values also support the standard JSON strings `"NaN"`, `"In
 
 ## Install and try
 
+**Real data workflow:** [convert a public CT ROI with MoonBit and verify every output value with Python](docs/REAL_VOLUME_PIPELINE.md).
+It reuses fixed hash-pinned OME-Zarr objects, writes normalized float32 v3 shards,
+and retains the converted arrays plus request/timing reports. Python is the
+independent oracle; the data transformation runs in the native MoonBit application.
+See the [paired conversion measurements](docs/VOLUME_COMPARISON.md) for evidence and limits.
+
+For the full [three-minute showcase](docs/SHOWCASE.md), after installing its pinned
+Python dependencies, run from the checkout:
+
+```sh
+python scripts/demo_volume_pipeline.py --download --output-dir _build/ct-showcase
+```
+
+It retains verified Zarr arrays and PNG slices encoded by a separate native
+`mizchi/image` module. Check [completion/failure semantics](docs/PIPELINE_COMPLETION.md),
+[paired Python comparison](docs/VOLUME_COMPARISON.md).
+
 Requires **`moonc >= 0.10.20`**. Check the compiler version with `moon version --all`; native filesystem/HTTP/S3 examples also require native-backend support. Older 0.7.0 retains its documented 0.10.14 baseline.
 
 Add the published module to a MoonBit project:

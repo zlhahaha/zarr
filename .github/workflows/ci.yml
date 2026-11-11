@@ -99,6 +99,9 @@ jobs:
       - name: Verify volume application with published dependency
         if: matrix.target == 'native'
         run: python scripts/verify_volume_pipeline.py --output _build/volume-pipeline-registry.json
+      - name: Reject incomplete volume products after real failures
+        if: matrix.target == 'native'
+        run: python scripts/verify_pipeline_failures.py --output _build/volume-pipeline-failures.json
       - name: Upload volume application verification
         if: matrix.target == 'native'
         uses: actions/upload-artifact@v4

@@ -29,9 +29,20 @@ HTTP/S3 shard inputs need a server supporting strict Range responses. For S3 set
 
 Tiles are processed sequentially and discarded. Each read and whole-shard write still buffers data; caches and intermediate values also consume memory. There is no aggregate-RAM bound. Metadata is pinned for a remote scan, not a snapshot of changing objects. Input must remain stable during processing.
 
-The first tile is read before output creation. Invalid initial ROI/dtype fails without an output array. Later failures may leave an incomplete output, and there is no multi-shard transaction or resume mode. Existing array/group output metadata is rejected; this example does not overwrite it. Choose a fresh destination.
+The first tile is read before output creation. Invalid initial ROI/dtype fails without an output array. The output directory is then created exclusively (its parent must exist), and `pipeline-status.json` is set to `incomplete` before metadata or shards are written. Only successful completion of every shard and provenance write sets it to `complete`. Any existing directory is rejected, including a previous incomplete run. Choose a fresh destination.
+
+Before consuming output, run `moon run --target native . --check OUTPUT`. This checks the completion marker, matching metadata and expected shard files. Late read/write failure or process termination leaves a product that this checker rejects. Generic Zarr readers ignore the marker; it is not a transaction, resume protocol, post-edit integrity proof or power-loss guarantee. See [completion checks and real fault tests](../../docs/PIPELINE_COMPLETION.md).
+
+JSON stdout also records monotonic open/hydration/decode/processing/write timings and OS process peak RSS. Remote decoding is timed separately from encoded hydration; local filesystem reads cannot separate their I/O from decoding and report that explicitly. Write time includes compression, index creation, data synchronization and replacement. The measurement C stub in `metrics/` reuses this repository's original `cmd/metrics` instrumentation.
+
+To export a completed normalized array slice, use `moon run --target native . --export-slice OUTPUT SLICE_INDEX NEW_RGBA`. A [separate native image module](../zarr_preview/README.md) encodes that RGBA8 plane to PNG, isolating its newer async dependency.
 
 ## Reproduce without your own input
+
+For a fixed **real CT dataset**, two ROI conversions, every-value Python
+verification, retained Zarr outputs and full-process request/timing records, see
+[real CT volume conversion](../../docs/REAL_VOLUME_PIPELINE.md). The commands
+below exercise generated data and transport/error regressions separately.
 
 From the repository root, install the pinned Python oracle and run:
 

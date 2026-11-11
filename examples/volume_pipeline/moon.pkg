@@ -7,7 +7,11 @@ import {
   "zlhahaha/zarr/scan/remote",
   "zlhahaha/zarr/metadata",
   "zlhahaha/zarr/codec",
+  "zlhahaha/zarr/array",
+  "zlhahaha/zarr_volume_pipeline/metrics",
   "moonbitlang/async",
+  "moonbitlang/async/fs" @sysfs,
+  "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/env",
   "moonbitlang/core/json",
 }

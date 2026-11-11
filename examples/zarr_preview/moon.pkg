@@ -1,0 +1,11 @@
+import {
+  "mizchi/image",
+  "moonbitlang/async",
+  "moonbitlang/async/fs" @sysfs,
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+}
+
+pkgtype(kind: "executable")
+
+supported_targets = "native"
