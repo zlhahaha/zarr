@@ -1,5 +1,6 @@
-# Development-only files are kept in Git but omitted from Mooncakes archives.
+# Omit development files and local notes from Mooncakes archives.
 /AGENTS.md
+/HANDOFF.md
 /PROPOSAL.md
 /integration/
 /scripts/

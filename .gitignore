@@ -9,3 +9,10 @@ pkg.generated.mbti
 integration/.roundtrip/
 __pycache__/
 *.pyc
+
+# Local development and submission notes
+/HANDOFF.md
+/PROPOSAL.md
+/docs/AWARD_TODO.md
+/docs/EXTERNAL_ADOPTION.md
+/docs/QUARTERLY_TECHNICAL_REPORT.md
