@@ -97,4 +97,4 @@ Initial interoperable subset of Zarr storage formats 2 and 3 for MoonBit.
 - Hydrate a bounded region of a static HTTP-served array into a `MemoryStore` on native targets. The read-only adapter has a configurable bounded in-memory LRU cache; it has no disk cache.
 - Verify interoperability in both directions with zarr-python 3.4.0, and run native CI on Linux, macOS, and Windows plus wasm-gc CI on Linux.
 
-See the [support table](README.md#status) and [known limits](docs/USAGE.md#supported-format-subset) before using this early version.
+See the [support table](docs/COMPATIBILITY.md) and [known limits](docs/USAGE.md#supported-format-subset) before using this early version.

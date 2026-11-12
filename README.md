@@ -1,239 +1,89 @@
-# Zarr
+# Zarr for MoonBit
 
-[![CI](https://github.com/zlhahaha/zarr/actions/workflows/ci.yml/badge.svg)](https://github.com/zlhahaha/zarr/actions/workflows/ci.yml)
+[![CI](https://github.com/zlhahaha/zarr/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/zlhahaha/zarr/actions/workflows/ci.yml)
+[![Mooncakes](https://img.shields.io/badge/Mooncakes-0.10.1-blue)](https://mooncakes.io/docs/zlhahaha/zarr)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 
-A MoonBit implementation of the Zarr v2 and v3 storage formats for chunked N-dimensional arrays. This is an independent implementation, not an official Zarr Developers project.
+Read and write chunked N-dimensional arrays in MoonBit using the Zarr v2 and
+v3 storage formats. Load a region of a large array, process it tile by tile,
+and exchange the results with zarr-python.
 
-## 简体中文
+## Features
 
-这是 MoonBit 的 Zarr v2/v3 分块数组库。它支持本地多维数组读写、通过
-HTTP/S3 按区域读取，以及在本地写入完整的 Zarr v3 shard。公开 CT 示例展示了
-如何只读取所需体块，并生成可由 NumPy 直接消费的模型输入。
+- **Typed array I/O.** Create arrays and read or write rectangular regions in
+  memory or on a native filesystem. Supports booleans, integers, floats, and
+  missing-chunk fill values.
+- **Remote reads.** Fetch the chunks needed for a region over HTTP or
+  S3-compatible storage. Typed tile readers support bounded, sequential scans.
+- **Compression and sharding.** Read and write gzip and Zstd chunks. Read
+  supported v3 shards and create or replace complete shards on native
+  filesystems with `uint8`, `uint16`, or `float32` data.
+- **Groups and metadata.** Discover hierarchies, read and write local
+  attributes, and open supported consolidated metadata.
 
-使用 MoonBit 原生工具链（`moonc >= 0.10.20`）安装：
+See the [format compatibility matrix](docs/COMPATIBILITY.md) for supported
+layouts, codecs and backends. In-memory arrays work on Native and Wasm-GC.
+Filesystem, HTTP and S3 require Native. HTTP and S3 access is read-only.
 
-```sh
-moon add zlhahaha/zarr@0.10.1
-```
+## Installation
 
-从仓库根目录复现 CT 输入流程。需要 Python 3.12+ 和原生 C 编译器：
-
-```sh
-python -m pip install zarr==3.4.0 numpy==2.5.3
-python scripts/verify_zarr_npy_roi.py --download --batch --output-dir _build/zarr-npy-batch
-```
-
-程序从公开 CT 读取四个 `16³` 体块。NumPy 将其预处理成
-float32 `[4,1,16,16,16]`，并逐值核对原始和预处理后的各 16,384 个数值。
-结果目录包含 `model-input.npy` 和请求与校验记录 `verification.json`。
-更多细节见[三分钟展示](docs/SHOWCASE.md)和[写入性能对照](docs/VOLUME_COMPARISON.md)。
-
-## Status
-
-Version **0.10.1** speeds up C-order region and complete-shard writes by copying
-contiguous row spans. The [paired CT comparison](docs/VOLUME_COMPARISON.md)
-records the same output and layout against the published 0.10.0 package.
-
-Version **0.10.0** adds native complete-shard writes for uint8/uint16/float32 and pinned remote metadata sessions with explicit refresh. An [independent volume application](examples/volume_pipeline/README.md) crops local/HTTP/S3 uint8 data, normalizes it to float32, and writes compressed v3 shards for imaging, model-input preparation and scientific data exchange. Python checks every output value. See [shard writes](docs/SHARD_WRITES.md), [typed readers and session semantics](docs/SCANNING.md) and [real-data reproduction](docs/REAL_DATA_BENCHMARK.md).
-
-The source passes **162 native / 79 wasm-gc tests**, alongside Python interoperability and real private MinIO checks. In the recorded 0.10.0 Windows real-data run, a chunk-aligned 128³ histogram took **71.65 ms median / 8.16 MiB maximum reader peak RSS**. Total GETs fell from 35 to 11, including just 3 metadata probes across eight tiles. This is a later nonpaired run against the historical 0.9.0 baseline, replaying exact real compressed objects over loopback; request elimination is counted directly, but no general cloud speedup or portable memory bound is claimed.
-
-Version 0.8.0 established explicit hierarchy discovery in memory, native files and S3, structured HTTP/S3 `_result` errors, bounded signed S3 pagination, Unicode names and opt-in for credentialed plaintext endpoints. See [discovery and error handling](docs/DISCOVERY.md), [real MinIO checks](docs/REMOTE.md#reproduce-private-minio-integration) and [toolchain verification](docs/MAINTENANCE.md).
-
-This is an early Mooncakes library. It reads and writes `bool`, signed/unsigned 8/16/32/64-bit integers, and `float32`/`float64` ordinary arrays in memory and on native filesystems, including elements, rectangular slices, missing-chunk fills and edge chunks. It supports raw chunks and gzip/zstd in both formats, plus zlib in v2 and a documented Blosc subset. Groups and attributes work in both formats. Native filesystem arrays read supported v3 sharding-indexed stores; uint8/uint16/float32 additionally support explicit **whole-shard** creation/replacement. Partial-shard `write`/`write_region` remain rejected. Native read-only HTTP and S3 adapters hydrate selected ordinary chunks **or selected inner chunks of shards** into a temporary `MemoryStore`. Typed readers process one tile at a time; each tile and shard write still buffers data. Unsupported dtypes/codecs, cloud writes and concurrent-writer snapshots remain outside the supported subset.
-
-Float32/float64 fill values also support the standard JSON strings `"NaN"`, `"Infinity"`, and `"-Infinity"`. Creating an array with any NaN writes the canonical `"NaN"` fill value; v3 payload-specific hexadecimal NaN fills are not supported.
-
-| Capability | Zarr v2 | Zarr v3 |
-| --- | --- | --- |
-| Parse regular-grid array metadata | Yes, common string dtypes | Yes, common string data types |
-| Metadata and chunk keys | `.` and `/` separators | default and v2-compatible encodings |
-| Raw encoded chunk storage | Memory and native filesystem | Memory and native filesystem |
-| Safe single-key filesystem replacement | Native: exclusive sibling staging + replace | Native: exclusive sibling staging + replace |
-| `bool` element and slice I/O | Memory and native filesystem | Memory and native filesystem; bytes codec |
-| `uint8` element and slice I/O | Memory and native filesystem; C/F order | Memory and native filesystem; bytes codec |
-| `int8` element and slice I/O (`Int` API, range-checked) | Memory and native filesystem; C/F order | Memory and native filesystem; bytes codec |
-| `uint16` element and slice I/O | Memory and native filesystem; little/big endian, C/F order | Memory and native filesystem; little/big endian bytes codec |
-| `int16` element and slice I/O | Memory and native filesystem; little/big endian, C/F order | Memory and native filesystem; little/big endian bytes codec |
-| `uint32` element and slice I/O | Memory and native filesystem; little/big endian, C/F order | Memory and native filesystem; little/big endian bytes codec |
-| `float64` element I/O | Memory and native filesystem; little/big endian, C/F order | Memory and native filesystem; little/big endian bytes codec |
-| `float32` element I/O | Memory and native filesystem; little/big endian, C/F order | Memory and native filesystem; little/big endian bytes codec |
-| `int32` element I/O | Memory and native filesystem; little/big endian, C/F order | Memory and native filesystem; little/big endian bytes codec |
-| `int64` element and slice I/O | Memory and native filesystem; little/big endian, C/F order | Memory and native filesystem; little/big endian bytes codec |
-| `uint64` element and slice I/O | Memory and native filesystem; little/big endian, C/F order | Memory and native filesystem; little/big endian bytes codec |
-| Rectangular slice I/O (all listed types) | Memory and native filesystem | Memory and native filesystem |
-| Incremental N-D tile traversal | `chunk.RegionTileCursor`, caller reads each bounded tile | Same; no whole-result allocation by the cursor |
-| gzip compression (levels 0–9) | Read/write | Read/write after bytes codec |
-| zstd compression (levels 0–22) | Read/write | Read/write after bytes codec, with or without frame checksum |
-| zlib compression (levels 0–9) | Read/write | Not a v3 core codec |
-| Blosc1 frames (LZ4/LZ4HC/Zlib/Zstd; no, byte or bit shuffle) | LZ4 read/write; LZ4HC/Zlib/Zstd read-only; BloscLZ unsupported | LZ4 read/write after bytes codec; LZ4HC/Zlib/Zstd read-only; BloscLZ unsupported |
-| Other dtypes, filters and codecs | Planned | Planned |
-| Groups, ancestors and attributes | Memory and native filesystem (`.zgroup`/`.zattrs`) | Memory and native filesystem (`zarr.json`) |
-| Consolidated metadata | Read-only native `.zmetadata` snapshot | Read-only native inline root `zarr.json` snapshot (zarr-python convention) |
-| HTTP read-only regional hydration | Native, bounded metadata/chunk downloads | Native, bounded ordinary or shard-index/payload byte-range downloads |
-| Sharding-indexed codec | Not a v2 codec | Native filesystem and HTTP/S3 reads; native whole-shard writes for uint8/uint16/float32; start/end index, index endian and optional CRC32C; no partial-shard or remote writes |
-| S3-compatible object storage | Native, read-only regional hydration | Native, read-only ordinary/sharded regional hydration; anonymous or explicit SigV4 credentials |
-| Explicit group children and breadth-first traversal | Memory, native filesystem (including consolidated snapshots), S3 | Same; signed S3 pagination, bounded nodes/depth/entries |
-| Structured remote diagnostics | HTTP/S3 `_result` APIs; legacy optional APIs retained | Same; metadata, transport/authentication, budgets and shard/Range failures |
-
-## Install and try
-
-**Real data workflow:** [convert a public CT ROI with MoonBit and verify every output value with Python](docs/REAL_VOLUME_PIPELINE.md).
-It reuses fixed hash-pinned OME-Zarr objects, writes normalized float32 v3 shards,
-and retains the converted arrays plus request/timing reports. Python is the
-independent oracle; the data transformation runs in the native MoonBit application.
-See the [paired conversion measurements](docs/VOLUME_COMPARISON.md) for evidence and limits.
-
-To try the published **0.10.1** package on both CT selections from this checkout,
-run the following with Python 3.12+, `moonc >= 0.10.20`, and a native C compiler:
-
-```sh
-python -m pip install zarr==3.4.0 numpy==2.5.3
-python scripts/verify_real_volume_pipeline.py --download --trials 1 --output _build/ct-trial.json
-```
-
-Look for `"status": "verified"` in the report. The sibling `ct-trial-artifacts/`
-directory contains the verified `.zarr` outputs. Use a fresh report name on reruns.
-
-The [CT patch batch example](examples/zarr_npy_roi/README.md#prepare-a-batch-for-python)
-uses the published package to read four 3D patches and prepares a verified
-NumPy float32 input batch for downstream processing.
-
-For the full [three-minute showcase](docs/SHOWCASE.md), after installing its pinned
-Python dependencies, run from the checkout:
-
-```sh
-python scripts/demo_volume_pipeline.py --download --output-dir _build/ct-showcase
-```
-
-It retains verified Zarr arrays and PNG slices encoded by a separate native
-`mizchi/image` module. Check [completion/failure semantics](docs/PIPELINE_COMPLETION.md),
-[paired Python comparison](docs/VOLUME_COMPARISON.md).
-
-Requires **`moonc >= 0.10.20`**. Check the compiler version with `moon version --all`; native filesystem/HTTP/S3 examples also require native-backend support. Older 0.7.0 retains its documented 0.10.14 baseline.
-
-Add the published module to a MoonBit project:
+Requires `moonc >= 0.10.20`. From your MoonBit project:
 
 ```sh
 moon add zlhahaha/zarr@0.10.1
 ```
 
-For native filesystem/HTTP examples that import `moonbitlang/async` or its subpackages, also add it as a **direct module dependency**:
+## Quick start
 
-```sh
-moon add moonbitlang/async@0.20.3
+This example writes three values across a chunk boundary and reads the entire
+four-element array back, including its fill value.
+
+Set up an executable package with this `moon.pkg`:
+
+```moonbit
+import {
+  "zlhahaha/zarr/array",
+  "zlhahaha/zarr/metadata",
+  "zlhahaha/zarr/store",
+}
+
+pkgtype(kind: "executable")
 ```
 
-Installing `zarr` alone does not allow your package to import its transitive `async` dependency. In-memory consumers that do not import `async` need only `zarr`. See the [standalone native quickstart](docs/USAGE.md#native-array-example) for complete package configuration, source and expected output.
+In `main.mbt`:
 
-To run the repository's examples, clone the [public repository](https://github.com/zlhahaha/zarr):
-
-```sh
-git clone https://github.com/zlhahaha/zarr.git
-cd zarr
-moon update
-moon run --target wasm-gc cmd/main
-moon run --target wasm-gc cmd/discovery_demo
-moon run --target native cmd/native_demo
-moon run --target native cmd/v2_demo
-moon run --target native cmd/budget_demo
-moon run --target native cmd/nd_demo
-moon run --target native cmd/tile_demo
-moon run --target native cmd/real_bonsai  # optional: accesses a public AWS dataset
-moon run --target native cmd/real_bonsai --volume  # optional: eight real compressed chunks
+```moonbit
+fn main {
+  let store = @store.MemoryStore::new()
+  guard @array.create_u8(store, @metadata.V3, "samples", [4], [2], b'\x00')
+    is Some(samples) else { abort("could not create the array") }
+  guard samples.write_region([1], [3], b"\x07\x09\x0b") else {
+    abort("could not write the region")
+  }
+  guard samples.read_region([0], [4]) is Some(values) else {
+    abort("could not read the region")
+  }
+  let numbers = values.to_array().map(byte => byte.to_int().to_string())
+  println("[\{numbers.join(", ")}]")
+}
 ```
 
-The local native examples create temporary stores or use memory only. `cmd/tile_demo` scans a 256 MiB *logical*, sparsely filled array through 256 tiles of at most 1 MiB each; it verifies a whole-region request is rejected under default limits. `cmd/real_bonsai` reads a public OME-Zarr microscopy dataset from AWS; its `--volume` mode validates an eight-object 128³ ROI with an independently checked checksum and a single-host sampled 10.84 MiB working-set peak. It requires network access and is deliberately not a required CI gate. The repository already declares the direct `async` dependency, so `moon update` is sufficient after cloning. See [remote and tiled reads](docs/REMOTE.md) for the measured scope and caveats, and [docs/USAGE.md](docs/USAGE.md).
+Run `moon run --target wasm-gc .` from the executable package. It prints
+`[0, 7, 9, 11]`. For a persistent array, see the
+[native filesystem quickstart](docs/USAGE.md#native-array-example).
 
-## Build and run
+## Documentation
 
-Requires `moonc >= 0.10.20` (inspect `moon version --all`), with native support for filesystem and HTTP packages. CI checks native builds and tests on Linux, macOS and Windows, plus wasm-gc on Linux; release packaging, real MinIO integration and the older Python reverse tests run on Linux; N-D reverse tests and a registry-only released-package consumer run on all three native platforms. From this directory:
+| Topic | Guide |
+| --- | --- |
+| Installation, package APIs and error handling | [Usage](docs/USAGE.md) |
+| HTTP, S3 and bounded tile scans | [Remote access](docs/REMOTE.md) · [Typed readers](docs/SCANNING.md) |
+| Complete-shard writes and storage guarantees | [Shard writes](docs/SHARD_WRITES.md) · [Write safety](docs/WRITE_SAFETY.md) |
+| Python compatibility and performance | [Interoperability](docs/INTEROPERABILITY.md) · [Benchmarks](docs/BENCHMARKS.md) · [CT comparison](docs/VOLUME_COMPARISON.md) |
+| Real-data examples | [CT crop and conversion](docs/REAL_VOLUME_PIPELINE.md) · [NumPy input batch](examples/zarr_npy_roi/README.md) |
+| Building and testing from source | [Maintenance](docs/MAINTENANCE.md) |
 
-```sh
-moon check --target native --deny-warn
-moon build --target native
-moon test --target native --deny-warn
-moon check --target wasm-gc --deny-warn
-moon build --target wasm-gc
-moon test --target wasm-gc --deny-warn
-moon run --target wasm-gc cmd/main
-moon run --target native cmd/native_demo
-moon run --target native cmd/v2_demo
-moon run --target native cmd/tile_demo
-```
+## License
 
-The example creates a v3 `uint8` array and writes a slice across chunks. It prints `Zarr v3 uint8 values: 0,7,9,11`.
-The first native example creates and reopens a v3 zstd-compressed `uint16` array in a temporary filesystem store. The v2 example does the same with a gzip-compressed, big-endian `int16` array and verifies a rectangular read after reopening. All examples exit with an error if their checks fail. See [docs/USAGE.md](docs/USAGE.md) for the public API and format limits.
-
-Typed operations return `None`/`false` for validation or decoding failures, but native filesystem operations can propagate I/O exceptions. Missing chunks read as fill values, not errors. See [error handling](docs/USAGE.md#error-handling) for the distinction and a `catch` example; multi-chunk writes are not atomic.
-
-## Interoperability tests
-
-Native tests read **51 committed stores** generated by zarr-python 3.4.0; Python verifies **50 MoonBit-written stores** in reverse. New coverage explicitly checks 3D `uint16` image volumes and 4D `float32` time/space/feature tensors, v2 C/F order, little/big endian, raw/gzip/zlib/zstd, missing and non-divisible edge chunks, non-aligned regions and persistence after an existing-chunk overwrite. Two new N-D fixtures also test start/end-index v3 shards, bringing shard layouts to six. The N-D reverse checks run on Linux/macOS/Windows native; portable N-D memory tests also run on wasm-gc. See [coverage and reproducible commands](docs/INTEROPERABILITY.md) and [fixture inventory](integration/fixtures/zarr-python/README.md). Existing checks include booleans, signed bytes, full-range integers, non-finite fills, Blosc, nested groups and consolidated metadata. This is format interoperability, not an ML framework or a guarantee for every scientific-data convention.
-
-## Read performance and memory
-
-`chunk.RegionTileCursor` plans validated C-order N-D tiles without enumerating the full selection or multiplying its total element count. A caller reads and processes each tile with the existing typed array API. The cursor's `max_tile_elements` controls one tile; each typed read is separately subject to `ReadLimits`. The runnable 256 MiB sparse-array scan and live 3D bioimage sample are described in [REMOTE.md](docs/REMOTE.md). This is bounded **per operation**, not a measured total-process memory guarantee, and it does not alter historical 0.5.0→0.6.0 benchmark claims.
-
-Native typed region reads now reuse validated shard indexes within each call, with a configurable FIFO cap of 16 MiB / 64 entries by default. No index persists across calls. Set `FileStore::new(path, shard_index_cache_bytes=0)` to compare without caching; per-store `shard_read_stats()` reports explicit index/payload range reads and cache hits. This is not a concurrent-writer snapshot or a persistent chunk cache.
-
-The [benchmark guide](docs/BENCHMARKS.md) provides independent zarr-python datasets, cache-on/off comparisons, every-value checks, monotonic slice timings and **OS reader-process peak resident memory**, with fresh processes per trial. The full profile covers 32 MiB logical arrays and slices touching up to 1089 chunks; Linux/macOS/Windows native CI reproduces a smaller smoke run and uploads the measurements without machine-dependent performance thresholds. These are synthetic local-filesystem measurements, not a cold-disk test or proof of fully validated large-scale/whole-array performance. Results remain buffered, and the index-cache byte cap is not a total-memory cap.
-
-Version `0.6.0` also replaces per-element read coordinates and discarded chunk keys with validated strided row spans, including native typed result assembly. In a Windows five-trial **alternating-version comparison against 0.5.0**, the synthetic 2048² raw case measured 5256.33→133.76 ms (39.3×), gzip 5633.11→524.74 ms (10.7×), and gzip shards 5400.29→477.26 ms (11.3×). Max reader peak remained about 14.7–15.1 MiB; no peak-memory reduction is claimed. Exact values and range-read counts were checked for both versions. These ratios apply only to those measured 2D `uint16` selections; 3D/4D correctness tests are not 3D/4D throughput measurements. See [paired raw reports, intermediate stages, ranges and reproduction](docs/BENCHMARKS.md#050--060-region-read-comparison-2026-09-29).
-
-## Read resource budgets
-
-Since `0.4.0`, native and in-memory typed arrays share configurable `store.ReadLimits`: 1 MiB metadata, 64 MiB encoded/decoded chunks, 64 MiB logical region data, 8388608 region elements, 16384 touched chunks, rank 64 and JSON nesting 64 by default. Region counts are checked without enumeration before result allocation; native files are size-checked on their opened handle before a fixed-length read. Oversized file inputs raise `fs.ReadLimitExceeded`, never missing-chunk fill values. Typed region/decode rejection returns `None`; missing data retains its fill behavior. HTTP/S3 uses the shared policy plus a 64 MiB cumulative encoded hydration cap; selected shard index bytes count toward that cap.
-
-Pass `read_limits=limits` to `MemoryStore::new`, `FileStore::new`, consolidated openers, `HttpStore::new` or `S3Store::new`. Every policy cap must be positive; explicit increases are available for trusted workloads. These are input/work budgets, **not total-memory, streaming or concurrent-writer guarantees**. Raw in-memory map access and direct low-level codec/parser calls are caller-managed. See [configuration, failure semantics and regression tests](docs/RESOURCE_LIMITS.md). Run `moon run --target native cmd/budget_demo` for an executable rejection/recovery example.
-
-## Filesystem write safety
-
-Since `0.5.0`, `FileStore::put` writes to an exclusively created `.zarr-tmp-*` file in the destination's directory. It completes the data-synchronized write and closes the handle before replacing the destination by rename; it never deletes or truncates the old destination as a fallback. This path also applies to ordinary chunks, metadata and attributes written through the native typed APIs. A pre-replacement write/rename failure leaves the previous target intact (or absent if new) and cleans up only the owned temporary file. Cooperative cancellation runs protected cleanup; a replacement already in progress can complete despite cancellation.
-
-This is **single-key replacement, not a multi-chunk transaction, concurrent read-modify-write lock, whole-store snapshot or power-loss durability guarantee**. Safe visibility depends on the filesystem's same-directory rename semantics. Cleanup failure raises `fs.WriteCleanupFailed` with the temporary path and diagnostic; forced termination may leave staging files. Replacement creates a new file rather than preserving inode identity, hard links or custom permissions. See [failure contracts, recovery and reproducible tests](docs/WRITE_SAFETY.md).
-
-## Design
-
-Both formats share a storage-neutral array API, but retain their distinct metadata, chunk-key, dtype, and codec rules. Unknown or unsupported encodings must fail explicitly instead of returning incorrect values. The MoonBit packages follow one-way dependencies:
-
-```text
-metadata/        Parse and validate v2/v3 array and group documents
-chunk/           Regular-grid indexing and metadata/chunk keys
-shard/           V3 sharding layout, bounded indexes and encoded packing
-dtype/           Numeric dtype and fill-value checks
-codec/           Codec-chain validation and bounded gzip/zlib/zstd decode
-store/           In-memory encoded-byte store and structured AccessError
-store/fs/        Native-only filesystem store
-store/http/      Native-only read-only HTTP regional hydration
-store/s3/        Native-only read-only S3-compatible adapter with SigV4
-array/           Typed array creation, element and region I/O
-hierarchy/       Group/attribute operations and shared node discovery
-scan/            Portable typed tile reader (no prefetch or result collection)
-scan/async/      Native async reader for filesystem/custom sources
-scan/remote/     Automatic HTTP/S3 typed tile hydration and decode
-integration/     Cross-package tests
-cmd/main/        Portable in-memory v3 example
-cmd/discovery_demo/ Portable explicit hierarchy traversal and limits
-cmd/native_demo/ Native filesystem v3 example
-cmd/v2_demo/     Native filesystem v2 example
-cmd/budget_demo/ Native read-budget rejection and recovery example
-cmd/nd_demo/     Native 3D image / 4D feature-tensor example
-cmd/nd_interop/  N-D reverse interoperability generator
-cmd/shard_interop/ Complete-shard reverse interoperability generator
-cmd/tile_demo/   Full logical 256 MiB scan using bounded tile reads
-cmd/real_bonsai/ Optional live public OME-Zarr AWS read example
-cmd/benchmark/   Native read latency and OS peak-memory instrumentation
-cmd/scan_benchmark/ Real 3D HTTP tile histogram and memory measurements
-cmd/metrics/     Shared native OS benchmark instrumentation
-scripts/         Independent data generation, interoperability and benchmarks
-examples/volume_pipeline/ Independent crop/normalize/shard application module
-```
-
-The public array functions live in `zlhahaha/zarr/array`; `MemoryStore` lives in `zlhahaha/zarr/store`, and format constants in `zlhahaha/zarr/metadata`. For example, `@array.create_u8(store, @metadata.V3, "samples", [4], [2], b'\x00', compression=@codec.Zstd(3))` creates a compressed v3 array without hand-writing metadata JSON. On native, `FileStore::create_u8` accepts the same `compression` option. gzip/zlib output is bounded while decoding; zstd frames are preflight-checked against the declared chunk size using the dependency's frame-size bound. Thus, valid zstd frames without a known content size may be rejected if the conservative bound exceeds the chunk size. See [the roadmap](docs/ROADMAP.md) for the staged interoperability targets.
-
-## Specification and attribution
-
-This project implements the publicly documented [Zarr v2 storage specification](https://zarr-specs.readthedocs.io/en/latest/v2/v2.0.html), [Zarr v3 core specification](https://zarr-specs.readthedocs.io/en/latest/v3/core/), and [sharding-indexed codec specification](https://zarr-specs.readthedocs.io/en/latest/v3/codecs/sharding-indexed/index.html). The [Zarr specifications repository](https://github.com/zarr-developers/zarr-specs) is CC BY 4.0. The Blosc codec follows the public [C-Blosc chunk-format description](https://github.com/Blosc/c-blosc/blob/main/README_CHUNK_FORMAT.rst) and [LZ4 block format](https://github.com/lz4/lz4/blob/dev/doc/lz4_Block_format.md) (the reference projects have BSD-style licenses); no upstream implementation code was copied. The committed interoperability stores were generated by this repository's original scripts using [zarr-python 3.4.0](https://github.com/zarr-developers/zarr-python), which is MIT-licensed; see [integration/fixtures/zarr-python/README.md](integration/fixtures/zarr-python/README.md). Compression uses the Apache-2.0 MoonBit dependencies [moonbit-community/flate](https://mooncakes.io/docs/moonbit-community/flate) and [Milky2018/zstd](https://mooncakes.io/docs/Milky2018/zstd); S3 SigV4 uses [moonbitlang/x](https://mooncakes.io/docs/moonbitlang/x) SHA-256/HMAC and UTC conversion. The optional real-data example reads the publicly documented [OME-Zarr OpenSciVis dataset](https://github.com/InsightSoftwareConsortium/OMEZarrOpenSciVisDatasets) without distributing its bytes in this repository.
-
-This project is licensed under Apache-2.0; see [LICENSE](LICENSE).
+[Apache-2.0](LICENSE). This is an independent implementation of the Zarr
+specifications. See [specification and attribution](docs/COMPATIBILITY.md#specification-and-attribution).

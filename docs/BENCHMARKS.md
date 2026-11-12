@@ -10,7 +10,7 @@ Version `0.4.0` adds [read resource budgets](RESOURCE_LIMITS.md); `0.5.0` adds [
 
 Requires `moonc >= 0.10.14`, a native C toolchain, Python 3.12 or newer, and the pinned independent data generator:
 
-Use the GitHub source checkout (clone it as described in [README](../README.md#install-and-try)). The Mooncakes library archive does not include the Python benchmark scripts; run the commands below from the repository root:
+Run from a [GitHub source checkout](https://github.com/zlhahaha/zarr). The Mooncakes library archive does not include the Python benchmark scripts; run the commands below from the repository root:
 
 ```sh
 moon update
