@@ -2,7 +2,7 @@
 
 The author-maintained application now detects incomplete products without adding
 transactions or resume to the Zarr library. This protocol belongs to the example,
-not the Zarr specification. The library remains `zlhahaha/zarr@0.10.0`.
+not the Zarr specification. The example uses `zlhahaha/zarr@0.10.1`.
 
 ## Contract
 

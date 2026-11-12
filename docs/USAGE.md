@@ -7,7 +7,7 @@ See [hierarchy discovery and structured remote errors](DISCOVERY.md) for the new
 For sequential processing without collecting a complete selection, use the [typed tile readers](SCANNING.md). The [real-data histogram benchmark](REAL_DATA_BENCHMARK.md) includes independent Python validation and peak-memory measurements.
 
 ```sh
-moon add zlhahaha/zarr@0.10.0
+moon add zlhahaha/zarr@0.10.1
 ```
 
 For native examples importing `moonbitlang/async` or `moonbitlang/async/fs`, add a direct dependency as well:
@@ -43,7 +43,7 @@ To reproduce this example independently of the repository, create a new project 
 ```sh
 moon new --user example zarr-quickstart
 cd zarr-quickstart
-moon add zlhahaha/zarr@0.10.0
+moon add zlhahaha/zarr@0.10.1
 moon add moonbitlang/async@0.20.3
 ```
 

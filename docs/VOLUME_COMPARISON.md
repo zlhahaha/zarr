@@ -2,12 +2,14 @@
 
 ## C-order write optimization
 
-The checkout's C-order writer copies contiguous row spans into each inner
-chunk. To measure the change against the published 0.10.0 package, build the
-same volume application against both library versions and run alternating pairs:
+Since 0.10.1, the C-order writer copies contiguous row spans into each inner
+chunk. To reproduce the comparison with the published 0.10.0 package, run the
+benchmark from the [showcase snapshot](https://github.com/zlhahaha/zarr/tree/showcase-20261112).
+Its application manifest pins the original registry baseline. Use a fresh checkout:
 
 ```sh
 python -m pip install zarr==3.4.0 numpy==2.5.3
+git switch --detach showcase-20261112
 python scripts/benchmark_volume_pipeline.py --registry-baseline --download --trials 5 --output _build/paired-registry.json
 ```
 

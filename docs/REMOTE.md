@@ -52,7 +52,7 @@ Expected values: `262144 20736 40`. Live data and availability are maintained by
 
 ## Native S3-compatible adapter
 
-Import `zlhahaha/zarr/store/s3` as `@s3`, `zlhahaha/zarr/array` as `@array`, and `moonbitlang/async` directly in your native executable package. After `moon add zlhahaha/zarr@0.10.0`, also run `moon add moonbitlang/async@0.20.3` because your package imports it directly.
+Import `zlhahaha/zarr/store/s3` as `@s3`, `zlhahaha/zarr/array` as `@array`, and `moonbitlang/async` directly in your native executable package. After `moon add zlhahaha/zarr@0.10.1`, also run `moon add moonbitlang/async@0.20.3` because your package imports it directly.
 
 ```moonbit
 guard @s3.S3Store::new(

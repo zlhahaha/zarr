@@ -4,7 +4,35 @@
 
 A MoonBit implementation of the Zarr v2 and v3 storage formats for chunked N-dimensional arrays. This is an independent implementation, not an official Zarr Developers project.
 
+## 简体中文
+
+这是 MoonBit 的 Zarr v2/v3 分块数组库。它支持本地多维数组读写、通过
+HTTP/S3 按区域读取，以及在本地写入完整的 Zarr v3 shard。公开 CT 示例展示了
+如何只读取所需体块，并生成可由 NumPy 直接消费的模型输入。
+
+使用 MoonBit 原生工具链（`moonc >= 0.10.20`）安装：
+
+```sh
+moon add zlhahaha/zarr@0.10.1
+```
+
+从仓库根目录复现 CT 输入流程。需要 Python 3.12+ 和原生 C 编译器：
+
+```sh
+python -m pip install zarr==3.4.0 numpy==2.5.3
+python scripts/verify_zarr_npy_roi.py --download --batch --output-dir _build/zarr-npy-batch
+```
+
+程序从公开 CT 读取四个 `16³` 体块。NumPy 将其预处理成
+float32 `[4,1,16,16,16]`，并逐值核对原始和预处理后的各 16,384 个数值。
+结果目录包含 `model-input.npy` 和请求与校验记录 `verification.json`。
+更多细节见[三分钟展示](docs/SHOWCASE.md)和[写入性能对照](docs/VOLUME_COMPARISON.md)。
+
 ## Status
+
+Version **0.10.1** speeds up C-order region and complete-shard writes by copying
+contiguous row spans. The [paired CT comparison](docs/VOLUME_COMPARISON.md)
+records the same output and layout against the published 0.10.0 package.
 
 Version **0.10.0** adds native complete-shard writes for uint8/uint16/float32 and pinned remote metadata sessions with explicit refresh. An [independent volume application](examples/volume_pipeline/README.md) crops local/HTTP/S3 uint8 data, normalizes it to float32, and writes compressed v3 shards for imaging, model-input preparation and scientific data exchange. Python checks every output value. See [shard writes](docs/SHARD_WRITES.md), [typed readers and session semantics](docs/SCANNING.md) and [real-data reproduction](docs/REAL_DATA_BENCHMARK.md).
 
@@ -56,7 +84,7 @@ and retains the converted arrays plus request/timing reports. Python is the
 independent oracle; the data transformation runs in the native MoonBit application.
 See the [paired conversion measurements](docs/VOLUME_COMPARISON.md) for evidence and limits.
 
-To try the published **0.10.0** package on both CT selections from this checkout,
+To try the published **0.10.1** package on both CT selections from this checkout,
 run the following with Python 3.12+, `moonc >= 0.10.20`, and a native C compiler:
 
 ```sh
@@ -87,7 +115,7 @@ Requires **`moonc >= 0.10.20`**. Check the compiler version with `moon version -
 Add the published module to a MoonBit project:
 
 ```sh
-moon add zlhahaha/zarr@0.10.0
+moon add zlhahaha/zarr@0.10.1
 ```
 
 For native filesystem/HTTP examples that import `moonbitlang/async` or its subpackages, also add it as a **direct module dependency**:

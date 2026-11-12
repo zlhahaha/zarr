@@ -12,7 +12,7 @@ On 2026-11-06, the official stable archives supplied `moon 0.1.20261104` and `mo
 
 ## Independent published-package consumer
 
-`scripts/published_consumer/moon.mod` is a separate module pinned to **registry `zlhahaha/zarr@0.10.0`**, not a path override to this checkout. Its JSON report records the verified version; ancestor workspace overrides are rejected. Earlier fixtures independently checked 0.7.0, 0.8.0 and 0.9.0. It directly declares `moonbitlang/async`, as required by the usage guide. From the repository root with the desired MoonBit toolchain active:
+`scripts/published_consumer/moon.mod` is a separate module pinned to **registry `zlhahaha/zarr@0.10.1`**, not a path override to this checkout. Its JSON report records the verified version; ancestor workspace overrides are rejected. Earlier fixtures independently checked 0.7.0, 0.8.0 and 0.9.0. It directly declares `moonbitlang/async`, as required by the usage guide. From the repository root with the desired MoonBit toolchain active:
 
 ```sh
 python -m pip install zarr==3.4.0 numpy==2.5.3
@@ -23,7 +23,7 @@ The runner performs strict native checking, building and execution, verifies the
 
 The 0.9.0 fixture also imports the new scan packages from the registry, checks every filesystem tile coordinate/value, portable early close and the automatic remote source API. The filesystem scan is checked against the independently validated complete array. It does not turn the registry consumer into a live public-data test; that remains optional.
 
-The 0.10.0 fixture additionally creates/writes/reopens complete edge-clipped shards and checks the session API. Python verifies the produced shard array. The separate volume application checks every value through six local/HTTP paths with the published dependency, and CI uploads both source and registry application reports. See [application commands and expected output](../examples/volume_pipeline/README.md).
+The current fixture creates/writes/reopens complete edge-clipped shards and checks the session API. Python verifies the produced shard array. The separate volume application checks every value through six local/HTTP paths with the published dependency, and CI uploads both source and registry application reports. See [application commands and expected output](../examples/volume_pipeline/README.md).
 
 ## Real private MinIO reads
 

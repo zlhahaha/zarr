@@ -5,7 +5,7 @@ application with the published `mizchi/image@0.5.0` PNG encoder. It demonstrates
 a usable connection between two MoonBit libraries, not an external adoption.
 
 The modules deliberately run in separate processes: image's zlib dependency
-requires async 0.22.4, while Zarr 0.10.0 uses async 0.20.3. A direct combined
+requires async 0.22.4, while Zarr 0.10.1 uses async 0.20.3. A direct combined
 module selects the newer async and fails on Zarr's `resume_on_cancel` labels.
 The explicit bridge avoids a runtime migration for this demo.
 

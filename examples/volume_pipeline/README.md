@@ -1,6 +1,6 @@
 # Cropped volume normalization
 
-An independent native MoonBit module using the published `zlhahaha/zarr@0.10.0` library. It reads a 3D uint8 array from local files, HTTP or S3, crops a rectangular ROI, divides intensities by 255, and writes float32 Zstd-compressed v3 shards. It also computes a 256-bin histogram and checksum. This is an application maintained in this repository, not a claim of an external adopter.
+An independent native MoonBit module using the published `zlhahaha/zarr@0.10.1` library. It reads a 3D uint8 array from local files, HTTP or S3, crops a rectangular ROI, divides intensities by 255, and writes float32 Zstd-compressed v3 shards. It also computes a 256-bin histogram and checksum. This is an application maintained in this repository, not a claim of an external adopter.
 
 This demonstrates data preparation for imaging tools, model inputs and scientific data conversion. No ndarray arithmetic framework, training loop, clinical interpretation or full OME-NGFF implementation is required or claimed.
 
@@ -15,7 +15,7 @@ moon build --target native
 moon run --target native . INPUT ARRAY_PATH OUTPUT O0 O1 O2 N0 N1 N2
 ```
 
-The manifest directly pins both `zlhahaha/zarr@0.10.0` and `moonbitlang/async@0.20.3`. `INPUT` is a local store root, HTTP root URL or `s3://bucket/prefix`. `ARRAY_PATH` is relative to that root (use `""` for a root array). `OUTPUT` must be a new local array root. Origins and extents follow the input array's dimension order; this program preserves that order without interpreting axes or physical coordinates.
+The manifest directly pins both `zlhahaha/zarr@0.10.1` and `moonbitlang/async@0.20.3`. `INPUT` is a local store root, HTTP root URL or `s3://bucket/prefix`. `ARRAY_PATH` is relative to that root (use `""` for a root array). `OUTPUT` must be a new local array root. Origins and extents follow the input array's dimension order; this program preserves that order without interpreting axes or physical coordinates.
 
 For example, with a local input of at least `[10,36,38]`:
 

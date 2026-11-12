@@ -7,6 +7,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 from math import prod
 from pathlib import Path
+import re
 import subprocess
 import threading
 
@@ -66,8 +67,12 @@ def main():
             server.shutdown()
             thread.join()
 
+    pin = re.search(r'"zlhahaha/zarr@([^"\s]+)"', (app / "moon.mod").read_text(encoding="utf-8"))
+    if pin is None:
+        raise RuntimeError("the application must pin a registry version")
+    version = pin.group(1)
     dependency = app / ".mooncakes/zlhahaha/zarr"
-    assert dependency.resolve() != PROJECT and 'version = "0.10.0"' in (dependency / "moon.mod").read_text()
+    assert dependency.resolve() != PROJECT and f'version = "{version}"' in (dependency / "moon.mod").read_text(encoding="utf-8")
     payloads = {f"/{i}/{j}/{k}" for i in range(2) for j in range(2) for k in range(2)}
     expected_gets = Counter(payloads | {"/.zarray", "/.zgroup", "/zarr.json"})
     assert Counter(path for path, _, _ in requests) == expected_gets, requests
@@ -81,7 +86,7 @@ def main():
     np.testing.assert_array_equal(actual, expected)
     report = {
         "status": "verified",
-        "dependency": "zlhahaha/zarr@0.10.0 (registry)",
+        "dependency": f"zlhahaha/zarr@{version} (registry)",
         "origins": origins,
         "shape": list(actual.shape),
         "dtype": str(actual.dtype),

@@ -1,6 +1,10 @@
 # Changelog
 
-## Unreleased — Application reliability and reproducible real-data workflow
+## 0.10.1 — Faster C-order writes and a verified CT showcase
+
+- Copy C-order regions into chunks in contiguous row spans, including the inner chunks of complete shards. Preserve the existing public API and dependencies.
+- Record five paired runs per CT selection against the published 0.10.0 package. The Windows end-to-end medians fell from 4.93 to 2.25 s and 6.06 to 3.47 s, with byte-identical outputs.
+- Add a registry-only example that reads four public CT patches and verifies a float32 NumPy input batch.
 
 - Add example-level incomplete/complete output markers, exclusive output directories, fixed-layout completion checks and regression checks for late read/write failure, termination and damaged products. These do not add transactions or resume to the library.
 - Connect the fixed real CT manifest to ROI normalization, v3 shard output and independent every-value verification. Add an optional native RGBA/PNG preview in separate modules to isolate dependency versions.

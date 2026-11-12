@@ -1,6 +1,6 @@
 # Export a public Zarr region to NumPy
 
-This author-maintained example installs `zlhahaha/zarr@0.10.0` from Mooncakes.
+This author-maintained example installs `zlhahaha/zarr@0.10.1` from Mooncakes.
 It reads a `16 × 16 × 16` uint8 region of the public
 [bonsai CT volume](https://github.com/InsightSoftwareConsortium/OMEZarrOpenSciVisDatasets#bonsai)
 at origin `[56,56,56]`. The crop crosses a source chunk boundary on each axis.

@@ -12,7 +12,7 @@ Existing element/region APIs and the coordinate-only planner remain available. N
 
 ## Automatic HTTP and S3 reads
 
-For a fresh native executable, install `zlhahaha/zarr@0.10.0` and a direct `moonbitlang/async@0.20.3` dependency. Its `moon.pkg` is:
+For a fresh native executable, install `zlhahaha/zarr@0.10.1` and a direct `moonbitlang/async@0.20.3` dependency. Its `moon.pkg` is:
 
 ```moonbit
 import {

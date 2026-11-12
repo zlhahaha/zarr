@@ -22,7 +22,7 @@ python -m pip install zarr==3.4.0 numpy==2.5.3
 python scripts/verify_real_volume_pipeline.py --download --output _build/real-volume-registry.json
 ```
 
-The default builds the application's pinned **published** `zlhahaha/zarr@0.10.0` dependency and rejects ancestor workspace overrides. To check the current source separately:
+The default builds the application's pinned **published** `zlhahaha/zarr@0.10.1` dependency and rejects ancestor workspace overrides. To check the current source separately:
 
 ```sh
 python scripts/verify_real_volume_pipeline.py --source --output _build/real-volume-source.json
