@@ -157,6 +157,15 @@ def run(args):
         values = zarr.open_array(str(args.work_dir.resolve()), mode="r")[:128, :128, :128]
         assert int(values.sum()) == 24039966
         binary, version = build_app(True)
+        binaries = {"moonbit": binary}
+        reference = "python"
+        registry_version = None
+        if args.registry_baseline:
+            registry_binary, registry_version = build_app(False)
+            if registry_binary.resolve() == binary.resolve():
+                raise RuntimeError("registry and source builds must produce separate artifacts")
+            reference = "registry"
+            binaries[reference] = registry_binary
         records = []
 
         class Handler(BaseHTTPRequestHandler):
@@ -185,14 +194,15 @@ def run(args):
                 samples = []
                 for pair in range(args.trials + 1):
                     # AB, BA, AB... after an unmeasured warmup for both paths.
-                    order = ["moonbit", "python"] if pair % 2 else ["python", "moonbit"]
+                    order = ("moonbit", reference) if pair % 2 else (reference, "moonbit")
                     for implementation in order:
                         trial = "warmup" if pair == 0 else f"pair-{pair}"
                         stem = f"{label}-{trial}-{implementation}"
                         output = artifacts / (stem + ".zarr")
                         url = f"http://127.0.0.1:{server.server_port}"
-                        if implementation == "moonbit":
-                            invocation = [str(binary), url, "", str(output), *map(str, origin), *map(str, extent)]
+                        if implementation in binaries:
+                            invocation = [str(binaries[implementation]), url, "", str(output),
+                                          *map(str, origin), *map(str, extent)]
                         else:
                             invocation = [sys.executable, str(Path(__file__).resolve()), "--worker", url,
                                           str(output), *map(str, origin), *map(str, extent)]
@@ -226,7 +236,7 @@ def run(args):
                             samples.append(sample)
                         print(f"{label}/{trial}/{implementation}: {wall_ms:.2f} ms; every value verified", flush=True)
                 summaries = {}
-                for implementation in ("moonbit", "python"):
+                for implementation in ("moonbit", reference):
                     selected = [s for s in samples if s["implementation"] == implementation]
                     summaries[implementation] = dict(median_wall_ms=statistics.median(s["wall_ms"] for s in selected),
                         max_peak_rss_bytes=max(s["peak_rss_bytes"] for s in selected),
@@ -246,11 +256,15 @@ def run(args):
             commit=command(["git", "rev-parse", "HEAD"], PROJECT).strip(),
             working_tree=command(["git", "status", "--short"], PROJECT).splitlines(), implementation_sha256=hashes,
             dependency=f"zlhahaha/zarr@{version}; explicit source workspace",
+            reference=(f"zlhahaha/zarr@{registry_version}; published registry dependency"
+                       if args.registry_baseline else "task-specific zarr-python worker"),
             manifest=manifest, manifest_sha256=hashlib.sha256(MANIFEST.read_bytes()).hexdigest(),
             executable_sha256=hashlib.sha256(binary.read_bytes()).hexdigest(), trials_per_case=args.trials,
             artifacts=artifacts.name, warmups_per_implementation_per_case=1,
-            scope="paired alternating fresh processes, release native vs task-specific zarr-python reference; same hash-pinned CT ROI, tile/shard layout, uint8->float32 /255, histogram, provenance, Zstd3, single-key data sync+replace and completion marker; loopback HTTP encoded-object cache; no WAN/cold-disk claim; wall includes process startup/imports; internal stages exclude startup/imports; decode includes typed assembly, hydrate includes cache and encoded staging; write includes compression, index encoding, filesystem operations and data sync; RSS is OS process high-water including each runtime, Python imports and arrays, not parent oracle/server; no total-memory bound or broad language ranking",
+            scope="paired alternating fresh processes; same hash-pinned CT ROI, tile/shard layout, uint8->float32 /255, histogram, provenance, Zstd3, single-key data sync+replace and completion marker; loopback HTTP encoded-object cache; no WAN/cold-disk claim; wall includes process startup/imports; internal stages exclude startup/imports; decode includes typed assembly, hydrate includes cache and encoded staging; write includes compression, index encoding, filesystem operations and data sync; RSS is OS process high-water including each runtime, excluding the parent oracle/server; no total-memory bound or broad language ranking",
             cases=cases)
+        if args.registry_baseline:
+            report["registry_executable_sha256"] = hashlib.sha256(registry_binary.read_bytes()).hexdigest()
         with report_path.open("x", encoding="utf-8") as stream:
             stream.write(json.dumps(report, indent=2) + "\n")
         write_json(status, {"status": "verified", "report": report_path.name})
@@ -268,6 +282,8 @@ if __name__ == "__main__":
     else:
         parser = argparse.ArgumentParser(description=__doc__)
         parser.add_argument("--download", action="store_true")
+        parser.add_argument("--registry-baseline", action="store_true",
+                            help="compare the source build with the pinned registry package")
         parser.add_argument("--work-dir", type=Path, default=PROJECT / "_build/real-scan-data")
         parser.add_argument("--output", type=Path, default=PROJECT / "_build/paired-volume.json")
         parser.add_argument("--trials", type=int, default=5)

@@ -1,5 +1,28 @@
 # Real CT conversion benchmark
 
+## C-order write optimization
+
+The checkout's C-order writer copies contiguous row spans into each inner
+chunk. To measure the change against the published 0.10.0 package, build the
+same volume application against both library versions and run alternating pairs:
+
+```sh
+python -m pip install zarr==3.4.0 numpy==2.5.3
+python scripts/benchmark_volume_pipeline.py --registry-baseline --download --trials 5 --output _build/paired-registry.json
+```
+
+The benchmark uses Python to verify every output value from both builds. It
+records executable hashes, elapsed times, peak RSS and the fixed input manifest.
+The standard Python comparison remains available through the command below.
+
+In the initial Windows experiment, enabling only C-order span writes reduced
+median wall time from **5.36 to 2.29 s** for the aligned ROI and from **6.13 to
+3.43 s** for the nonaligned ROI. The largest observed peak RSS increase was
+0.11 MiB. These five-pair results came from an instrumented source build with
+the write optimization toggled. Each pair produced byte-identical output trees.
+
+## Original 0.10.0 source versus zarr-python
+
 The Windows run used two hash-pinned CT regions and five alternating measured
 pairs per region. MoonBit took longer and used less peak resident memory in this
 workload. All 24 conversions, including warmups, passed independent every-value

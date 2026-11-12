@@ -147,23 +147,47 @@ fn write_region_bytes(
         }
     }
     let mutable = raw.to_array()
-    guard @chunk.region_len(metadata, piece.origin, piece.extent)
-      is Some(piece_len) else {
-      return false
-    }
-    for linear in 0..<piece_len {
-      let indices = @chunk.region_coords(piece.origin, piece.extent, linear)
-      guard @chunk.region_index(origin, extent, indices) is Some(input_index) else {
+    // C-order input and chunk storage share contiguous last-axis spans.
+    if metadata.order == "C" {
+      let chunk_origin = piece.coordinates.mapi(fn(axis, coordinate) {
+        coordinate * metadata.chunk_shape[axis]
+      })
+      if !@chunk.copy_region_spans(
+          origin,
+          extent,
+          chunk_origin,
+          metadata.chunk_shape,
+          piece.origin,
+          piece.extent,
+          fn(input, output, count, _) {
+            let source_byte = input * element_size
+            let destination_byte = output * element_size
+            for i in 0..<(count * element_size) {
+              mutable[destination_byte + i] = values[source_byte + i]
+            }
+          },
+        ) {
         return false
       }
-      guard @chunk.element_location(metadata, indices, path)
-        is Some((_, output_index)) else {
+    } else {
+      guard @chunk.region_len(metadata, piece.origin, piece.extent)
+        is Some(piece_len) else {
         return false
       }
-      for byte_index in 0..<element_size {
-        mutable[output_index * element_size + byte_index] = values[input_index *
-          element_size +
-          byte_index]
+      for linear in 0..<piece_len {
+        let indices = @chunk.region_coords(piece.origin, piece.extent, linear)
+        guard @chunk.region_index(origin, extent, indices) is Some(input_index) else {
+          return false
+        }
+        guard @chunk.element_location(metadata, indices, path)
+          is Some((_, output_index)) else {
+          return false
+        }
+        for byte_index in 0..<element_size {
+          mutable[output_index * element_size + byte_index] = values[input_index *
+            element_size +
+            byte_index]
+        }
       }
     }
     guard @codec.encode_chunk(compression, Bytes::from_array(mutable[:]))

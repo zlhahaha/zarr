@@ -56,6 +56,17 @@ and retains the converted arrays plus request/timing reports. Python is the
 independent oracle; the data transformation runs in the native MoonBit application.
 See the [paired conversion measurements](docs/VOLUME_COMPARISON.md) for evidence and limits.
 
+To try the published **0.10.0** package on both CT selections from this checkout,
+run the following with Python 3.12+, `moonc >= 0.10.20`, and a native C compiler:
+
+```sh
+python -m pip install zarr==3.4.0 numpy==2.5.3
+python scripts/verify_real_volume_pipeline.py --download --trials 1 --output _build/ct-trial.json
+```
+
+Look for `"status": "verified"` in the report. The sibling `ct-trial-artifacts/`
+directory contains the verified `.zarr` outputs. Use a fresh report name on reruns.
+
 For the full [three-minute showcase](docs/SHOWCASE.md), after installing its pinned
 Python dependencies, run from the checkout:
 
