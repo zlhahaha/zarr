@@ -1,5 +1,18 @@
 # Real CT conversion and PNG walkthrough
 
+## Three-minute walkthrough
+
+1. Show the [public CT source and fixed patch origins](../examples/zarr_npy_roi/README.md).
+   The MoonBit consumer reads four patches with eight payload GETs.
+2. Run the [batch example](../examples/zarr_npy_roi/README.md#prepare-a-batch-for-python).
+   Open `verification.json` and `model-input.npy`. Show the float32
+   `[4,1,16,16,16]` batch and the independent every-value check.
+3. Show the [same-task write comparison](VOLUME_COMPARISON.md#c-order-write-optimization)
+   against the published package. The separate conversion below demonstrates
+   writing interoperable Zarr v3 and previewing a completed array.
+
+## Zarr conversion and PNG preview
+
 Run the numerical conversion, independent verification and native PNG preview
 from a checkout. Requires Python 3.12+, moonc >= 0.10.20 and a native C compiler.
 

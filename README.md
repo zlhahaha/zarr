@@ -67,6 +67,10 @@ python scripts/verify_real_volume_pipeline.py --download --trials 1 --output _bu
 Look for `"status": "verified"` in the report. The sibling `ct-trial-artifacts/`
 directory contains the verified `.zarr` outputs. Use a fresh report name on reruns.
 
+The [CT patch batch example](examples/zarr_npy_roi/README.md#prepare-a-batch-for-python)
+uses the published package to read four 3D patches and prepares a verified
+NumPy float32 input batch for downstream processing.
+
 For the full [three-minute showcase](docs/SHOWCASE.md), after installing its pinned
 Python dependencies, run from the checkout:
 

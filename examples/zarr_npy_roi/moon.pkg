@@ -1,0 +1,12 @@
+import {
+  "zlhahaha/zarr/array",
+  "zlhahaha/zarr/store/http",
+  "moonbitlang/async",
+  "moonbitlang/async/fs",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/env",
+}
+
+pkgtype(kind: "executable")
+
+supported_targets = "native"

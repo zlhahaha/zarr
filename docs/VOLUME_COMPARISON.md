@@ -15,6 +15,17 @@ The benchmark uses Python to verify every output value from both builds. It
 records executable hashes, elapsed times, peak RSS and the fixed input manifest.
 The standard Python comparison remains available through the command below.
 
+The uninstrumented Windows run compared the published package with source
+commit `6da0262`. Five paired rounds per ROI produced byte-identical output
+trees. The wall medians include process launch.
+
+| ROI | Published 0.10.0 | Source with span writes | Lower wall time |
+| --- | ---: | ---: | ---: |
+| Aligned | 4.93 s | 2.25 s | 54.4% |
+| Nonaligned | 6.06 s | 3.47 s | 42.8% |
+
+The maximum peak RSS increase was 0.17 MiB on this host.
+
 In the initial Windows experiment, enabling only C-order span writes reduced
 median wall time from **5.36 to 2.29 s** for the aligned ROI and from **6.13 to
 3.43 s** for the nonaligned ROI. The largest observed peak RSS increase was
