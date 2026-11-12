@@ -1,0 +1,749 @@
+{
+  "schema_version": 1,
+  "status": "verified",
+  "timestamp_utc": "2026-11-12T06:36:16.201921+00:00",
+  "platform": "Windows-11-10.0.22631-SP0",
+  "python": "3.12.7",
+  "zarr": "3.4.0",
+  "numpy": "2.5.3",
+  "commit": "6da026277666bda1e08a617c96ea935c00a3f7e6",
+  "dependency": "zlhahaha/zarr@0.10.0; explicit source workspace",
+  "reference": "zlhahaha/zarr@0.10.0; published registry dependency",
+  "manifest": {
+    "base_url": "https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.4/64x0/bonsai.ome.zarr/scale0/bonsai",
+    "selection": {
+      "origin": [
+        0,
+        0,
+        0
+      ],
+      "extent": [
+        128,
+        128,
+        128
+      ]
+    },
+    "objects": [
+      {
+        "key": ".zarray",
+        "bytes": 322,
+        "sha256": "17a39373f4bdd95f7d7ae1ca0adfbb7941a8f6ec2a1c30077600f895b888bcd4"
+      },
+      {
+        "key": "0/0/0",
+        "bytes": 30347,
+        "sha256": "a7d58ed068be660b8c4bd99a48fa1ff3e3794257f0bc7fbe9e4aeb4f9307a756"
+      },
+      {
+        "key": "0/0/1",
+        "bytes": 8238,
+        "sha256": "9de427fea31dea74170c7bb09ad821531b9c3cf20d2919185a06a1c071ce56aa"
+      },
+      {
+        "key": "0/1/0",
+        "bytes": 80,
+        "sha256": "67947e92c5f9acd99ad5b1f07072149103849dfcc13060671ead9574bb801515"
+      },
+      {
+        "key": "0/1/1",
+        "bytes": 583,
+        "sha256": "982663f0f7cc4466b88e6622b1cfc7cde1e5957532211a7d42d49bd2f17a6856"
+      },
+      {
+        "key": "1/0/0",
+        "bytes": 39472,
+        "sha256": "a40e7fd0a0a9f94aad7c8a2dd88fb7b8f7599c026f68f5b3002e58ab667d575f"
+      },
+      {
+        "key": "1/0/1",
+        "bytes": 118841,
+        "sha256": "bfb36aef3d00456d9d1d46967b88b2142b2e19e02cc96cb43fb3c6bddf4efde2"
+      },
+      {
+        "key": "1/1/0",
+        "bytes": 26763,
+        "sha256": "3539282525011fedf8e1f718a4ea2a7a78a8257fdfc555a9ce718ba2c854dba3"
+      },
+      {
+        "key": "1/1/1",
+        "bytes": 77189,
+        "sha256": "a33d5c6b608de08a00d959d6197f34a78a8342fa399b7b14ac05881a2baa4f87"
+      }
+    ]
+  },
+  "manifest_sha256": "5686cae91a0c63c80f742655e3532da6c8b78503ecfcbab93d9a40b0148a1584",
+  "executable_sha256": "294e293a3a0fc85bec3d6c569d99d308ab946f1399aa9acc3173ad1f0716fd4e",
+  "registry_executable_sha256": "f3ab3f8fdc10cf1c84f295a4385d7db8333517588fd053de0ce82917af483eb6",
+  "trials_per_case": 5,
+  "warmups_per_implementation_per_case": 1,
+  "scope": "paired alternating fresh processes; same hash-pinned CT ROI, tile/shard layout, uint8->float32 /255, histogram, provenance, Zstd3, single-key data sync+replace and completion marker; loopback HTTP encoded-object cache; no WAN/cold-disk claim; wall includes process startup/imports; internal stages exclude startup/imports; decode includes typed assembly, hydrate includes cache and encoded staging; write includes compression, index encoding, filesystem operations and data sync; RSS is OS process high-water including each runtime, excluding the parent oracle/server; no total-memory bound or broad language ranking",
+  "toolchain": [
+    "moon 0.1.20261104 (940aa18 2026-11-04)",
+    "moonc v0.10.20+65efd5b93 (2026-11-05)",
+    "moonrun 0.1.20261104 (940aa18 2026-11-04)"
+  ],
+  "cases": [
+    {
+      "name": "aligned",
+      "origin": [
+        0,
+        0,
+        0
+      ],
+      "extent": [
+        128,
+        128,
+        128
+      ],
+      "summaries": {
+        "moonbit": {
+          "median_wall_ms": 2248.0868,
+          "max_peak_rss_bytes": 9310208,
+          "median_stage_ms": {
+            "open_ns": 2.7357,
+            "hydrate_ns": 20.1104,
+            "decode_ns": 1650.285,
+            "process_ns": 5.1589,
+            "write_ns": 570.9321,
+            "total_ns": 2234.2986
+          }
+        },
+        "registry": {
+          "median_wall_ms": 4927.4199,
+          "max_peak_rss_bytes": 9138176,
+          "median_stage_ms": {
+            "open_ns": 3.4571,
+            "hydrate_ns": 22.454,
+            "decode_ns": 1625.8902,
+            "process_ns": 5.2326,
+            "write_ns": 3255.3212,
+            "total_ns": 4912.7021
+          }
+        }
+      },
+      "samples": [
+        {
+          "implementation": "moonbit",
+          "pair": 1,
+          "wall_ms": 2173.1556,
+          "timings": {
+            "open_ns": 2688600,
+            "hydrate_ns": 19342100,
+            "decode_ns": 1602318700,
+            "process_ns": 4997500,
+            "write_ns": 529643700,
+            "total_ns": 2159373400,
+            "remote_decode_separated": true
+          },
+          "peak_rss_bytes": 9089024,
+          "requests": 11,
+          "transferred_bytes": 301835,
+          "output_bytes": 4132781,
+          "verification": {
+            "voxels": 2097152,
+            "input_checksum": 24039966,
+            "output_shards": 256,
+            "every_value_verified": true,
+            "max_absolute_error": 0.0,
+            "metadata_and_provenance_verified": true,
+            "all_shard_files_verified": true,
+            "completion_marker_verified": true
+          },
+          "output_tree_sha256": "8d2e1b12570d9392a198e86d36101ddd7904447a70aa6be71b380de3b940c928"
+        },
+        {
+          "implementation": "registry",
+          "pair": 1,
+          "wall_ms": 4770.0617,
+          "timings": {
+            "open_ns": 3532800,
+            "hydrate_ns": 21738100,
+            "decode_ns": 1589551100,
+            "process_ns": 4973800,
+            "write_ns": 3134556000,
+            "total_ns": 4754749900,
+            "remote_decode_separated": true
+          },
+          "peak_rss_bytes": 9138176,
+          "requests": 11,
+          "transferred_bytes": 301835,
+          "output_bytes": 4132781,
+          "verification": {
+            "voxels": 2097152,
+            "input_checksum": 24039966,
+            "output_shards": 256,
+            "every_value_verified": true,
+            "max_absolute_error": 0.0,
+            "metadata_and_provenance_verified": true,
+            "all_shard_files_verified": true,
+            "completion_marker_verified": true
+          },
+          "output_tree_sha256": "8d2e1b12570d9392a198e86d36101ddd7904447a70aa6be71b380de3b940c928"
+        },
+        {
+          "implementation": "registry",
+          "pair": 2,
+          "wall_ms": 4824.384,
+          "timings": {
+            "open_ns": 3457100,
+            "hydrate_ns": 22069600,
+            "decode_ns": 1594330400,
+            "process_ns": 5056400,
+            "write_ns": 3181508600,
+            "total_ns": 4806844200,
+            "remote_decode_separated": true
+          },
+          "peak_rss_bytes": 9138176,
+          "requests": 11,
+          "transferred_bytes": 301835,
+          "output_bytes": 4132781,
+          "verification": {
+            "voxels": 2097152,
+            "input_checksum": 24039966,
+            "output_shards": 256,
+            "every_value_verified": true,
+            "max_absolute_error": 0.0,
+            "metadata_and_provenance_verified": true,
+            "all_shard_files_verified": true,
+            "completion_marker_verified": true
+          },
+          "output_tree_sha256": "8d2e1b12570d9392a198e86d36101ddd7904447a70aa6be71b380de3b940c928"
+        },
+        {
+          "implementation": "moonbit",
+          "pair": 2,
+          "wall_ms": 2248.0868,
+          "timings": {
+            "open_ns": 3122200,
+            "hydrate_ns": 21811100,
+            "decode_ns": 1657012300,
+            "process_ns": 5221400,
+            "write_ns": 546714400,
+            "total_ns": 2234298600,
+            "remote_decode_separated": true
+          },
+          "peak_rss_bytes": 9101312,
+          "requests": 11,
+          "transferred_bytes": 301835,
+          "output_bytes": 4132781,
+          "verification": {
+            "voxels": 2097152,
+            "input_checksum": 24039966,
+            "output_shards": 256,
+            "every_value_verified": true,
+            "max_absolute_error": 0.0,
+            "metadata_and_provenance_verified": true,
+            "all_shard_files_verified": true,
+            "completion_marker_verified": true
+          },
+          "output_tree_sha256": "8d2e1b12570d9392a198e86d36101ddd7904447a70aa6be71b380de3b940c928"
+        },
+        {
+          "implementation": "moonbit",
+          "pair": 3,
+          "wall_ms": 2242.4102,
+          "timings": {
+            "open_ns": 2615800,
+            "hydrate_ns": 20086500,
+            "decode_ns": 1612801100,
+            "process_ns": 5185300,
+            "write_ns": 587438400,
+            "total_ns": 2228519100,
+            "remote_decode_separated": true
+          },
+          "peak_rss_bytes": 9310208,
+          "requests": 11,
+          "transferred_bytes": 301835,
+          "output_bytes": 4132781,
+          "verification": {
+            "voxels": 2097152,
+            "input_checksum": 24039966,
+            "output_shards": 256,
+            "every_value_verified": true,
+            "max_absolute_error": 0.0,
+            "metadata_and_provenance_verified": true,
+            "all_shard_files_verified": true,
+            "completion_marker_verified": true
+          },
+          "output_tree_sha256": "8d2e1b12570d9392a198e86d36101ddd7904447a70aa6be71b380de3b940c928"
+        },
+        {
+          "implementation": "registry",
+          "pair": 3,
+          "wall_ms": 5139.5898,
+          "timings": {
+            "open_ns": 3570900,
+            "hydrate_ns": 23242300,
+            "decode_ns": 1687287600,
+            "process_ns": 5232600,
+            "write_ns": 3403445600,
+            "total_ns": 5123222500,
+            "remote_decode_separated": true
+          },
+          "peak_rss_bytes": 9138176,
+          "requests": 11,
+          "transferred_bytes": 301835,
+          "output_bytes": 4132781,
+          "verification": {
+            "voxels": 2097152,
+            "input_checksum": 24039966,
+            "output_shards": 256,
+            "every_value_verified": true,
+            "max_absolute_error": 0.0,
+            "metadata_and_provenance_verified": true,
+            "all_shard_files_verified": true,
+            "completion_marker_verified": true
+          },
+          "output_tree_sha256": "8d2e1b12570d9392a198e86d36101ddd7904447a70aa6be71b380de3b940c928"
+        },
+        {
+          "implementation": "registry",
+          "pair": 4,
+          "wall_ms": 5653.8809,
+          "timings": {
+            "open_ns": 3120100,
+            "hydrate_ns": 22796900,
+            "decode_ns": 1679795900,
+            "process_ns": 5484700,
+            "write_ns": 3925749400,
+            "total_ns": 5637596300,
+            "remote_decode_separated": true
+          },
+          "peak_rss_bytes": 9097216,
+          "requests": 11,
+          "transferred_bytes": 301835,
+          "output_bytes": 4132781,
+          "verification": {
+            "voxels": 2097152,
+            "input_checksum": 24039966,
+            "output_shards": 256,
+            "every_value_verified": true,
+            "max_absolute_error": 0.0,
+            "metadata_and_provenance_verified": true,
+            "all_shard_files_verified": true,
+            "completion_marker_verified": true
+          },
+          "output_tree_sha256": "8d2e1b12570d9392a198e86d36101ddd7904447a70aa6be71b380de3b940c928"
+        },
+        {
+          "implementation": "moonbit",
+          "pair": 4,
+          "wall_ms": 2267.1643,
+          "timings": {
+            "open_ns": 3047900,
+            "hydrate_ns": 20110400,
+            "decode_ns": 1650285000,
+            "process_ns": 4953800,
+            "write_ns": 570932100,
+            "total_ns": 2249623500,
+            "remote_decode_separated": true
+          },
+          "peak_rss_bytes": 9011200,
+          "requests": 11,
+          "transferred_bytes": 301835,
+          "output_bytes": 4132781,
+          "verification": {
+            "voxels": 2097152,
+            "input_checksum": 24039966,
+            "output_shards": 256,
+            "every_value_verified": true,
+            "max_absolute_error": 0.0,
+            "metadata_and_provenance_verified": true,
+            "all_shard_files_verified": true,
+            "completion_marker_verified": true
+          },
+          "output_tree_sha256": "8d2e1b12570d9392a198e86d36101ddd7904447a70aa6be71b380de3b940c928"
+        },
+        {
+          "implementation": "moonbit",
+          "pair": 5,
+          "wall_ms": 2296.0006,
+          "timings": {
+            "open_ns": 2735700,
+            "hydrate_ns": 22336800,
+            "decode_ns": 1662481900,
+            "process_ns": 5158900,
+            "write_ns": 588524000,
+            "total_ns": 2281659700,
+            "remote_decode_separated": true
+          },
+          "peak_rss_bytes": 9109504,
+          "requests": 11,
+          "transferred_bytes": 301835,
+          "output_bytes": 4132781,
+          "verification": {
+            "voxels": 2097152,
+            "input_checksum": 24039966,
+            "output_shards": 256,
+            "every_value_verified": true,
+            "max_absolute_error": 0.0,
+            "metadata_and_provenance_verified": true,
+            "all_shard_files_verified": true,
+            "completion_marker_verified": true
+          },
+          "output_tree_sha256": "8d2e1b12570d9392a198e86d36101ddd7904447a70aa6be71b380de3b940c928"
+        },
+        {
+          "implementation": "registry",
+          "pair": 5,
+          "wall_ms": 4927.4199,
+          "timings": {
+            "open_ns": 3322200,
+            "hydrate_ns": 22454000,
+            "decode_ns": 1625890200,
+            "process_ns": 5276400,
+            "write_ns": 3255321200,
+            "total_ns": 4912702100,
+            "remote_decode_separated": true
+          },
+          "peak_rss_bytes": 9121792,
+          "requests": 11,
+          "transferred_bytes": 301835,
+          "output_bytes": 4132781,
+          "verification": {
+            "voxels": 2097152,
+            "input_checksum": 24039966,
+            "output_shards": 256,
+            "every_value_verified": true,
+            "max_absolute_error": 0.0,
+            "metadata_and_provenance_verified": true,
+            "all_shard_files_verified": true,
+            "completion_marker_verified": true
+          },
+          "output_tree_sha256": "8d2e1b12570d9392a198e86d36101ddd7904447a70aa6be71b380de3b940c928"
+        }
+      ]
+    },
+    {
+      "name": "nonaligned",
+      "origin": [
+        1,
+        2,
+        3
+      ],
+      "extent": [
+        125,
+        124,
+        123
+      ],
+      "summaries": {
+        "moonbit": {
+          "median_wall_ms": 3469.5407,
+          "max_peak_rss_bytes": 9195520,
+          "median_stage_ms": {
+            "open_ns": 3.4301,
+            "hydrate_ns": 23.5748,
+            "decode_ns": 2822.6892,
+            "process_ns": 4.7356,
+            "write_ns": 579.8159,
+            "total_ns": 3456.2878
+          }
+        },
+        "registry": {
+          "median_wall_ms": 6061.186,
+          "max_peak_rss_bytes": 9175040,
+          "median_stage_ms": {
+            "open_ns": 3.1308,
+            "hydrate_ns": 25.2318,
+            "decode_ns": 2812.7792,
+            "process_ns": 4.6597,
+            "write_ns": 3191.5988,
+            "total_ns": 6047.694
+          }
+        }
+      },
+      "samples": [
+        {
+          "implementation": "moonbit",
+          "pair": 1,
+          "wall_ms": 3365.5353,
+          "timings": {
+            "open_ns": 3752300,
+            "hydrate_ns": 23574800,
+            "decode_ns": 2763339400,
+            "process_ns": 4438200,
+            "write_ns": 556472500,
+            "total_ns": 3351974700,
+            "remote_decode_separated": true
+          },
+          "peak_rss_bytes": 9150464,
+          "requests": 11,
+          "transferred_bytes": 301835,
+          "output_bytes": 3843322,
+          "verification": {
+            "voxels": 1906500,
+            "input_checksum": 20405142,
+            "output_shards": 256,
+            "every_value_verified": true,
+            "max_absolute_error": 0.0,
+            "metadata_and_provenance_verified": true,
+            "all_shard_files_verified": true,
+            "completion_marker_verified": true
+          },
+          "output_tree_sha256": "709e84a339f604d702d4ed69c603bf0dc918940788d05abd2836ec59dfe8649b"
+        },
+        {
+          "implementation": "registry",
+          "pair": 1,
+          "wall_ms": 6097.386,
+          "timings": {
+            "open_ns": 2632300,
+            "hydrate_ns": 25656500,
+            "decode_ns": 2762577600,
+            "process_ns": 4543400,
+            "write_ns": 3286329300,
+            "total_ns": 6082295100,
+            "remote_decode_separated": true
+          },
+          "peak_rss_bytes": 9129984,
+          "requests": 11,
+          "transferred_bytes": 301835,
+          "output_bytes": 3843322,
+          "verification": {
+            "voxels": 1906500,
+            "input_checksum": 20405142,
+            "output_shards": 256,
+            "every_value_verified": true,
+            "max_absolute_error": 0.0,
+            "metadata_and_provenance_verified": true,
+            "all_shard_files_verified": true,
+            "completion_marker_verified": true
+          },
+          "output_tree_sha256": "709e84a339f604d702d4ed69c603bf0dc918940788d05abd2836ec59dfe8649b"
+        },
+        {
+          "implementation": "registry",
+          "pair": 2,
+          "wall_ms": 6046.682,
+          "timings": {
+            "open_ns": 3353700,
+            "hydrate_ns": 24877200,
+            "decode_ns": 2812779200,
+            "process_ns": 4500900,
+            "write_ns": 3183608800,
+            "total_ns": 6029639700,
+            "remote_decode_separated": true
+          },
+          "peak_rss_bytes": 9142272,
+          "requests": 11,
+          "transferred_bytes": 301835,
+          "output_bytes": 3843322,
+          "verification": {
+            "voxels": 1906500,
+            "input_checksum": 20405142,
+            "output_shards": 256,
+            "every_value_verified": true,
+            "max_absolute_error": 0.0,
+            "metadata_and_provenance_verified": true,
+            "all_shard_files_verified": true,
+            "completion_marker_verified": true
+          },
+          "output_tree_sha256": "709e84a339f604d702d4ed69c603bf0dc918940788d05abd2836ec59dfe8649b"
+        },
+        {
+          "implementation": "moonbit",
+          "pair": 2,
+          "wall_ms": 3461.7149,
+          "timings": {
+            "open_ns": 3089800,
+            "hydrate_ns": 22594300,
+            "decode_ns": 2820237300,
+            "process_ns": 4735600,
+            "write_ns": 596129700,
+            "total_ns": 3447211900,
+            "remote_decode_separated": true
+          },
+          "peak_rss_bytes": 9166848,
+          "requests": 11,
+          "transferred_bytes": 301835,
+          "output_bytes": 3843322,
+          "verification": {
+            "voxels": 1906500,
+            "input_checksum": 20405142,
+            "output_shards": 256,
+            "every_value_verified": true,
+            "max_absolute_error": 0.0,
+            "metadata_and_provenance_verified": true,
+            "all_shard_files_verified": true,
+            "completion_marker_verified": true
+          },
+          "output_tree_sha256": "709e84a339f604d702d4ed69c603bf0dc918940788d05abd2836ec59dfe8649b"
+        },
+        {
+          "implementation": "moonbit",
+          "pair": 3,
+          "wall_ms": 3507.2542,
+          "timings": {
+            "open_ns": 3430100,
+            "hydrate_ns": 23643700,
+            "decode_ns": 2822689200,
+            "process_ns": 4881900,
+            "write_ns": 634935000,
+            "total_ns": 3490011800,
+            "remote_decode_separated": true
+          },
+          "peak_rss_bytes": 9195520,
+          "requests": 11,
+          "transferred_bytes": 301835,
+          "output_bytes": 3843322,
+          "verification": {
+            "voxels": 1906500,
+            "input_checksum": 20405142,
+            "output_shards": 256,
+            "every_value_verified": true,
+            "max_absolute_error": 0.0,
+            "metadata_and_provenance_verified": true,
+            "all_shard_files_verified": true,
+            "completion_marker_verified": true
+          },
+          "output_tree_sha256": "709e84a339f604d702d4ed69c603bf0dc918940788d05abd2836ec59dfe8649b"
+        },
+        {
+          "implementation": "registry",
+          "pair": 3,
+          "wall_ms": 6061.186,
+          "timings": {
+            "open_ns": 3130800,
+            "hydrate_ns": 26842400,
+            "decode_ns": 2820923400,
+            "process_ns": 4659700,
+            "write_ns": 3191598800,
+            "total_ns": 6047694000,
+            "remote_decode_separated": true
+          },
+          "peak_rss_bytes": 9162752,
+          "requests": 11,
+          "transferred_bytes": 301835,
+          "output_bytes": 3843322,
+          "verification": {
+            "voxels": 1906500,
+            "input_checksum": 20405142,
+            "output_shards": 256,
+            "every_value_verified": true,
+            "max_absolute_error": 0.0,
+            "metadata_and_provenance_verified": true,
+            "all_shard_files_verified": true,
+            "completion_marker_verified": true
+          },
+          "output_tree_sha256": "709e84a339f604d702d4ed69c603bf0dc918940788d05abd2836ec59dfe8649b"
+        },
+        {
+          "implementation": "registry",
+          "pair": 4,
+          "wall_ms": 6059.907,
+          "timings": {
+            "open_ns": 2855200,
+            "hydrate_ns": 25231800,
+            "decode_ns": 2826762700,
+            "process_ns": 4737800,
+            "write_ns": 3178519400,
+            "total_ns": 6038528300,
+            "remote_decode_separated": true
+          },
+          "peak_rss_bytes": 9175040,
+          "requests": 11,
+          "transferred_bytes": 301835,
+          "output_bytes": 3843322,
+          "verification": {
+            "voxels": 1906500,
+            "input_checksum": 20405142,
+            "output_shards": 256,
+            "every_value_verified": true,
+            "max_absolute_error": 0.0,
+            "metadata_and_provenance_verified": true,
+            "all_shard_files_verified": true,
+            "completion_marker_verified": true
+          },
+          "output_tree_sha256": "709e84a339f604d702d4ed69c603bf0dc918940788d05abd2836ec59dfe8649b"
+        },
+        {
+          "implementation": "moonbit",
+          "pair": 4,
+          "wall_ms": 3534.0363,
+          "timings": {
+            "open_ns": 3965800,
+            "hydrate_ns": 24977700,
+            "decode_ns": 2905100300,
+            "process_ns": 4858500,
+            "write_ns": 579815900,
+            "total_ns": 3519277100,
+            "remote_decode_separated": true
+          },
+          "peak_rss_bytes": 9170944,
+          "requests": 11,
+          "transferred_bytes": 301835,
+          "output_bytes": 3843322,
+          "verification": {
+            "voxels": 1906500,
+            "input_checksum": 20405142,
+            "output_shards": 256,
+            "every_value_verified": true,
+            "max_absolute_error": 0.0,
+            "metadata_and_provenance_verified": true,
+            "all_shard_files_verified": true,
+            "completion_marker_verified": true
+          },
+          "output_tree_sha256": "709e84a339f604d702d4ed69c603bf0dc918940788d05abd2836ec59dfe8649b"
+        },
+        {
+          "implementation": "moonbit",
+          "pair": 5,
+          "wall_ms": 3469.5407,
+          "timings": {
+            "open_ns": 2810900,
+            "hydrate_ns": 22402500,
+            "decode_ns": 2850796600,
+            "process_ns": 4361800,
+            "write_ns": 574592100,
+            "total_ns": 3456287800,
+            "remote_decode_separated": true
+          },
+          "peak_rss_bytes": 9097216,
+          "requests": 11,
+          "transferred_bytes": 301835,
+          "output_bytes": 3843322,
+          "verification": {
+            "voxels": 1906500,
+            "input_checksum": 20405142,
+            "output_shards": 256,
+            "every_value_verified": true,
+            "max_absolute_error": 0.0,
+            "metadata_and_provenance_verified": true,
+            "all_shard_files_verified": true,
+            "completion_marker_verified": true
+          },
+          "output_tree_sha256": "709e84a339f604d702d4ed69c603bf0dc918940788d05abd2836ec59dfe8649b"
+        },
+        {
+          "implementation": "registry",
+          "pair": 5,
+          "wall_ms": 6269.0121,
+          "timings": {
+            "open_ns": 4231400,
+            "hydrate_ns": 24886700,
+            "decode_ns": 2806772000,
+            "process_ns": 4765400,
+            "write_ns": 3411491200,
+            "total_ns": 6252700800,
+            "remote_decode_separated": true
+          },
+          "peak_rss_bytes": 9134080,
+          "requests": 11,
+          "transferred_bytes": 301835,
+          "output_bytes": 3843322,
+          "verification": {
+            "voxels": 1906500,
+            "input_checksum": 20405142,
+            "output_shards": 256,
+            "every_value_verified": true,
+            "max_absolute_error": 0.0,
+            "metadata_and_provenance_verified": true,
+            "all_shard_files_verified": true,
+            "completion_marker_verified": true
+          },
+          "output_tree_sha256": "709e84a339f604d702d4ed69c603bf0dc918940788d05abd2836ec59dfe8649b"
+        }
+      ]
+    }
+  ]
+}

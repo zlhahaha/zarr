@@ -27,6 +27,8 @@ against independently sliced zarr-python data. `verification.json` records
 the ordered `[D,H,W]` origins, HTTP requests and bytes, shapes, and file hashes.
 The four patches touch eight distinct data chunks and reuse encoded objects
 within the session. The verified example runs through input preparation.
+The [Linux workflow record](../../docs/benchmarks/linux-ct-npy-batch-20261112.json)
+includes the requests and output hashes. Both NPY hashes matched the Windows run.
 
 ## Reproduce and verify
 

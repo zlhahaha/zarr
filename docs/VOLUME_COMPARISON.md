@@ -17,7 +17,10 @@ The standard Python comparison remains available through the command below.
 
 The uninstrumented Windows run compared the published package with source
 commit `6da0262`. Five paired rounds per ROI produced byte-identical output
-trees. The wall medians include process launch.
+trees. The wall medians include process launch. The
+[measured samples](benchmarks/windows-ct-span-vs-registry-20261112.json)
+include all 20 conversions, executable hashes, and matching output-tree
+hashes for each pair.
 
 | ROI | Published 0.10.0 | Source with span writes | Lower wall time |
 | --- | ---: | ---: | ---: |

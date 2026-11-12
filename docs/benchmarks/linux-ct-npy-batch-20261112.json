@@ -1,0 +1,113 @@
+{
+  "source_commit": "d4607a6f74ad4b575c91eacdbb5fa5545522aff0",
+  "workflow_run": "https://github.com/zlhahaha/zarr/actions/runs/43171566923",
+  "source_manifest_sha256": "5686cae91a0c63c80f742655e3532da6c8b78503ecfcbab93d9a40b0148a1584",
+  "status": "verified",
+  "dependency": "zlhahaha/zarr@0.10.0 (registry)",
+  "origins": [
+    [
+      56,
+      56,
+      56
+    ],
+    [
+      0,
+      0,
+      0
+    ],
+    [
+      8,
+      8,
+      8
+    ],
+    [
+      112,
+      112,
+      112
+    ]
+  ],
+  "shape": [
+    4,
+    16,
+    16,
+    16
+  ],
+  "dtype": "uint8",
+  "values_verified": 16384,
+  "patch_chunk_intersections": 11,
+  "payload_gets": 8,
+  "response_body_bytes": 301835,
+  "requests": [
+    {
+      "path": "/.zarray",
+      "status": 200,
+      "bytes": 322
+    },
+    {
+      "path": "/.zgroup",
+      "status": 404,
+      "bytes": 0
+    },
+    {
+      "path": "/zarr.json",
+      "status": 404,
+      "bytes": 0
+    },
+    {
+      "path": "/0/0/0",
+      "status": 200,
+      "bytes": 30347
+    },
+    {
+      "path": "/0/0/1",
+      "status": 200,
+      "bytes": 8238
+    },
+    {
+      "path": "/0/1/0",
+      "status": 200,
+      "bytes": 80
+    },
+    {
+      "path": "/0/1/1",
+      "status": 200,
+      "bytes": 583
+    },
+    {
+      "path": "/1/0/0",
+      "status": 200,
+      "bytes": 39472
+    },
+    {
+      "path": "/1/0/1",
+      "status": 200,
+      "bytes": 118841
+    },
+    {
+      "path": "/1/1/0",
+      "status": 200,
+      "bytes": 26763
+    },
+    {
+      "path": "/1/1/1",
+      "status": 200,
+      "bytes": 77189
+    }
+  ],
+  "output": "bonsai-patches.npy",
+  "sha256": "1ea1c021d1bf53bf3d1fc95c3aaf7ec621d440b75cff365d9b7b846bb4a1c3b6",
+  "preprocessed": {
+    "file": "model-input.npy",
+    "layout": "NCDHW",
+    "shape": [
+      4,
+      1,
+      16,
+      16,
+      16
+    ],
+    "dtype": "float32",
+    "values_verified": 16384,
+    "sha256": "35568332cc9b69467d0a9e4f7630258bccc99c7dc73c60a3a3419f2da2c4afda"
+  }
+}
